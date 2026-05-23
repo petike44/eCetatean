@@ -14,7 +14,16 @@ import {
   useSavePdfFormMapping,
 } from "@/lib/api-hooks";
 
+type DocumentPreviewSearch = {
+  form?: string;
+  q?: string;
+};
+
 export const Route = createFileRoute("/document-preview")({
+  validateSearch: (search: Record<string, unknown>): DocumentPreviewSearch => ({
+    form: typeof search.form === "string" ? search.form : undefined,
+    q: typeof search.q === "string" ? search.q : undefined,
+  }),
   head: () => ({ meta: [{ title: "Previzualizare cerere — eCetățean" }] }),
   component: () => (
     <Protected>
@@ -24,8 +33,10 @@ export const Route = createFileRoute("/document-preview")({
 });
 
 function DocPreview() {
-  const [query, setQuery] = useState("");
+  const { form: formFromUrl, q: queryFromUrl } = Route.useSearch();
+  const [query, setQuery] = useState(queryFromUrl ?? "");
   const [selectedForm, setSelectedForm] = useState<PdfForm | null>(null);
+  const [autoSelected, setAutoSelected] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [fields, setFields] = useState<PdfAutofillField[]>([]);
   const forms = usePdfForms(query);
@@ -64,6 +75,15 @@ function DocPreview() {
     setFields([]);
     analyze.mutate({ formId: form.slug });
   }
+
+  useEffect(() => {
+    if (!formFromUrl || autoSelected || !forms.data?.length) return;
+    const match = forms.data.find((form) => form.slug === formFromUrl);
+    if (match) {
+      selectForm(match);
+      setAutoSelected(true);
+    }
+  }, [formFromUrl, forms.data, autoSelected]);
 
   function updateInput(key: string, value: string) {
     setInputValues((current) => ({ ...current, [key]: value }));

@@ -60,6 +60,28 @@ const OFFICE_LOCATION_MAP: Record<string, LocationItem[] | undefined> = {
   drpciv: locationsCatalog.inmatriculare,
 };
 
+/** PDF slug in document-preview for a life-event type */
+const PREVIEW_FORM_BY_EVENT: Record<string, string> = {
+  car_from_germany: "cerere-inmatriculare-drpciv",
+  car_domestic: "cerere-inmatriculare-drpciv",
+  bought_car: "cerere-inmatriculare-drpciv",
+  moving_to_cluj: "cerere-viza-flotant",
+  renewal_id: "cerere-viza-flotant",
+  pfa_registration: "cerere-certificat-fiscal",
+};
+
+function navigateAfterLifeEvent(
+  nav: ReturnType<typeof useNavigate>,
+  eventType: string,
+  eventId: string,
+) {
+  if (eventType === "bought_car" || eventType === "car_domestic") {
+    nav({ to: "/drpciv/$eventId", params: { eventId } });
+  } else {
+    nav({ to: "/life-event/$id", params: { id: eventId } });
+  }
+}
+
 type ActionPlanProcedure = {
   event_type: string;
   title: string;
@@ -569,21 +591,26 @@ function PageAnswer({ reply }: { reply: Reply }) {
   const { show } = useToast();
   const [creating, setCreating] = useState(false);
 
-  const handleTrackProgress = async () => {
-    if (!reply.event_type) return;
+  const createAndOpenPlan = async () => {
+    if (!reply.event_type) {
+      show("error", "Nu am identificat tipul procedurii — descrie situația ta în chat.");
+      return;
+    }
     setCreating(true);
     try {
       const result = await createLifeEvent.mutateAsync({ event_type: reply.event_type });
-      // DRPCIV car-purchase flow gets its own dedicated step-by-step page
-      if (reply.event_type === "bought_car" || reply.event_type === "car_domestic") {
-        nav({ to: "/drpciv/$eventId", params: { eventId: result.id } });
-      } else {
-        nav({ to: "/life-event/$id", params: { id: result.id } });
-      }
+      navigateAfterLifeEvent(nav, reply.event_type, result.id);
     } catch {
       show("error", "Eroare la crearea evenimentului civic");
       setCreating(false);
     }
+  };
+
+  const handlePreviewRequest = () => {
+    const formSlug =
+      (reply.event_type && PREVIEW_FORM_BY_EVENT[reply.event_type]) ||
+      "cerere-inmatriculare-drpciv";
+    nav({ to: "/document-preview", search: { form: formSlug } });
   };
 
   return (
@@ -612,7 +639,7 @@ function PageAnswer({ reply }: { reply: Reply }) {
       <div className="flex flex-col gap-2">
         {reply.create_life_event && reply.event_type && (
           <button
-            onClick={handleTrackProgress}
+            onClick={createAndOpenPlan}
             disabled={creating}
             className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
           >
@@ -626,10 +653,17 @@ function PageAnswer({ reply }: { reply: Reply }) {
             )}
           </button>
         )}
-        <button onClick={() => nav({ to: "/action-plan" })} className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl">
-          Generează plan complet
+        <button
+          onClick={createAndOpenPlan}
+          disabled={creating || !reply.event_type}
+          className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl disabled:opacity-60"
+        >
+          {creating ? "Se generează planul..." : "Generează plan complet"}
         </button>
-        <button onClick={() => nav({ to: "/document-preview" })} className="press border border-border bg-white text-text-primary font-semibold text-[14px] py-3 px-4 rounded-xl">
+        <button
+          onClick={handlePreviewRequest}
+          className="press border border-border bg-white text-text-primary font-semibold text-[14px] py-3 px-4 rounded-xl"
+        >
           Previzualizează cererea
         </button>
       </div>

@@ -14,7 +14,8 @@
     "@pdfme/common": "^6.1.2",
     "@pdfme/generator": "^6.1.2",
     "@supabase/supabase-js": "^2.106.1",
-    "hono": "^4.12.22"
+    "hono": "^4.12.22",
+    "jose": "^6.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -1,87 +1,97 @@
-import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase, isSupabaseConfigured } from "./supabase";
 
 // ─────────────────────────────────────────────────────────────
-// LOCAL AUTH STUB — drop-in replacement for
-// "@clerk/tanstack-react-start" so the app runs locally WITHOUT
-// a Clerk account. The whole app behaves as if one citizen is
-// always signed in.
-//
-// TO RESTORE REAL CLERK LATER:
-//   In these files, change the import back to
-//   "@clerk/tanstack-react-start":
-//     - src/routes/__root.tsx   (and re-add the publishable-key gate)
-//     - src/routes/auth.tsx
-//     - src/lib/auth-guard.tsx
-//     - src/lib/api-hooks.ts
-//   Then set VITE_CLERK_PUBLISHABLE_KEY in frontend/.env.local
-//   and remove AUTH_STUB from backend/.env.local.
+// Supabase Auth — drop-in replacement for the old Clerk stub.
+// Exports the same interface so auth-guard.tsx, __root.tsx,
+// api-hooks.ts, and auth.tsx need no import changes.
 // ─────────────────────────────────────────────────────────────
 
-// Must match AUTH_STUB_USER_ID in backend/.env.local. The backend
-// ignores the token value when AUTH_STUB=true, so any non-empty
-// string is fine here.
-const STUB_USER_ID = "stub-user-citizen";
-const STUB_TOKEN = "stub-token";
+interface AuthState {
+  isLoaded: boolean;
+  isSignedIn: boolean;
+  session: Session | null;
+  user: User | null;
+}
+
+const AuthContext = createContext<AuthState>({
+  isLoaded: false,
+  isSignedIn: false,
+  session: null,
+  user: null,
+});
+
+export function ClerkProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>({
+    isLoaded: false,
+    isSignedIn: false,
+    session: null,
+    user: null,
+  });
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setState({ isLoaded: true, isSignedIn: false, session: null, user: null });
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setState({ isLoaded: true, isSignedIn: !!session, session, user: session?.user ?? null });
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setState({ isLoaded: true, isSignedIn: !!session, session, user: session?.user ?? null });
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
+}
 
 export function useAuth() {
+  const { isLoaded, isSignedIn, session, user } = useContext(AuthContext);
   return {
-    isLoaded: true,
-    isSignedIn: true,
-    userId: STUB_USER_ID,
-    sessionId: "stub-session",
+    isLoaded,
+    isSignedIn,
+    userId: user?.id ?? null,
+    sessionId: session?.access_token?.slice(0, 8) ?? null,
     orgId: null,
-    getToken: async (_options?: unknown) => STUB_TOKEN,
-    signOut: async (_options?: unknown) => {},
+    getToken: async (_options?: unknown) => session?.access_token ?? null,
+    signOut: () => supabase.auth.signOut(),
   };
 }
 
 export function useUser() {
+  const { isLoaded, isSignedIn, user } = useContext(AuthContext);
   return {
-    isLoaded: true,
-    isSignedIn: true,
-    user: {
-      id: STUB_USER_ID,
-      fullName: "Cetățean Demo",
-      primaryEmailAddress: { emailAddress: "demo@ecetatean.ro" },
-      primaryPhoneNumber: { phoneNumber: "+40700000000" },
-    },
+    isLoaded,
+    isSignedIn,
+    user: user
+      ? {
+          id: user.id,
+          fullName: user.user_metadata?.full_name ?? null,
+          primaryEmailAddress: user.email ? { emailAddress: user.email } : null,
+          primaryPhoneNumber: user.phone ? { phoneNumber: user.phone } : null,
+        }
+      : null,
   };
 }
 
-export function ClerkProvider({
-  children,
-}: {
-  children: ReactNode;
-  publishableKey?: string;
-}) {
-  return <>{children}</>;
-}
-
 export function SignedIn({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  const { isSignedIn } = useContext(AuthContext);
+  return isSignedIn ? <>{children}</> : null;
 }
 
-export function SignedOut(_props: { children: ReactNode }) {
-  return null;
+export function SignedOut({ children }: { children: ReactNode }) {
+  const { isSignedIn } = useContext(AuthContext);
+  return isSignedIn ? null : <>{children}</>;
 }
 
-// Never actually rendered in stub mode: useAuth() reports signed-in,
-// so /auth immediately redirects. Kept so the import resolves.
+// Actual sign-in form lives in src/routes/auth.tsx.
 export function SignIn(_props: Record<string, unknown>) {
-  return (
-    <div className="rounded-xl border border-border bg-surface p-5 text-center">
-      <p className="text-sm text-text-secondary">
-        Mod local — autentificarea Clerk este dezactivată.
-      </p>
-      <Link
-        to="/chat"
-        className="mt-3 inline-flex rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white"
-      >
-        Continuă
-      </Link>
-    </div>
-  );
+  return null;
 }
 
 export function UserButton(_props: Record<string, unknown>) {

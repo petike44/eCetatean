@@ -1,5 +1,5 @@
 import { createMiddleware } from 'hono/factory'
-import { verifyClerkJWT } from '../lib/clerk'
+import { verifySupabaseJWT } from '../lib/supabase-jwt'
 import type { ClerkPayload } from '../types'
 
 declare module 'hono' {
@@ -43,7 +43,7 @@ export const requireAuth = createMiddleware(async (c, next) => {
   const token = authHeader.replace('Bearer ', '')
 
   try {
-    const payload = await verifyClerkJWT(token)
+    const payload = await verifySupabaseJWT(token)
     c.set('userId', payload.sub)
     c.set('userRole', (payload.role as 'citizen' | 'civil_servant') || 'citizen')
     c.set('clerkPayload', payload)

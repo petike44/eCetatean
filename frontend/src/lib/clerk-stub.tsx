@@ -59,7 +59,11 @@ export function useAuth() {
     sessionId: session?.access_token?.slice(0, 8) ?? null,
     orgId: null,
     getToken: async (_options?: unknown) => session?.access_token ?? null,
-    signOut: () => supabase.auth.signOut(),
+    signOut: async () => {
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
+    },
   };
 }
 

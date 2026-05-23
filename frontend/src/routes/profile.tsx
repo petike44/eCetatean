@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { History, Loader2, Car, HeartPulse, GraduationCap } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { History, Loader2, Car, HeartPulse, GraduationCap, LogOut } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { Card, PrimaryButton, GhostButton, Field } from "@/components/ui-bits";
 import { useToast } from "@/components/Toast";
 import { Protected } from "@/lib/auth-guard";
 import { useProfile, useUpsertProfile } from "@/lib/api-hooks";
-import { useUser } from "@/lib/clerk-stub";
+import { useAuth, useUser } from "@/lib/clerk-stub";
 import { profileCompletion, profileDisplayName, profileInitials, formatRoDate } from "@/lib/profile-utils";
 
 export const Route = createFileRoute("/profile")({
@@ -24,7 +25,10 @@ const TABS = ["Personal", "Vehicule", "Locuință", "Sănătate", "Educație"] a
 
 function Profile() {
   const nav = useNavigate();
+  const queryClient = useQueryClient();
+  const { signOut } = useAuth();
   const [tab, setTab] = useState<(typeof TABS)[number]>("Personal");
+  const [loggingOut, setLoggingOut] = useState(false);
   const { show } = useToast();
   const { data: profile, isLoading } = useProfile();
   const { user } = useUser();
@@ -78,6 +82,17 @@ function Profile() {
       show("success", "Modificările au fost salvate");
     } catch {
       show("error", "Eroare la salvarea profilului");
+    }
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+      queryClient.clear();
+      nav({ to: "/auth", replace: true });
+    } finally {
+      setLoggingOut(false);
     }
   };
 
@@ -223,6 +238,26 @@ function Profile() {
               description="Poți salva studiile și diplomele aici — funcția vine în curând."
             />
           )}
+        </div>
+
+        <div className="px-5 pt-2 pb-8 lg:px-8 lg:pb-10 mt-4 border-t border-border">
+          <p className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-3 pt-4">
+            Sesiune
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            disabled={loggingOut}
+            aria-label="Deconectare"
+            className="press w-full flex items-center justify-center gap-2 min-h-11 rounded-xl border border-error/30 bg-error/5 text-error font-semibold text-[15px] px-6 py-3 hover:bg-error/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loggingOut ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <LogOut size={18} strokeWidth={2} />
+            )}
+            {loggingOut ? "Se deconectează..." : "Deconectare"}
+          </button>
         </div>
       </div>
     </AppShell>

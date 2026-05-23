@@ -100,10 +100,17 @@ formsRoute.post('/:id/fill', requireAuth, async (c) => {
     return c.json({ success: false, error: message }, 503)
   }
 
-  const fields = body.fields?.length
-    ? normalizeFields(body.fields)
-    : await analyzePdf(form, sourcePdf, profile, inputValues)
-  const pdfBuffer = await fillPdf(sourcePdf, fields, profile, inputValues)
+  let pdfBuffer: Buffer
+  try {
+    const fields = body.fields?.length
+      ? normalizeFields(body.fields)
+      : await analyzePdf(form, sourcePdf, profile, inputValues)
+    pdfBuffer = await fillPdf(sourcePdf, fields, profile, inputValues)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'PDF fill failed'
+    console.error('fillPdf failed:', message)
+    return c.json({ success: false, error: `Eroare la completarea PDF-ului: ${message}` }, 500)
+  }
 
   writeAuditEntry({
     userId,

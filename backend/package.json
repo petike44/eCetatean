@@ -1,0 +1,24 @@
+{
+  "name": "ecetatean-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clerk/backend": "^3.4.13",
+    "@hono/node-server": "^2.0.3",
+    "@pdfme/common": "^6.1.2",
+    "@pdfme/generator": "^6.1.2",
+    "@supabase/supabase-js": "^2.106.1",
+    "hono": "^4.12.22"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}

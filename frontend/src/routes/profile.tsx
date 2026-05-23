@@ -2,10 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { History, Loader2, Car, HeartPulse, GraduationCap, LogOut } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
+import { FadeIn } from "@/components/motion-primitives";
 import { Card, PrimaryButton, GhostButton, Field } from "@/components/ui-bits";
+import { navIndicator } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
 import { Protected } from "@/lib/auth-guard";
 import { useProfile, useUpsertProfile } from "@/lib/api-hooks";
@@ -110,7 +114,7 @@ function Profile() {
       }
     >
       <div className="lg:max-w-3xl lg:mx-auto">
-        <div className="px-5 pt-5 lg:px-8 lg:pt-6">
+        <FadeIn className="px-5 pt-5 lg:px-0 lg:pt-2">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-[22px]">
               {isLoading ? <Loader2 size={22} className="animate-spin" /> : initials}
@@ -129,9 +133,9 @@ function Profile() {
               </span>
             )}
           </div>
-        </div>
+        </FadeIn>
 
-        <div className="px-5 mt-5 lg:px-8">
+        <div className="px-5 mt-5 lg:px-0">
           <Card accent="amber">
             <div className="flex justify-between items-baseline mb-2">
               <p className="font-display font-semibold text-[14px] text-text-primary">
@@ -140,28 +144,49 @@ function Profile() {
               <span className="text-[12px] text-text-tertiary">{filled} din {total} câmpuri</span>
             </div>
             <div className="h-2 bg-surface-secondary rounded-full overflow-hidden">
-              <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+              <motion.div
+                className="h-full bg-accent rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              />
             </div>
           </Card>
         </div>
 
         <div className="sticky top-14 lg:top-0 z-20 bg-bg pt-4">
-          <div className="flex gap-1 overflow-x-auto scrollbar-hide px-5 lg:px-8 border-b border-border bg-bg">
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide px-5 lg:px-0 border-b border-border bg-bg relative">
             {TABS.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`press shrink-0 px-4 py-3 min-h-11 text-[14px] font-semibold border-b-2 transition-colors ${
-                  tab === t ? "border-primary text-text-primary" : "border-transparent text-text-tertiary"
-                }`}
+                className={cn(
+                  "press relative shrink-0 px-4 py-3 min-h-11 text-[14px] font-semibold transition-colors z-[1]",
+                  tab === t ? "text-accent" : "text-text-tertiary",
+                )}
               >
+                {tab === t && (
+                  <motion.span
+                    layoutId="profile-tab"
+                    className="absolute inset-x-1 bottom-0 h-0.5 bg-accent rounded-full"
+                    transition={navIndicator.transition}
+                  />
+                )}
                 {t}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="px-5 pt-5 lg:px-8 lg:pb-8">
+        <div className="px-5 pt-5 lg:px-0 lg:pb-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2 }}
+            >
           {tab === "Personal" && (
             <div className="space-y-5">
               <SectionTitle>Identitate</SectionTitle>
@@ -238,9 +263,11 @@ function Profile() {
               description="Poți salva studiile și diplomele aici — funcția vine în curând."
             />
           )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        <div className="px-5 pt-2 pb-8 lg:px-8 lg:pb-10 mt-4 border-t border-border">
+        <div className="px-5 pt-2 pb-8 lg:px-0 lg:pb-10 mt-4 border-t border-border">
           <p className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-3 pt-4">
             Sesiune
           </p>

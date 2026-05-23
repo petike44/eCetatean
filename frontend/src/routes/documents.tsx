@@ -1,10 +1,14 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 
+import { motion } from "framer-motion";
+
 import { Bell, IdCard, Plane, Briefcase, Baby, CarFront, Car, AlertCircle, ChevronRight, FileUp, Loader2, Sparkles, Wand2 } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 
 import { HomeTopBar } from "@/components/TopBar";
+
+import { FadeIn, StaggerItem, StaggerList } from "@/components/motion-primitives";
 
 import { Card, PrimaryButton, GhostButton, Badge } from "@/components/ui-bits";
 
@@ -120,6 +124,8 @@ function Documents() {
 
     <AppShell
 
+      className="lg:!px-0 lg:!py-0"
+
       topBar={
 
         <HomeTopBar
@@ -142,13 +148,13 @@ function Documents() {
 
       <div className="lg:max-w-6xl lg:mx-auto">
 
-        <div className="px-5 pt-4 lg:px-8 lg:pt-6">
+        <FadeIn className="px-5 pt-4 lg:px-8 lg:pt-6">
 
           <h1 className="font-display font-bold text-[22px] lg:text-[28px] text-text-primary">Documentele mele</h1>
 
           <p className="text-[14px] text-text-secondary mt-1">Acte din profil, proceduri active și pași noi cu ClaudIA.</p>
 
-        </div>
+        </FadeIn>
 
 
 
@@ -186,11 +192,15 @@ function Documents() {
 
                     <div className="h-2 bg-surface-secondary rounded-full overflow-hidden mb-3">
 
-                      <div
+                      <motion.div
 
-                        className="h-full bg-accent rounded-full transition-all duration-500 ease-out"
+                        className="h-full bg-accent rounded-full"
 
-                        style={{ width: `${pct}%` }}
+                        initial={{ width: 0 }}
+
+                        animate={{ width: `${pct}%` }}
+
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
 
                       />
 
@@ -264,11 +274,13 @@ function Documents() {
 
               ) : (
 
-                <div className="space-y-3">
+                <StaggerList className="space-y-3">
 
                   {activeEvents.map((ev) => (
 
-                    <Card key={ev.id} accent="amber">
+                    <StaggerItem key={ev.id}>
+
+                      <Card accent="amber" interactive>
 
                       <p className="font-display font-semibold text-[15px] text-text-primary mb-1">{ev.event_title}</p>
 
@@ -282,9 +294,11 @@ function Documents() {
 
                     </Card>
 
+                    </StaggerItem>
+
                   ))}
 
-                </div>
+                </StaggerList>
 
               )}
 

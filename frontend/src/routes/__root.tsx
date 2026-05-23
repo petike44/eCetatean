@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -10,6 +11,8 @@ import {
 
 import appCss from "../styles.css?url";
 import { ToastProvider } from "@/components/Toast";
+
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 
 function NotFoundComponent() {
   return (
@@ -91,11 +94,25 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  if (!CLERK_PUBLISHABLE_KEY) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-bg px-5 text-center">
+        <div className="max-w-md">
+          <h1 className="font-display text-xl font-semibold text-text-primary">Configurare lipsă</h1>
+          <p className="mt-2 text-sm text-text-secondary">
+            <code className="font-mono">VITE_CLERK_PUBLISHABLE_KEY</code> nu este setat. Adaugă cheia în <code className="font-mono">frontend/.env.local</code>.
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <Outlet />
-      </ToastProvider>
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <Outlet />
+        </ToastProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }

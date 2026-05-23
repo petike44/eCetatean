@@ -4,10 +4,15 @@ import { Check, Lock, Download, Eye } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { GhostButton } from "@/components/ui-bits";
+import { Protected } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/action-plan")({
   head: () => ({ meta: [{ title: "Plan de acțiune — eCetățean" }] }),
-  component: ActionPlan,
+  component: () => (
+    <Protected>
+      <ActionPlan />
+    </Protected>
+  ),
 });
 
 function ActionPlan() {

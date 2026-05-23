@@ -1,6 +1,40 @@
-node_modules
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment — NEVER COMMIT THESE
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env*.local
-dist
-.next
+
+# Build output
+/.next/
+/out/
+/build
+/dist
+
+# Vercel
 .vercel
+
+# PWA (auto-generated)
+public/sw.js
+public/workbox-*.js
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

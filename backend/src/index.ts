@@ -36,7 +36,7 @@ app.get('/', (c) =>
     app: 'eCetățean API',
     version: '1.0.0',
     status: 'running',
-    note: 'ClaudIA AI integration must be added manually',
+    note: 'ClaudIA uses Google Gemini when GEMINI_API_KEY is set',
   })
 )
 

@@ -9,10 +9,12 @@ import { LIFE_EVENTS, OFFICES } from './knowledge-base'
 import { handleToolCall } from './claudia-tools'
 import type { ChatMessage, Profile } from '../types'
 
+// Prefer models that are available on the current API key / free tier.
+// Order matters: a 404 or 429 on an early model must not block later candidates.
 const MODEL_CANDIDATES = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
   'gemini-2.5-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.0-flash',
 ] as const
 
 export class GeminiQuotaError extends Error {
@@ -34,7 +36,13 @@ export function isGeminiQuotaError(err: unknown): boolean {
 }
 
 function isRetryableGeminiError(err: unknown): boolean {
-  return isGeminiQuotaError(err)
+  if (isGeminiQuotaError(err)) return true
+  const msg = err instanceof Error ? err.message : String(err)
+  return (
+    msg.includes('[404 Not Found]') ||
+    msg.includes('is not found') ||
+    msg.includes('not supported for generateContent')
+  )
 }
 
 function buildSystemPrompt(profile?: Partial<Profile>): string {

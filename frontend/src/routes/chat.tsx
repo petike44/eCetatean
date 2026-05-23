@@ -267,20 +267,25 @@ function Chat() {
 
   const chatTopBar = (
     <header
-      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 border-b border-border flex items-center justify-between px-6 backdrop-blur-md bg-background/85"
+      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 border-b border-primary/20 flex items-center justify-between px-5 backdrop-blur-sm bg-background/95"
       role="banner"
     >
-      <div className="flex items-center gap-1.5">
-        <h1 className="font-display font-bold text-[19px] tracking-tight text-foreground">
+      <div className="flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
+          <Sparkles size={13} className="text-white" fill="currentColor" />
+        </div>
+        <h1 className="font-display font-semibold text-[16px] tracking-tight text-foreground leading-none">
           ClaudIA
         </h1>
-        <Sparkles size={15} className="text-primary" fill="currentColor" />
+        <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none">
+          beta
+        </span>
       </div>
       <button
         aria-label="Despre ClaudIA"
-        className="press p-2 -mr-2 rounded-full hover:bg-surface-secondary transition-colors"
+        className="press p-2 -mr-1.5 rounded-xl hover:bg-surface-secondary transition-colors"
       >
-        <Info size={19} className="text-text-secondary" />
+        <Info size={18} className="text-text-secondary" />
       </button>
     </header>
   );
@@ -297,171 +302,274 @@ function Chat() {
       >
         {isEmpty ? (
           /* ───── EMPTY / HERO STATE ───── */
-          <div className="flex-1 flex flex-col px-6 pt-4 lg:max-w-xl lg:mx-auto lg:w-full anim-fade-up">
-            {/* Disclaimer */}
-            <div className="mb-8 px-4 py-2.5 rounded-xl border border-accent-light bg-accent-light/40 text-center">
-              <p className="text-[11px] font-medium leading-tight text-accent-dark">
-                ClaudIA folosește date din surse oficiale verificate.
-              </p>
-            </div>
+          <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 anim-fade-up">
+            <div className="w-full max-w-md">
+              {/* Disclaimer */}
+              <div className="mb-7 flex justify-center">
+                <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-text-tertiary px-3 py-1.5 rounded-full border border-border bg-surface">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                  Date din surse oficiale verificate
+                </span>
+              </div>
 
-            {/* Greeting */}
-            <div className="mb-10">
-              <h2
-                className="font-display font-semibold text-[30px] leading-[1.15] mb-4 text-foreground"
-                style={{ letterSpacing: "-0.01em" }}
+              {/* Greeting */}
+              <div className="mb-8 text-center">
+                <h2
+                  className="font-display font-semibold text-[32px] leading-[1.1] mb-3 text-foreground"
+                  style={{ letterSpacing: "-0.02em" }}
+                >
+                  Bună ziua, {displayName}.<br />Cu ce te ajut azi?
+                </h2>
+                <p className="text-[14.5px] text-text-secondary">
+                  Asistent civic pentru instituțiile statului.
+                </p>
+              </div>
+
+              {/* Suggestion dial */}
+              <div className="mb-5">
+                <SuggestionDial onSelect={send} />
+              </div>
+
+              {/* Inline input — bigger */}
+              <form
+                onSubmit={(e) => { e.preventDefault(); send(input); }}
               >
-                Bună ziua, {displayName}.<br />Cu ce te ajut azi?
-              </h2>
-              <p className="text-[15px] leading-relaxed text-text-secondary">
-                Sunt asistentul tău civic pentru interacțiunea cu instituțiile statului.
-              </p>
-            </div>
-
-            {/* Prompt cards 2x2 */}
-            <div className="grid grid-cols-2 gap-3">
-              {SUGGESTIONS.map((s, i) => {
-                const Icon = s.icon;
-                return (
+                <div className="relative">
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Sau scrie ce ai nevoie..."
+                    aria-label="Mesaj pentru ClaudIA"
+                    className="w-full h-[60px] pl-5 pr-16 rounded-2xl outline-none text-[15.5px] bg-surface border border-border text-foreground shadow-sm focus:border-primary focus:shadow-[0_0_0_3px_rgba(11,37,64,0.08)] transition-all"
+                    style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
+                    autoFocus
+                  />
                   <button
-                    key={s.label}
-                    onClick={() => send(s.query)}
-                    className="press group p-4 rounded-2xl border border-border bg-surface text-left shadow-card hover:border-primary/40 hover:shadow-elevated transition-all anim-fade-up"
-                    style={{ animationDelay: `${i * 60}ms` }}
+                    type="submit"
+                    aria-label="Trimite"
+                    disabled={!input.trim()}
+                    className="press absolute right-2 top-2 bottom-2 aspect-square rounded-xl flex items-center justify-center bg-primary text-primary-foreground transition-opacity disabled:opacity-25"
                   >
-                    <div className="mb-3 w-9 h-9 rounded-lg flex items-center justify-center bg-primary-light text-primary">
-                      <Icon size={17} strokeWidth={1.8} />
-                    </div>
-                    <span className="font-display text-[13.5px] font-semibold leading-snug text-foreground">
-                      {s.label}
-                    </span>
+                    <Send size={17} strokeWidth={2.2} />
                   </button>
-                );
-              })}
+                </div>
+              </form>
             </div>
           </div>
         ) : (
           /* ───── CONVERSATION STATE ───── */
-          <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          <div className="px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
-            {msgs.slice(1).map((m) => {
-              if (m.role === "steps") {
-                return (
-                  <div key={m.id} className="anim-fade-up">
-                    <LifeEventStepsPanel eventId={m.eventId} />
-                  </div>
-                );
-              }
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto">
+              <div className="px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
+                {msgs.slice(1).map((m) => {
+                  if (m.role === "steps") {
+                    return (
+                      <div key={m.id} className="anim-fade-up">
+                        <LifeEventStepsPanel eventId={m.eventId} />
+                      </div>
+                    );
+                  }
 
-              if (m.role === "user") {
-                return (
-                  <div key={m.id} className="flex justify-end gap-2 anim-fade-up">
-                    <div
-                      className="max-w-[80%] px-4 py-3 rounded-2xl bg-primary text-primary-foreground"
-                      style={{ borderBottomRightRadius: "6px" }}
-                    >
-                      <p className="text-[14.5px] leading-relaxed whitespace-pre-line">{m.text}</p>
+                  if (m.role === "user") {
+                    return (
+                      <div key={m.id} className="flex justify-end gap-2 anim-fade-up">
+                        <div
+                          className="max-w-[80%] px-4 py-3 rounded-2xl bg-primary text-primary-foreground"
+                          style={{ borderBottomRightRadius: "6px" }}
+                        >
+                          <p className="text-[14.5px] leading-relaxed whitespace-pre-line">{m.text}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const hasExtras =
+                    !!(m.reply.bullets?.length) ||
+                    !!(m.reply.info?.length) ||
+                    !!(m.reply.documents?.length) ||
+                    !!(m.reply.locations?.length) ||
+                    !!(m.reply.create_life_event || m.reply.event_type);
+
+                  return (
+                    <div key={m.id} className="flex justify-start gap-2 anim-fade-up">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground mt-0.5">
+                        <Sparkles size={14} fill="currentColor" />
+                      </div>
+                      <div className="flex flex-col gap-3 flex-1 min-w-0 max-w-[calc(100%-2.5rem)]">
+                        <div
+                          className="px-4 py-3 rounded-2xl bg-surface-secondary text-foreground border border-border self-start max-w-[85%]"
+                          style={{ borderBottomLeftRadius: "6px" }}
+                        >
+                          <p className="text-[14.5px] leading-relaxed whitespace-pre-line">{m.reply.text}</p>
+                          {m.reply.clarification && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {m.reply.clarification.options.map((opt) => (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  onClick={() => send(opt)}
+                                  className="press text-[12.5px] font-semibold px-3 py-1.5 rounded-full border border-primary text-primary bg-primary-light"
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {hasExtras && (
+                          <ReplyExtras reply={m.reply} onTrackProgress={handleTrackProgress} onSend={send} />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              }
+                  );
+                })}
 
-              // AI message
-              const hasExtras =
-                !!(m.reply.bullets?.length) ||
-                !!(m.reply.info?.length) ||
-                !!(m.reply.documents?.length) ||
-                !!(m.reply.locations?.length) ||
-                !!(m.reply.create_life_event || m.reply.event_type);
-
-              return (
-                <div key={m.id} className="flex justify-start gap-2 anim-fade-up">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground mt-0.5">
-                    <Sparkles size={14} fill="currentColor" />
-                  </div>
-                  <div className="flex flex-col gap-3 flex-1 min-w-0 max-w-[calc(100%-2.5rem)]">
-                    {/* Text bubble */}
+                {typing && (
+                  <div className="flex gap-2 items-end anim-fade-up">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground">
+                      <Sparkles size={14} fill="currentColor" />
+                    </div>
                     <div
-                      className="px-4 py-3 rounded-2xl bg-surface-secondary text-foreground border border-border self-start max-w-[85%]"
+                      className="px-4 py-3 rounded-2xl bg-surface-secondary border border-border"
                       style={{ borderBottomLeftRadius: "6px" }}
                     >
-                      <p className="text-[14.5px] leading-relaxed whitespace-pre-line">{m.reply.text}</p>
-                      {m.reply.clarification && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {m.reply.clarification.options.map((opt) => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => send(opt)}
-                              className="press text-[12.5px] font-semibold px-3 py-1.5 rounded-full border border-primary text-primary bg-primary-light"
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <div className="anim-typing flex gap-1 items-center h-4">
+                        <span className="w-1.5 h-1.5 rounded-full inline-block bg-text-tertiary" />
+                        <span className="w-1.5 h-1.5 rounded-full inline-block bg-text-tertiary" />
+                        <span className="w-1.5 h-1.5 rounded-full inline-block bg-text-tertiary" />
+                      </div>
                     </div>
-
-                    {/* Inline extras */}
-                    {hasExtras && (
-                      <ReplyExtras reply={m.reply} onTrackProgress={handleTrackProgress} onSend={send} />
-                    )}
                   </div>
-                </div>
-              );
-            })}
-
-            {typing && (
-              <div className="flex gap-2 items-end anim-fade-up">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground">
-                  <Sparkles size={14} fill="currentColor" />
-                </div>
-                <div
-                  className="px-4 py-3 rounded-2xl bg-surface-secondary border border-border"
-                  style={{ borderBottomLeftRadius: "6px" }}
-                >
-                  <div className="anim-typing flex gap-1 items-center h-4">
-                    <span className="w-1.5 h-1.5 rounded-full inline-block bg-text-tertiary" />
-                    <span className="w-1.5 h-1.5 rounded-full inline-block bg-text-tertiary" />
-                    <span className="w-1.5 h-1.5 rounded-full inline-block bg-text-tertiary" />
-                  </div>
-                </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+
+            {/* Input bar — pinned below scroll area */}
+            <form
+              onSubmit={(e) => { e.preventDefault(); send(input); }}
+              className="shrink-0 px-4 py-3 bg-background border-t border-primary/20 lg:pb-4"
+            >
+              <div className="relative flex items-center lg:max-w-2xl lg:mx-auto">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Scrie un mesaj..."
+                  aria-label="Mesaj pentru ClaudIA"
+                  className="w-full h-14 pl-5 pr-14 rounded-2xl outline-none text-[15px] bg-surface-secondary border border-border text-foreground shadow-sm focus:border-primary"
+                  style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
+                />
+                <button
+                  type="submit"
+                  aria-label="Trimite"
+                  disabled={!input.trim()}
+                  className="press absolute right-2 w-10 h-10 rounded-xl flex items-center justify-center shadow-md transition-opacity bg-primary text-primary-foreground"
+                  style={{ opacity: input.trim() ? 1 : 0.35 }}
+                >
+                  <Send size={17} strokeWidth={2.2} />
+                </button>
+              </div>
+            </form>
           </div>
         )}
-
-        {/* Input bar */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            send(input);
-          }}
-          className="sticky bottom-16 lg:bottom-0 z-30 px-4 py-3 bg-background border-t border-border"
-        >
-          <div className="relative flex items-center lg:max-w-2xl lg:mx-auto">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Scrie un mesaj..."
-              aria-label="Mesaj pentru ClaudIA"
-              className="w-full h-14 pl-5 pr-14 rounded-2xl outline-none text-[15px] bg-surface-secondary border border-border text-foreground shadow-sm focus:border-primary"
-              style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
-            />
-            <button
-              type="submit"
-              aria-label="Trimite"
-              disabled={!input.trim()}
-              className="press absolute right-2 w-10 h-10 rounded-xl flex items-center justify-center shadow-md transition-opacity bg-primary text-primary-foreground"
-              style={{ opacity: input.trim() ? 1 : 0.35 }}
-            >
-              <Send size={17} strokeWidth={2.2} />
-            </button>
-          </div>
-        </form>
       </div>
     </AppShell>
+  );
+}
+
+/* ───────────── Suggestion dial ───────────── */
+
+const ITEM_H = 52;
+const VISIBLE = 3; // center + 1 above + 1 below visible; ±1 more faded outside
+
+function SuggestionDial({ onSelect }: { onSelect: (q: string) => void }) {
+  const [active, setActive] = useState(0);
+  const touchY = useRef<number | null>(null);
+  const lastWheel = useRef(0);
+  const n = SUGGESTIONS.length;
+
+  const go = (dir: 1 | -1) => setActive((i) => (i + dir + n) % n);
+
+  return (
+    <div
+      className="relative w-full overflow-hidden select-none"
+      style={{ height: ITEM_H * VISIBLE }}
+      onWheel={(e) => {
+        e.preventDefault();
+        const now = Date.now();
+        if (Math.abs(e.deltaY) < 12 || now - lastWheel.current < 220) return;
+        lastWheel.current = now;
+        go(e.deltaY > 0 ? 1 : -1);
+      }}
+      onTouchStart={(e) => { touchY.current = e.touches[0].clientY; }}
+      onTouchEnd={(e) => {
+        if (touchY.current === null) return;
+        const dy = e.changedTouches[0].clientY - touchY.current;
+        if (dy < -18) go(1);
+        else if (dy > 18) go(-1);
+        touchY.current = null;
+      }}
+    >
+      {/* Fade masks — create the drum "exit" effect */}
+      <div className="absolute inset-x-0 top-0 h-[52px] z-10 pointer-events-none bg-gradient-to-b from-background to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-[52px] z-10 pointer-events-none bg-gradient-to-t from-background to-transparent" />
+
+      {/* Center-row highlight */}
+      <div
+        className="absolute inset-x-0 z-0 rounded-2xl bg-primary/5 border border-primary/12"
+        style={{ top: ITEM_H, height: ITEM_H }}
+      />
+
+      {/* Items */}
+      {SUGGESTIONS.map((s, i) => {
+        const raw = ((i - active) % n + n) % n;
+        const d = raw > n / 2 ? raw - n : raw; // normalize to -2..2
+        if (Math.abs(d) > 2) return null;
+
+        const isCenter = d === 0;
+        const opacity = isCenter ? 1 : Math.max(0, 1 - Math.abs(d) * 0.48);
+        const angleDeg = d * -22;
+        const Icon = s.icon;
+
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => (isCenter ? onSelect(s.query) : setActive(i))}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: ITEM_H + d * ITEM_H,
+              height: ITEM_H,
+              opacity,
+              transform: `perspective(480px) rotateX(${angleDeg}deg)`,
+              transformOrigin: "center center",
+              transition: "top 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.32s ease, transform 0.32s cubic-bezier(0.22,1,0.36,1)",
+              zIndex: isCenter ? 2 : 1,
+            }}
+            className="flex items-center gap-3 px-4"
+          >
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-300 ${
+                isCenter ? "bg-primary text-primary-foreground" : "bg-primary/8 text-primary/60"
+              }`}
+            >
+              <Icon size={15} strokeWidth={isCenter ? 2 : 1.7} />
+            </div>
+            <span
+              className={`font-display font-semibold text-[14.5px] transition-colors duration-300 ${
+                isCenter ? "text-foreground" : "text-text-tertiary"
+              }`}
+            >
+              {s.label}
+            </span>
+            {isCenter && (
+              <ArrowRight size={14} className="ml-auto text-primary/40 shrink-0" />
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

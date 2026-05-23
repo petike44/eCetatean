@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
+import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText, CreditCard, Building2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { DrpcivStepsPanel } from "@/components/DrpcivStepsPanel";
 import { locationsCatalog, type LocationItem } from "@/lib/office-locations";

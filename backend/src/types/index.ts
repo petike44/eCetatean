@@ -126,6 +126,7 @@ export interface LifeEventStep {
   form_type: string | null
   payment_url: string | null
   tip: string | null
+  category?: 'docs' | 'financial' | 'onsite'
   online_action?: {
     label: string
     type: 'pdf' | 'url' | 'payment' | 'appointment'

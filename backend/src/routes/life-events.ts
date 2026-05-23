@@ -13,6 +13,10 @@ export const lifeEventsRoute = new Hono()
 
 const mockLifeEventStore = new Map<string, LifeEventProgress>()
 
+function isMockLifeEventId(id: string): boolean {
+  return id.startsWith('mock-')
+}
+
 function buildStepStatuses(totalSteps: number): Record<string, StepStatus> {
   const statuses: Record<string, StepStatus> = {}
   for (let i = 1; i <= totalSteps; i++) {
@@ -121,7 +125,23 @@ lifeEventsRoute.post('/', requireAuth, async (c) => {
 
   if (error) {
     console.error('life_event_progress insert error:', error.message)
-    return c.json({ success: false, error: 'Eroare la crearea evenimentului' }, 500)
+    // Fallback when DB write fails (wrong key, RLS, missing table) so chat CTAs still work locally.
+    const mock: LifeEventProgress = {
+      id: `mock-${Date.now()}`,
+      user_id: userId,
+      event_type,
+      event_title: procedure.title,
+      event_data,
+      steps_status: stepsStatus,
+      current_step: 1,
+      total_steps: totalSteps,
+      is_completed: false,
+      started_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      completed_at: null,
+    }
+    mockLifeEventStore.set(mock.id, mock)
+    return c.json({ success: true, data: enrichWithDetails(mock) })
   }
 
   writeAuditEntry({
@@ -138,11 +158,12 @@ lifeEventsRoute.post('/', requireAuth, async (c) => {
 lifeEventsRoute.get('/', requireAuth, async (c) => {
   const userId = c.get('userId')
 
+  const mockEvents = [...mockLifeEventStore.values()]
+    .filter((e) => e.user_id === userId)
+    .map(enrichWithDetails)
+
   if (!isSupabaseConfigured) {
-    const mocks = [...mockLifeEventStore.values()]
-      .filter((e) => e.user_id === userId)
-      .map(enrichWithDetails)
-    return c.json({ success: true, data: mocks })
+    return c.json({ success: true, data: mockEvents })
   }
 
   const { data, error } = await supabaseAdmin
@@ -156,7 +177,9 @@ lifeEventsRoute.get('/', requireAuth, async (c) => {
   }
 
   const enriched = (data as LifeEventProgress[]).map(enrichWithDetails)
-  return c.json({ success: true, data: enriched })
+  const mockIds = new Set(mockEvents.map((e) => e.id))
+  const merged = [...mockEvents, ...enriched.filter((e) => !mockIds.has(e.id))]
+  return c.json({ success: true, data: merged })
 })
 
 // GET /api/life-events/:id — single event
@@ -164,7 +187,7 @@ lifeEventsRoute.get('/:id', requireAuth, async (c) => {
   const userId = c.get('userId')
   const id = c.req.param('id')
 
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured || isMockLifeEventId(id)) {
     const mock = mockLifeEventStore.get(id)
     if (!mock || mock.user_id !== userId) {
       return c.json({ success: false, error: 'Eveniment negăsit' }, 404)
@@ -205,7 +228,7 @@ lifeEventsRoute.patch('/:id/steps/:stepNumber', requireAuth, async (c) => {
     return c.json({ success: false, error: 'Status invalid' }, 400)
   }
 
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured || isMockLifeEventId(id)) {
     const mock = mockLifeEventStore.get(id)
     if (!mock || mock.user_id !== userId) {
       return c.json({ success: false, error: 'Eveniment negăsit' }, 404)

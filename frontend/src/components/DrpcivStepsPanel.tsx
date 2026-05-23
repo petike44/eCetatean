@@ -13,8 +13,11 @@ import {
   CheckCircle2,
   CreditCard,
   Building2,
+<<<<<<< Updated upstream
   ExternalLink,
   Calendar,
+=======
+>>>>>>> Stashed changes
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import {
@@ -40,6 +43,32 @@ const CATEGORY_META: Record<StepCategory, StepMeta> = {
   onsite:    { label: "Prezentare la ghișeu",   icon: <Building2 size={13} />,  color: "text-green-700", bg: "bg-green-50", border: "border-green-200" },
 };
 
+type StepCategory = "docs" | "financial" | "onsite";
+
+const CATEGORY_META: Record<StepCategory, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
+  docs: {
+    label: "Documente de pregătit",
+    icon: <FileText size={13} />,
+    color: "text-blue-700",
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+  },
+  financial: {
+    label: "Plăți necesare",
+    icon: <CreditCard size={13} />,
+    color: "text-amber-700",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+  },
+  onsite: {
+    label: "Prezentare la ghișeu",
+    icon: <Building2 size={13} />,
+    color: "text-green-700",
+    bg: "bg-green-50",
+    border: "border-green-200",
+  },
+};
+
 // ─── Main panel ──────────────────────────────────────────────────────────────
 
 export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
@@ -50,9 +79,30 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
   const updateStep = useUpdateLifeEventStep();
   const autofillDrpciv = useAutofillDrpciv();
 
+<<<<<<< Updated upstream
   const [vehicleFields, setVehicleFields] = useState<VehicleFields>({ make: "", model: "", vin: "", current_plate: "" });
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [personalFields, setPersonalFields] = useState<PersonalFields>({ email: "", phone: "", county: "Cluj", bloc: "", scara: "", etaj: "", ap: "" });
+=======
+  const firstVehicle = vehicles?.[0];
+
+  const [vehicleFields, setVehicleFields] = useState<VehicleFields>({
+    make: "",
+    model: "",
+    vin: "",
+    current_plate: "",
+  });
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [personalFields, setPersonalFields] = useState<PersonalFields>({
+    email: "",
+    phone: "",
+    county: "Cluj",
+    bloc: "",
+    scara: "",
+    etaj: "",
+    ap: "",
+  });
+>>>>>>> Stashed changes
   const [editingVehicle, setEditingVehicle] = useState(false);
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -62,7 +112,9 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
     setPersonalFields((p) => ({ ...p, email: p.email || profile.email || "", phone: p.phone || profile.phone || "" }));
   }, [profile]);
 
+  // Auto-select first vehicle on load
   useEffect(() => {
+<<<<<<< Updated upstream
     const first = vehicles?.[0];
     if (!first || selectedVehicleId) return;
     applyVehicle(first);
@@ -70,6 +122,23 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
 
   const applyVehicle = (v: Vehicle) => {
     setVehicleFields({ make: v.make ?? "", model: v.model ?? "", vin: v.vin ?? "", current_plate: v.plate_number ?? "" });
+    setSelectedVehicleId(v.id);
+    setEditingVehicle(false);
+  };
+=======
+    if (!firstVehicle || selectedVehicleId) return;
+    applyVehicle(firstVehicle);
+    setSelectedVehicleId(firstVehicle.id);
+  }, [firstVehicle]);
+>>>>>>> Stashed changes
+
+  const applyVehicle = (v: Vehicle) => {
+    setVehicleFields({
+      make: v.make ?? "",
+      model: v.model ?? "",
+      vin: v.vin ?? "",
+      current_plate: v.plate_number ?? "",
+    });
     setSelectedVehicleId(v.id);
     setEditingVehicle(false);
   };
@@ -91,6 +160,7 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
   const missingPersonal = !profile?.full_name || !profile?.cnp || !profile?.address;
   const missingVehicle = !vehicleFields.make || !vehicleFields.vin;
 
+<<<<<<< Updated upstream
   const step1Detail = event.step_details[0];
   const subsequentSteps = event.step_details.slice(1);
 
@@ -98,6 +168,13 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
   const grouped: Record<StepCategory, typeof subsequentSteps> = { docs: [], financial: [], onsite: [] };
   for (const step of subsequentSteps) {
     const cat: StepCategory = ((step as Record<string, unknown>).category as StepCategory) ?? "onsite";
+=======
+  // Group subsequent steps by category
+  const subsequentSteps = event.step_details.slice(1);
+  const grouped: Record<StepCategory, typeof subsequentSteps> = { docs: [], financial: [], onsite: [] };
+  for (const step of subsequentSteps) {
+    const cat: StepCategory = (step as { category?: StepCategory }).category ?? "onsite";
+>>>>>>> Stashed changes
     grouped[cat].push(step);
   }
   const categoryOrder: StepCategory[] = ["docs", "financial", "onsite"];
@@ -142,6 +219,7 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
         </div>
       </div>
 
+<<<<<<< Updated upstream
       {/* ── 📄 Documente de pregătit ── */}
       <CategorySection meta={CATEGORY_META.docs} stepsDone={step1Done ? 1 : 0} stepsTotal={1}>
         <div className="rounded-xl border border-border bg-white overflow-hidden">
@@ -152,6 +230,66 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
               <p className="text-[11px] text-text-secondary mt-0.5">{step1Detail?.office ?? "DRPCIV"} · {step1Detail?.fee ?? "Gratuit"}</p>
             </div>
             {step1Done && <DoneChip />}
+=======
+      {/* Category roadmap overview */}
+      {categoryOrder.some((cat) => grouped[cat].length > 0) && (
+        <div className="rounded-2xl bg-surface border border-border shadow-card p-4">
+          <p className="font-display font-semibold text-[12px] text-text-secondary uppercase tracking-wide mb-3">
+            Ce urmează
+          </p>
+          <div className="flex flex-col gap-2">
+            {/* Step 1 always shown as docs */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-blue-50 text-blue-700 shrink-0">
+                <FileText size={12} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-[12px] font-semibold text-blue-700">Documente de pregătit</span>
+                <span className="text-[11px] text-text-tertiary ml-2">Pasul 1 · Gratuit</span>
+              </div>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border-2 text-[10px] font-bold ${step1Done ? "bg-green-500 border-green-500 text-white" : "border-border text-text-tertiary"}`}>
+                {step1Done ? "✓" : "1"}
+              </span>
+            </div>
+            {categoryOrder.map((cat) => {
+              const steps = grouped[cat];
+              if (steps.length === 0) return null;
+              const meta = CATEGORY_META[cat];
+              const allDone = steps.every((s) => (event.steps_status[`step_${s.order}`] ?? "pending") === "completed");
+              const feeSummary = steps.map((s) => s.fee).filter((f) => f && f !== "Gratuit" && !f.startsWith("Inclus")).join(" + ") || "Gratuit";
+              return (
+                <div key={cat} className="flex items-center gap-2.5">
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${meta.bg} ${meta.color} shrink-0`}>
+                    {meta.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-[12px] font-semibold ${meta.color}`}>{meta.label}</span>
+                    <span className="text-[11px] text-text-tertiary ml-2">{steps.length} {steps.length === 1 ? "pas" : "pași"} · {feeSummary}</span>
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${allDone ? "bg-green-100 text-green-700" : step1Done ? "bg-surface text-text-secondary border border-border" : "bg-surface text-text-tertiary border border-border opacity-60"}`}>
+                    {allDone ? "✓ Gata" : step1Done ? "Urmează" : "Blocat"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Step 1 — active card */}
+      <div className="rounded-2xl border-2 border-primary bg-white shadow-md overflow-hidden">
+        <div className="bg-primary px-4 py-3 flex items-center gap-3">
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+              step1Done ? "bg-green-500" : "bg-white/20 border-2 border-white/60"
+            }`}
+          >
+            {step1Done ? (
+              <Check size={14} className="text-white" />
+            ) : (
+              <span className="text-white font-bold text-[13px]">1</span>
+            )}
+>>>>>>> Stashed changes
           </div>
 
           <div className="px-3 py-3 space-y-3">
@@ -230,11 +368,119 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
               </div>
             )}
 
+<<<<<<< Updated upstream
             <button onClick={handleDownload} disabled={autofillDrpciv.isPending}
               className="press w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold text-[13px] py-2.5 px-4 rounded-xl disabled:opacity-60">
               {autofillDrpciv.isPending
                 ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />Se generează...</>
                 : <><Download size={14} />Descarcă cererea completată (PDF)</>}
+=======
+          {/* Vehicle data */}
+          <DataSection
+            icon={<Car size={13} />}
+            title="Date vehicul"
+            missing={missingVehicle}
+            editMode={editingVehicle}
+            onEdit={() => setEditingVehicle((v) => !v)}
+          >
+            {/* Vehicle selector */}
+            {vehicles && vehicles.length > 0 && (
+              <div className="mt-3 mb-2">
+                <p className="text-[11px] font-semibold text-text-secondary mb-1.5">Selectează vehiculul din profilul tău:</p>
+                <div className="flex flex-wrap gap-2">
+                  {vehicles.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => applyVehicle(v)}
+                      className={`press flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-semibold transition-all ${
+                        selectedVehicleId === v.id
+                          ? "bg-primary text-white border-primary"
+                          : "bg-surface-secondary text-foreground border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <Car size={11} />
+                      {v.make ?? "?"} {v.model ?? ""} {v.plate_number ? `· ${v.plate_number}` : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(!vehicles || vehicles.length === 0) && !editingVehicle && (
+              <FieldNote text="Nu ai vehicule salvate. Completează datele manual sau adaugă un vehicul din Profil." />
+            )}
+
+            {editingVehicle ? (
+              <div className="space-y-2 mt-2">
+                <InputRow label="Marcă" value={vehicleFields.make} onChange={(v) => setVehicleFields((f) => ({ ...f, make: v }))} placeholder="ex. Volkswagen" />
+                <InputRow label="Tip / Model" value={vehicleFields.model} onChange={(v) => setVehicleFields((f) => ({ ...f, model: v }))} placeholder="ex. Golf 7" />
+                <InputRow label="Serie șasiu (VIN)" value={vehicleFields.vin} onChange={(v) => setVehicleFields((f) => ({ ...f, vin: v }))} placeholder="17 caractere" />
+                <InputRow label="Nr. înmatriculare curent" value={vehicleFields.current_plate} onChange={(v) => setVehicleFields((f) => ({ ...f, current_plate: v }))} placeholder="ex. CJ-01-ABC" />
+                <button onClick={() => setEditingVehicle(false)} className="press w-full py-2 rounded-xl bg-primary text-white text-[13px] font-semibold">Salvează</button>
+              </div>
+            ) : (
+              <div className="mt-2 space-y-1.5">
+                <FieldRow label="Marcă" value={vehicleFields.make} required />
+                <FieldRow label="Tip / Model" value={vehicleFields.model} />
+                <FieldRow label="Serie șasiu (VIN)" value={vehicleFields.vin} required />
+                <FieldRow label="Nr. înmatriculare curent" value={vehicleFields.current_plate} />
+              </div>
+            )}
+          </DataSection>
+
+          {/* Operation type */}
+          <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
+            <FileText size={13} className="text-blue-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[11px] font-semibold text-blue-700">Tipul operației</p>
+              <p className="text-[12px] text-blue-800 mt-0.5">
+                Transcriere a transmiterii dreptului de proprietate (cumpărare vehicul)
+              </p>
+            </div>
+          </div>
+
+          {/* Missing data warning */}
+          {(missingPersonal || missingVehicle) && (
+            <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
+              <AlertCircle size={13} className="text-orange-600 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-orange-800">
+                {missingPersonal
+                  ? "Profilul tău este incomplet. Completează Numele, CNP-ul și Adresa din Profil."
+                  : "Completează datele vehiculului (Marcă și VIN)."}
+              </p>
+            </div>
+          )}
+
+          {/* Download */}
+          <button
+            onClick={handleDownload}
+            disabled={autofillDrpciv.isPending}
+            className="press w-full flex items-center justify-center gap-2 bg-primary text-white font-semibold text-[13px] py-3 px-4 rounded-xl disabled:opacity-60"
+          >
+            {autofillDrpciv.isPending ? (
+              <>
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                Se generează...
+              </>
+            ) : (
+              <>
+                <Download size={15} />
+                Descarcă cererea completată (PDF)
+              </>
+            )}
+          </button>
+
+          {/* Confirm step */}
+          {!step1Done && (
+            <button
+              onClick={handleConfirmStep1}
+              disabled={!downloaded || updateStep.isPending}
+              className="press w-full flex items-center justify-center gap-2 border-2 border-green-500 text-green-700 font-semibold text-[13px] py-2.5 px-4 rounded-xl disabled:opacity-40 bg-green-50"
+              title={!downloaded ? "Descarcă cererea mai întâi" : ""}
+            >
+              <CheckCircle2 size={15} />
+              Am tipărit și semnat → Pasul 1 finalizat
+>>>>>>> Stashed changes
             </button>
             {!step1Done ? (
               <button onClick={() => handleMarkStep(1)} disabled={!downloaded || updateStep.isPending}
@@ -259,6 +505,7 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
         const meta = CATEGORY_META[cat];
         const doneInCat = steps.filter((s) => (event.steps_status[`step_${s.order}`] ?? "pending") === "completed").length;
 
+<<<<<<< Updated upstream
         return (
           <CategorySection key={cat} meta={meta} stepsDone={doneInCat} stepsTotal={steps.length}>
             <div className="space-y-2">
@@ -302,6 +549,39 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
               })}
             </div>
           </CategorySection>
+=======
+      {/* Grouped subsequent steps */}
+      {categoryOrder.map((cat) => {
+        const steps = grouped[cat];
+        if (steps.length === 0) return null;
+        const meta = CATEGORY_META[cat];
+        return (
+          <div key={cat}>
+            {/* Category header */}
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${meta.bg} ${meta.border} border mb-2`}>
+              <span className={meta.color}>{meta.icon}</span>
+              <span className={`font-display font-semibold text-[12px] ${meta.color}`}>{meta.label}</span>
+            </div>
+            <div className="space-y-2">
+              {steps.map((step) => {
+                const key = `step_${step.order}`;
+                const status: StepStatus = event.steps_status[key] ?? "pending";
+                const isUnlocked = step1Done || status === "completed";
+                return (
+                  <LockedStep
+                    key={step.order}
+                    order={step.order}
+                    title={step.title}
+                    office={step.office}
+                    fee={step.fee}
+                    status={status}
+                    unlocked={isUnlocked}
+                  />
+                );
+              })}
+            </div>
+          </div>
+>>>>>>> Stashed changes
         );
       })}
 

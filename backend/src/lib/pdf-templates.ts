@@ -37,6 +37,7 @@ interface ProfileData {
   cnp?: string | null
   address?: string | null
   city?: string | null
+  email?: string | null
   buletin_series?: string | null
   buletin_number?: string | null
 }
@@ -154,14 +155,27 @@ export async function generatePDF(
       break
 
     case 'anaf_tva_certificate_request':
+      // ANAF form for TVA certificate on intra-EU transport purchases
       inputs = [
         {
-          'Solicitant — Nume': profile.full_name ?? '_______________',
-          'Solicitant — CNP': profile.cnp ?? '_______________',
-          'Solicitant — Adresă': `${profile.address ?? ''}, ${profile.city ?? 'Cluj-Napoca'}`,
-          'Vehicul — Marcă și Model': additionalData.vehicle ?? '_______________',
-          'Număr de identificare (VIN)': additionalData.vin ?? '_______________',
-          'Data achiziției din UE': additionalData.purchase_date ?? '_______________',
+          'Denumire/Nume, Prenume': profile.full_name ?? '_______________',
+          'Cod de identificare fiscală': additionalData.fiscal_code ?? '_______________',
+          'Cod numeric personal': profile.cnp ?? '_______________',
+          'Cod de înregistrare în scopuri TVA': additionalData.tva_code ?? '_____',
+          // Address fields
+          Județ: additionalData.county ?? 'Cluj',
+          Localitate: profile.city ?? 'Cluj-Napoca',
+          Strada: profile.address ?? '_______________',
+          'E-mail': additionalData.email ?? profile.email ?? '_______________',
+          Telefon: additionalData.phone ?? '_______________',
+          // Vehicle fields
+          'Categorie vehicul': 'Vehicul terestru',
+          Marcă: additionalData.make ?? '_______________',
+          'Denumire comercială': `${additionalData.make ?? ''} ${additionalData.model ?? ''}`.trim(),
+          'Număr identificare/Șasiu': additionalData.vin ?? '_______________',
+          'Număr omologare': additionalData.homologation_number ?? '_______________',
+          // Declaration
+          'Declar sub sancțiuni că datele sunt corecte': 'DA',
           Data: today,
           Semnătură: '_______________',
         },
@@ -169,16 +183,28 @@ export async function generatePDF(
       break
 
     case 'cerere_drpciv':
+      // DRPCIV request form for vehicle registration from EU
       inputs = [
         {
-          'Subsemnatul/a': profile.full_name ?? '_______________',
-          CNP: profile.cnp ?? '_______________',
-          'Domiciliat(ă) în': `${profile.address ?? ''}, ${profile.city ?? 'Cluj-Napoca'}`,
-          'Act de identitate seria': `${profile.buletin_series ?? '___'} nr. ${profile.buletin_number ?? '___________'}`,
-          'Solicit înmatricularea auto': additionalData.vehicle ?? '_______________',
-          'Număr de identificare (VIN)': additionalData.vin ?? '_______________',
-          'Culoare': additionalData.color ?? '_______________',
-          'An fabricație': additionalData.year ?? '_______________',
+          'Subsemnatul(a)': profile.full_name ?? '_______________',
+          'C.N.P. (C.U.I.)': profile.cnp ?? '_______________',
+          Localitate: profile.city ?? 'Cluj-Napoca',
+          Strada: profile.address ?? '_______________',
+          Județ: additionalData.county ?? 'Cluj',
+          'E-mail': additionalData.email ?? profile.email ?? '_______________',
+          Telefon: additionalData.phone ?? '_______________',
+          'Solicit: Înmatricularea': 'X',
+          'Vehicul — Marcă': additionalData.make ?? '_______________',
+          'Vehicul — Tip': additionalData.model ?? '_______________',
+          'Vehicul — Număr identificare': additionalData.vin ?? '_______________',
+          'Vehicul — Număr înmatriculare curent': additionalData.current_plate ?? '_____',
+          // Optional: other person using vehicle
+          'Altă persoană — Nume': additionalData.other_person_name ?? '',
+          'Altă persoană — C.N.P.': additionalData.other_person_cnp ?? '',
+          // Agreements
+          'Acord cont internet': 'DA',
+          'Acord notificări e-mail': 'DA',
+          'Declar că am citit Nota de Informare': 'DA',
           Data: today,
           Semnătură: '_______________',
         },

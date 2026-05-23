@@ -36,6 +36,13 @@ export const OFFICES: Record<string, OfficeInfo> = {
     phone: '0264-531.155',
     notes: 'Transferul medicului de familie se face direct la noul cabinet.',
   },
+  anaf_cluj: {
+    name: 'Agenția Națională de Administrare Fiscală — Cluj',
+    address: 'Str. Gh. Doja 67, Cluj-Napoca',
+    hours: 'Luni–Vineri: 08:00–16:30',
+    phone: '0264-591.890',
+    notes: 'Orice birou ANAF din țară poate emite certificatul de TVA.',
+  },
 }
 
 export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
@@ -260,6 +267,144 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       },
     ],
   },
+  car_from_germany: {
+    event_type: 'car_from_germany',
+    title: 'Am cumpărat o mașină din Germania (UE)',
+    emoji: '🚗🇩🇪',
+    summary: 'Înmatriculare de vehicul din UE — 7 pași obligatori cu documente pre-completate.',
+    total_estimated_time: '7–10 zile lucrătoare',
+    steps: [
+      {
+        order: 1,
+        title: 'Obții documentul de proprietate și dovada fiscală',
+        office: 'Autoritatea fiscală din țara de proveniență',
+        address: 'Variabil (țara de origine a vehiculului)',
+        hours: 'Variabil',
+        phone: 'Contactează vânzătorul',
+        documents: [
+          'Act de proprietate original + copie (din țara de origen)',
+          'Certificat de înmatriculare din țara de origen',
+          'Dovada declarării fiscale la autoritatea locală (cu nr. REMTII)',
+        ],
+        fee: 'Variabil — plătit deja în țara de origen',
+        deadline: 'Înainte de a veni în România',
+        form_type: null,
+        payment_url: null,
+        tip: 'Cere vânzătorului toate documentele în original. Documentul trebuie să fie înregistrat fiscal în România ÎNAINTE de depunerea la DRPCIV.',
+      },
+      {
+        order: 2,
+        title: 'Înregistrezi vehiculul la autoritatea fiscală locală din România',
+        office: 'Primăria/Finanțe locale Cluj-Napoca',
+        address: 'Calea Moților 3, Cluj-Napoca',
+        hours: 'Luni–Joi: 08:00–16:00 | Vineri: 08:00–13:00',
+        phone: '0264-596.030',
+        documents: [
+          'Act de proprietate + copie (cu nr. REMTII din țara de origen)',
+          'Buletin (original + copie)',
+          'Carnet de identificare a vehiculului (CIV) din țara de origen',
+          'Contract de cumpărare-vânzare',
+        ],
+        fee: 'Gratuit — înregistrare de proprietate',
+        deadline: 'PRIORITAR — înainte de pasul 3',
+        form_type: null,
+        payment_url: null,
+        tip: 'Autoritatea fiscală va ștampila documentul cu nr. REMTII. Aceasta e dovada că ai dreptul legal de proprietate în România.',
+      },
+      {
+        order: 3,
+        title: 'Depui cererea de înmatriculare la DRPCIV',
+        office: 'DRPCIV Cluj — Înmatriculări și Permise',
+        address: 'Str. Traian Vuia 1-4, Cluj-Napoca',
+        hours: 'Luni–Vineri: 08:00–16:00',
+        phone: '0264-420.464',
+        documents: [
+          'Cererea de înmatriculare (Cerere DRPCIV) — generez noi',
+          'Act de identitate (original + copie)',
+          'Carnet de identitate vehicul (CIV) original',
+          'Act de proprietate original ștampilat cu REMTII de finanțe',
+          'Dovada achitării certificatului de înmatriculare (49 RON)',
+          'RCA (asigurare de răspundere civilă) — copie valabilă',
+        ],
+        fee: '49 RON certificat înmatriculare + ITP/RCA inițiale',
+        deadline: 'După ce ai REMTII din finanțe',
+        form_type: 'cerere_drpciv',
+        payment_url: 'https://www.ghiseu.ro',
+        tip: 'Programare online pe politiaromana.ro (3-5 zile). Plata certificatului se poate face online pe ghiseu.ro, nu trebuie dovadă la ghișeu.',
+      },
+      {
+        order: 4,
+        title: 'Depui cerificatul ANAF pentru TVA (dacă nu ești înregistrat)',
+        office: 'Agenția Națională de Administrare Fiscală — Cluj',
+        address: 'Str. Gh. Doja 67, Cluj-Napoca',
+        hours: 'Luni–Vineri: 08:00–16:30',
+        phone: '0264-591.890',
+        documents: [
+          'Cerere ANAF pentru Certificat TVA — generez noi',
+          'Dovada achiziției intracomunitare (factura)',
+          'Identificarea vehiculului și a vânzătorului din UE',
+          'Buletin (copie)',
+        ],
+        fee: 'Gratuit — emitere certificat',
+        deadline: 'Dacă nu ești înregistrat în scopuri TVA',
+        form_type: 'anaf_tva_certificate_request',
+        payment_url: null,
+        tip: 'Completează online cererea sau la ghișeu. Cu certificatul ăsta, DRPCIV confiră că ai plătit TVA.',
+      },
+      {
+        order: 5,
+        title: 'Plătești impozitul auto la finanțe',
+        office: 'Primăria Municipiului Cluj-Napoca — Taxe și Impozite',
+        address: 'Calea Moților 3, Cluj-Napoca',
+        hours: 'Luni–Joi: 08:00–16:00 | Vineri: 08:00–13:00',
+        phone: '0264-596.030',
+        documents: [
+          'Noul certificat de înmatriculare (copie)',
+          'Dovada achiziției intracomunitare',
+        ],
+        fee: 'Impozit auto anual — variabil după cilindree și combustibil',
+        deadline: 'Imediat după primirea certificatului',
+        form_type: 'impozit_auto',
+        payment_url: 'https://www.ghiseu.ro',
+        tip: 'Calculatorul pe ghiseu.ro îți va zice taxa exactă. Plata se face direct online, fără deplasare.',
+      },
+      {
+        order: 6,
+        title: 'Obții plăcuțe cu numărul de înmatriculare',
+        office: 'DRPCIV Cluj (sau prin furnizor autorizat)',
+        address: 'Str. Traian Vuia 1-4, Cluj-Napoca',
+        hours: 'Luni–Vineri: 08:00–16:00',
+        phone: '0264-420.464',
+        documents: [
+          'Certificat de înmatriculare (copie)',
+          'Dovada plății plăcuțelor',
+        ],
+        fee: 'Plăcuțe metalice: ~90–150 RON (variabil)',
+        deadline: 'După primirea certificatului, înainte de a circula',
+        form_type: null,
+        payment_url: 'https://www.ghiseu.ro',
+        tip: 'Placa se comandă online pe ghiseu.ro și se livrează la adresa ta în 5–10 zile.',
+      },
+      {
+        order: 7,
+        title: 'Inspecție la ITP și viza pe RCA',
+        office: 'Stație ITP autorizată + Agenție asigurări',
+        address: 'Orice stație ITP din Cluj-Napoca',
+        hours: 'Luni–Vineri: 09:00–17:00 | Sâmbătă: 09:00–13:00',
+        phone: 'Variabil — stații ITP',
+        documents: [
+          'Certificat de înmatriculare (original)',
+          'Buletin (original)',
+          'Asigurare RCA activ cu viza ITP',
+        ],
+        fee: 'ITP: 80–150 RON | Viza RCA: gratuit pe chitanță asigurare',
+        deadline: 'Înainte de circulația pe drumul public',
+        form_type: null,
+        payment_url: null,
+        tip: 'ITP-ul din UE nu e valabil în România. Trebuie refăcut de la zero. Mergi la orice stație autorizată cu ștampila CNIR.',
+      },
+    ],
+  },
 }
 
 export function findProcedure(eventType: string): LifeEventProcedure | null {
@@ -268,6 +413,17 @@ export function findProcedure(eventType: string): LifeEventProcedure | null {
 
 export function detectEventType(message: string): string | null {
   const msg = message.toLowerCase()
+
+  // Car from Germany / EU (higher priority than generic bought_car)
+  if (
+    (msg.includes('mașin') || msg.includes('masin') || msg.includes('auto')) &&
+    (msg.includes('germania') || msg.includes('germani') || msg.includes('ue') ||
+     msg.includes('europa') || msg.includes('intracomunitara') || msg.includes('import') ||
+     msg.includes('din afar') || msg.includes('din strain'))
+  )
+    return 'car_from_germany'
+
+  // Generic car purchase
   if (
     msg.includes('mașin') ||
     msg.includes('masin') ||
@@ -276,6 +432,7 @@ export function detectEventType(message: string): string | null {
     msg.includes('cumparat')
   )
     return 'bought_car'
+
   if (
     msg.includes('facultate') ||
     msg.includes('universitate') ||

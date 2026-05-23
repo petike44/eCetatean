@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import { Send, Info, MapPin, Clock, Phone, Navigation2, ChevronLeft, ChevronRight, X, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
+import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { DrpcivStepsPanel } from "@/components/DrpcivStepsPanel";
 import { locationsCatalog, type LocationItem } from "@/lib/office-locations";
 import type { DocItem } from "@/lib/chat-types";
 import { useUser } from "@/lib/clerk-stub";
@@ -40,7 +41,8 @@ type Reply = {
 
 type Msg =
   | { id: number; role: "user"; text: string }
-  | { id: number; role: "ai"; reply: Reply };
+  | { id: number; role: "ai"; reply: Reply }
+  | { id: number; role: "steps"; eventId: string; eventType: string };
 
 const SUGGESTIONS: { label: string; icon: typeof Car; query: string }[] = [
   { label: "Mașină din Germania", icon: Car, query: "Am adus o mașină din Germania" },
@@ -75,11 +77,7 @@ function navigateAfterLifeEvent(
   eventType: string,
   eventId: string,
 ) {
-  if (eventType === "bought_car" || eventType === "car_domestic") {
-    nav({ to: "/drpciv/$eventId", params: { eventId } });
-  } else {
-    nav({ to: "/life-event/$id", params: { id: eventId } });
-  }
+  nav({ to: "/life-event/$id", params: { id: eventId } });
 }
 
 type ActionPlanProcedure = {
@@ -217,9 +215,15 @@ function Chat() {
     });
   }, [displayName, profileLoading]);
   const [input, setInput] = useState("");
-  const [panelReply, setPanelReply] = useState<Reply | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typing = sendChat.isPending;
+
+  const handleTrackProgress = (eventId: string, eventType: string) => {
+    setMsgs((prev) => [
+      ...prev,
+      { id: Date.now(), role: "steps", eventId, eventType },
+    ]);
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -229,13 +233,12 @@ function Chat() {
     const t = text.trim();
     if (!t) return;
     setInput("");
-    setPanelReply(null);
     setMsgs((p) => [...p, { id: Date.now(), role: "user", text: t }]);
 
     const history: ChatMessage[] = [];
     for (const m of msgs.slice(1)) {
       if (m.role === "user") history.push({ role: "user", content: m.text });
-      else history.push({ role: "assistant", content: m.reply.text });
+      else if (m.role === "ai") history.push({ role: "assistant", content: m.reply.text });
     }
     history.push({ role: "user", content: t });
 
@@ -246,7 +249,6 @@ function Chat() {
       });
       const r = mapChunksToReply(chunks);
       setMsgs((p) => [...p, { id: Date.now() + 1, role: "ai", reply: r }]);
-      if (r.bullets || r.documents || r.locations) setPanelReply(r);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Eroare necunoscută";
       setMsgs((p) => [...p, { id: Date.now() + 1, role: "ai", reply: { text: `⚠️ ${message}` } }]);
@@ -280,9 +282,8 @@ function Chat() {
     <AppShell
       topBar={chatTopBar}
       desktopScrollable={false}
-      className="flex flex-col lg:flex-row lg:flex-1 lg:overflow-hidden"
+      className="flex flex-col lg:flex-1 lg:overflow-hidden"
     >
-      {/* ── Chat column ── */}
       <div
         className="flex flex-col min-h-[calc(100dvh-56px-64px)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
         style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
@@ -334,49 +335,74 @@ function Chat() {
           </div>
         ) : (
           /* ───── CONVERSATION STATE ───── */
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
-            {msgs.slice(1).map((m) => (
-              <div
-                key={m.id}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} gap-2 anim-fade-up`}
-              >
-                {m.role === "ai" && (
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          <div className="px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
+            {msgs.slice(1).map((m) => {
+              if (m.role === "steps") {
+                return (
+                  <div key={m.id} className="anim-fade-up">
+                    <DrpcivStepsPanel eventId={m.eventId} />
+                  </div>
+                );
+              }
+
+              if (m.role === "user") {
+                return (
+                  <div key={m.id} className="flex justify-end gap-2 anim-fade-up">
+                    <div
+                      className="max-w-[80%] px-4 py-3 rounded-2xl bg-primary text-primary-foreground"
+                      style={{ borderBottomRightRadius: "6px" }}
+                    >
+                      <p className="text-[14.5px] leading-relaxed whitespace-pre-line">{m.text}</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              // AI message
+              const hasExtras =
+                !!(m.reply.bullets?.length) ||
+                !!(m.reply.info?.length) ||
+                !!(m.reply.documents?.length) ||
+                !!(m.reply.locations?.length) ||
+                !!(m.reply.create_life_event || m.reply.event_type);
+
+              return (
+                <div key={m.id} className="flex justify-start gap-2 anim-fade-up">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground mt-0.5">
                     <Sparkles size={14} fill="currentColor" />
                   </div>
-                )}
-                <div
-                  className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-surface-secondary text-foreground border border-border"
-                  }`}
-                  style={
-                    m.role === "user"
-                      ? { borderBottomRightRadius: "6px" }
-                      : { borderBottomLeftRadius: "6px" }
-                  }
-                >
-                  <p className="text-[14.5px] leading-relaxed whitespace-pre-line">
-                    {m.role === "user" ? m.text : m.reply.text}
-                  </p>
-                  {m.role === "ai" && m.reply.clarification && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {m.reply.clarification.options.map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => send(opt)}
-                          className="press text-[12.5px] font-semibold px-3 py-1.5 rounded-full border border-primary text-primary bg-primary-light"
-                        >
-                          {opt}
-                        </button>
-                      ))}
+                  <div className="flex flex-col gap-3 flex-1 min-w-0 max-w-[calc(100%-2.5rem)]">
+                    {/* Text bubble */}
+                    <div
+                      className="px-4 py-3 rounded-2xl bg-surface-secondary text-foreground border border-border self-start max-w-[85%]"
+                      style={{ borderBottomLeftRadius: "6px" }}
+                    >
+                      <p className="text-[14.5px] leading-relaxed whitespace-pre-line">{m.reply.text}</p>
+                      {m.reply.clarification && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {m.reply.clarification.options.map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => send(opt)}
+                              className="press text-[12.5px] font-semibold px-3 py-1.5 rounded-full border border-primary text-primary bg-primary-light"
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Inline extras */}
+                    {hasExtras && (
+                      <ReplyExtras reply={m.reply} onTrackProgress={handleTrackProgress} onSend={send} />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {typing && (
               <div className="flex gap-2 items-end anim-fade-up">
@@ -395,6 +421,7 @@ function Chat() {
                 </div>
               </div>
             )}
+          </div>
           </div>
         )}
 
@@ -427,169 +454,37 @@ function Chat() {
           </div>
         </form>
       </div>
-
-      {/* ── Desktop result panel (right column) ── */}
-      {panelReply && (
-        <aside className="hidden lg:flex lg:flex-col lg:w-[400px] lg:shrink-0 lg:border-l lg:border-border lg:overflow-y-auto bg-surface">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-surface z-10">
-            <p className="font-display font-semibold text-[15px] text-text-primary">Detalii răspuns</p>
-            <button
-              onClick={() => setPanelReply(null)}
-              aria-label="Închide panoul"
-              className="press p-1.5 rounded-lg text-text-tertiary hover:bg-surface-secondary"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div className="px-5 py-4 space-y-5">
-            <PageAnswer reply={panelReply} />
-            {(panelReply.documents?.length ?? 0) > 0 && (
-              <div>
-                <p className="font-display font-semibold text-[14px] text-text-primary mb-3">Documente necesare</p>
-                <div className="space-y-2.5">
-                  {panelReply.documents!.map((d) => <DocCard key={d.name} doc={d} />)}
-                </div>
-              </div>
-            )}
-            {(panelReply.locations?.length ?? 0) > 0 && (
-              <div>
-                <p className="font-display font-semibold text-[14px] text-text-primary mb-3">Locații</p>
-                <PageMap locations={panelReply.locations!} />
-              </div>
-            )}
-          </div>
-        </aside>
-      )}
-
-      {/* ── Mobile result panel (bottom sheet) ── */}
-      {panelReply && (
-        <div className="lg:hidden">
-          <ResultPanel reply={panelReply} onClose={() => setPanelReply(null)} />
-        </div>
-      )}
     </AppShell>
   );
 }
 
-/* ───────────── Result Panel ───────────── */
+/* ───────────── Inline reply extras ───────────── */
 
-function ResultPanel({ reply, onClose }: { reply: Reply; onClose: () => void }) {
-  const hasLocations = !!reply.locations?.length;
-  const pages: ("answer" | "docs" | "map")[] = ["answer", "docs"];
-  if (hasLocations) pages.push("map");
-  const [page, setPage] = useState(0);
-  const [dragY, setDragY] = useState(0);
-  const startY = useRef<number | null>(null);
-  const startX = useRef<number | null>(null);
+const DRPCIV_EVENT_TYPES = new Set(["bought_car", "car_domestic", "car_from_germany"]);
 
-  const onHandleStart = (y: number) => { startY.current = y; };
-  const onHandleMove = (y: number) => {
-    if (startY.current == null) return;
-    const dy = y - startY.current;
-    if (dy > 0) setDragY(Math.min(dy, 400));
-  };
-  const onHandleEnd = () => {
-    if (dragY > 120) onClose();
-    setDragY(0);
-    startY.current = null;
-  };
-
-  const onTrackStart = (x: number) => { startX.current = x; };
-  const onTrackEnd = (x: number) => {
-    if (startX.current == null) return;
-    const dx = x - startX.current;
-    if (dx < -50 && page < pages.length - 1) setPage(page + 1);
-    if (dx > 50 && page > 0) setPage(page - 1);
-    startX.current = null;
-  };
-
-  return (
-    <div
-      className="fixed left-0 right-0 z-40 mx-auto max-w-[440px] md:max-w-[640px] lg:max-w-[480px] bg-surface rounded-t-3xl shadow-sheet border-t border-border anim-fade-up"
-      style={{
-        bottom: "calc(64px + 64px)", // bottom nav + input
-        height: "55vh",
-        transform: `translateY(${dragY}px)`,
-        transition: startY.current == null ? "transform 200ms ease" : "none",
-      }}
-      role="dialog"
-      aria-label="Detalii răspuns ClaudIA"
-    >
-      {/* Drag handle + close */}
-      <div
-        className="flex flex-col items-center pt-2 pb-1 cursor-grab touch-none select-none"
-        onTouchStart={(e) => onHandleStart(e.touches[0].clientY)}
-        onTouchMove={(e) => onHandleMove(e.touches[0].clientY)}
-        onTouchEnd={onHandleEnd}
-        onMouseDown={(e) => onHandleStart(e.clientY)}
-      >
-        <div className="w-10 h-1 bg-border rounded-full" />
-      </div>
-      <button
-        onClick={onClose}
-        aria-label="Închide panoul"
-        className="press absolute top-2 right-3 p-1.5 rounded-lg text-text-tertiary"
-      >
-        <X size={18} />
-      </button>
-
-      {/* Dots indicator */}
-      <div className="flex justify-center gap-1.5 py-1.5">
-        {pages.map((p, i) => (
-          <button
-            key={p}
-            onClick={() => setPage(i)}
-            aria-label={`Pagina ${i + 1}`}
-            className={`h-1.5 rounded-full transition-all ${i === page ? "w-6 bg-accent" : "w-1.5 bg-border"}`}
-          />
-        ))}
-      </div>
-
-      {/* Pages track */}
-      <div
-        className="relative overflow-hidden"
-        style={{ height: "calc(55vh - 56px)" }}
-        onTouchStart={(e) => onTrackStart(e.touches[0].clientX)}
-        onTouchEnd={(e) => onTrackEnd(e.changedTouches[0].clientX)}
-      >
-        <div
-          className="flex h-full transition-transform duration-300 ease-out"
-          style={{ width: `${pages.length * 100}%`, transform: `translateX(-${page * (100 / pages.length)}%)` }}
-        >
-          <div className="h-full overflow-y-auto px-5 pb-6" style={{ width: `${100 / pages.length}%` }}>
-            <PageAnswer reply={reply} />
-            {pages.length > 1 && (
-              <p className="text-[11px] text-text-tertiary text-right mt-3">
-                Documente <ChevronRight size={11} className="inline -mt-0.5" />
-              </p>
-            )}
-          </div>
-          <div className="h-full overflow-y-auto px-5 pb-6" style={{ width: `${100 / pages.length}%` }}>
-            <PageDocs documents={reply.documents ?? []} />
-            <div className="flex justify-between text-[11px] text-text-tertiary mt-3">
-              <span><ChevronLeft size={11} className="inline -mt-0.5" /> Răspuns</span>
-              {hasLocations && <span>Hartă <ChevronRight size={11} className="inline -mt-0.5" /></span>}
-            </div>
-          </div>
-          {hasLocations && (
-            <div className="h-full overflow-y-auto px-5 pb-6" style={{ width: `${100 / pages.length}%` }}>
-              <PageMap locations={reply.locations!} />
-              <p className="text-[11px] text-text-tertiary mt-3">
-                <ChevronLeft size={11} className="inline -mt-0.5" /> Documente
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PageAnswer({ reply }: { reply: Reply }) {
+function ReplyExtras({
+  reply,
+  onTrackProgress,
+  onSend,
+}: {
+  reply: Reply;
+  onTrackProgress: (id: string, type: string) => void;
+  onSend: (text: string) => void;
+}) {
   const nav = useNavigate();
   const createLifeEvent = useCreateLifeEvent();
   const { show } = useToast();
   const [creating, setCreating] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const hasBullets = (reply.bullets?.length ?? 0) > 0;
+  const previewBullets = reply.bullets?.slice(0, 2) ?? [];
+  const totalSteps = reply.bullets?.length ?? 0;
+  const hasMore =
+    totalSteps > 2 ||
+    (reply.info?.length ?? 0) > 0 ||
+    (reply.documents?.length ?? 0) > 0 ||
+    (reply.locations?.length ?? 0) > 0;
 
   const createAndOpenPlan = async () => {
     if (!reply.event_type) {
@@ -599,7 +494,11 @@ function PageAnswer({ reply }: { reply: Reply }) {
     setCreating(true);
     try {
       const result = await createLifeEvent.mutateAsync({ event_type: reply.event_type });
-      navigateAfterLifeEvent(nav, reply.event_type, result.id);
+      if (DRPCIV_EVENT_TYPES.has(reply.event_type)) {
+        onTrackProgress(result.id, reply.event_type);
+      } else {
+        navigateAfterLifeEvent(nav, reply.event_type, result.id);
+      }
     } catch {
       show("error", "Eroare la crearea evenimentului civic");
       setCreating(false);
@@ -614,71 +513,141 @@ function PageAnswer({ reply }: { reply: Reply }) {
   };
 
   return (
-    <div className="pt-2 space-y-4">
-      <div className="bg-surface border border-border rounded-2xl p-4 shadow-card">
-        <p className="text-[14.5px] leading-relaxed text-text-primary">{reply.text}</p>
-        {reply.bullets && (
-          <div className="mt-4">
-            <p className="font-display font-semibold text-[13px] text-text-primary mb-2">Pașii necesari</p>
-            <ul className="text-[13.5px] text-text-secondary space-y-1 list-disc list-inside marker:text-accent">
-              {reply.bullets.map((b) => <li key={b}>{b}</li>)}
-            </ul>
+    <div className="flex flex-col gap-2.5">
+      {/* Compact preview card */}
+      {hasBullets && (
+        <div className="bg-surface border border-border rounded-2xl p-4 shadow-card">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-display font-semibold text-[13px] text-text-primary">
+              Plan în {totalSteps} pași
+            </p>
+            {reply.info?.find((i) => i.label === "Timp estimat") && (
+              <span className="text-[11px] font-semibold text-primary bg-primary-light px-2 py-0.5 rounded-full">
+                {reply.info.find((i) => i.label === "Timp estimat")!.value}
+              </span>
+            )}
           </div>
-        )}
-        {reply.info && (
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {reply.info.map((i) => (
-              <div key={i.label} className="bg-primary-light rounded-xl p-3">
-                <p className="font-display font-semibold text-[12px] text-primary">{i.label}</p>
-                <p className="text-[12.5px] text-text-secondary mt-0.5">{i.value}</p>
-              </div>
-            ))}
+          <ul className="text-[13px] text-text-secondary space-y-1 list-disc list-inside marker:text-accent">
+            {previewBullets.map((b) => <li key={b}>{b}</li>)}
+          </ul>
+          {!expanded && hasMore && (
+            <p className="text-[12px] text-text-tertiary mt-1.5 ml-0.5">
+              +{totalSteps - 2} pași suplimentari...
+            </p>
+          )}
+
+          {/* Expanded content */}
+          {expanded && (
+            <div className="mt-3 flex flex-col gap-3">
+              {totalSteps > 2 && (
+                <ul className="text-[13px] text-text-secondary space-y-1 list-disc list-inside marker:text-accent">
+                  {reply.bullets!.slice(2).map((b) => <li key={b}>{b}</li>)}
+                </ul>
+              )}
+              {reply.info && reply.info.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {reply.info.map((i) => (
+                    <div key={i.label} className="bg-primary-light rounded-xl p-3">
+                      <p className="font-display font-semibold text-[12px] text-primary">{i.label}</p>
+                      <p className="text-[12.5px] text-text-secondary mt-0.5">{i.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {reply.documents && reply.documents.length > 0 && (
+                <div>
+                  <p className="font-display font-semibold text-[12px] text-text-primary mb-2">Documente necesare</p>
+                  <div className="space-y-2">
+                    {reply.documents.map((d) => <DocCard key={d.name} doc={d} />)}
+                  </div>
+                </div>
+              )}
+              {reply.locations && reply.locations.length > 0 && (
+                <div>
+                  <p className="font-display font-semibold text-[12px] text-text-primary mb-2">Locații</p>
+                  <PageMap locations={reply.locations} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Expand / collapse toggle */}
+          {hasMore && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="press mt-3 w-full text-[12.5px] font-semibold text-primary bg-primary-light rounded-xl py-2 flex items-center justify-center gap-1.5"
+            >
+              {expanded ? "Restrânge" : "Arată planul complet"}
+              <ArrowRight size={13} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Info-only (no bullets) */}
+      {!hasBullets && reply.info && reply.info.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {reply.info.map((i) => (
+            <div key={i.label} className="bg-primary-light rounded-xl p-3">
+              <p className="font-display font-semibold text-[12px] text-primary">{i.label}</p>
+              <p className="text-[12.5px] text-text-secondary mt-0.5">{i.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Docs-only (no bullets) */}
+      {!hasBullets && reply.documents && reply.documents.length > 0 && (
+        <div>
+          <p className="font-display font-semibold text-[13px] text-text-primary mb-2">Documente necesare</p>
+          <div className="space-y-2.5">
+            {reply.documents.map((d) => <DocCard key={d.name} doc={d} />)}
           </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-2">
-        {reply.create_life_event && reply.event_type && (
+        </div>
+      )}
+
+      {/* Locations-only (no bullets) */}
+      {!hasBullets && reply.locations && reply.locations.length > 0 && (
+        <div>
+          <p className="font-display font-semibold text-[13px] text-text-primary mb-2">Locații</p>
+          <PageMap locations={reply.locations} />
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {(reply.create_life_event || reply.event_type) && (
+        <div className="flex flex-col gap-2">
+          {reply.create_life_event && reply.event_type && (
+            <button
+              onClick={createAndOpenPlan}
+              disabled={creating}
+              className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {creating ? (
+                "Se crează..."
+              ) : (
+                <>
+                  Urmărește progresul și bifează pașii
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          )}
           <button
             onClick={createAndOpenPlan}
-            disabled={creating}
-            className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
+            disabled={creating || !reply.event_type}
+            className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl disabled:opacity-60"
           >
-            {creating ? (
-              "Se crează..."
-            ) : (
-              <>
-                Urmărește progresul și bifează pașii
-                <ArrowRight size={16} />
-              </>
-            )}
+            {creating ? "Se generează planul..." : "Generează plan complet"}
           </button>
-        )}
-        <button
-          onClick={createAndOpenPlan}
-          disabled={creating || !reply.event_type}
-          className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl disabled:opacity-60"
-        >
-          {creating ? "Se generează planul..." : "Generează plan complet"}
-        </button>
-        <button
-          onClick={handlePreviewRequest}
-          className="press border border-border bg-white text-text-primary font-semibold text-[14px] py-3 px-4 rounded-xl"
-        >
-          Previzualizează cererea
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function PageDocs({ documents }: { documents: DocItem[] }) {
-  if (!documents.length) {
-    return <p className="pt-6 text-center text-[13px] text-text-tertiary">Nu există documente asociate.</p>;
-  }
-  return (
-    <div className="pt-2 space-y-2.5">
-      <p className="font-display font-semibold text-[15px] text-text-primary">Documente necesare</p>
-      {documents.map((d) => <DocCard key={d.name} doc={d} />)}
+          <button
+            onClick={handlePreviewRequest}
+            className="press border border-border bg-white text-text-primary font-semibold text-[14px] py-3 px-4 rounded-xl"
+          >
+            Previzualizează cererea
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -738,7 +707,7 @@ function DocCard({ doc }: { doc: DocItem }) {
 function PageMap({ locations }: { locations: LocationItem[] }) {
   const { show } = useToast();
   return (
-    <div className="pt-2 space-y-3">
+    <div className="space-y-3">
       <div
         className="relative w-full h-32 bg-primary-light rounded-2xl overflow-hidden border border-border"
         style={{

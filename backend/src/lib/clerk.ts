@@ -1,9 +1,17 @@
 import { createClerkClient, verifyToken } from '@clerk/backend'
 import type { ClerkPayload } from '../types'
 
-const clerkClient = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY!,
-})
+// Lazily construct the Clerk client so a missing CLERK_SECRET_KEY
+// (e.g. when running with AUTH_STUB=true) never crashes boot.
+let _clerkClient: ReturnType<typeof createClerkClient> | null = null
+function getClerkClient() {
+  if (!_clerkClient) {
+    _clerkClient = createClerkClient({
+      secretKey: process.env.CLERK_SECRET_KEY!,
+    })
+  }
+  return _clerkClient
+}
 
 export async function verifyClerkJWT(token: string): Promise<ClerkPayload> {
   try {
@@ -25,4 +33,4 @@ export async function verifyClerkJWT(token: string): Promise<ClerkPayload> {
   }
 }
 
-export { clerkClient }
+export { getClerkClient }

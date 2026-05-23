@@ -13,11 +13,8 @@ import {
   CheckCircle2,
   CreditCard,
   Building2,
-<<<<<<< Updated upstream
   ExternalLink,
   Calendar,
-=======
->>>>>>> Stashed changes
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import {
@@ -26,6 +23,7 @@ import {
   useAutofillDrpciv,
   useProfile,
   useVehicles,
+  type LifeEventStep,
   type StepStatus,
   type Vehicle,
 } from "@/lib/api-hooks";
@@ -43,31 +41,7 @@ const CATEGORY_META: Record<StepCategory, StepMeta> = {
   onsite:    { label: "Prezentare la ghișeu",   icon: <Building2 size={13} />,  color: "text-green-700", bg: "bg-green-50", border: "border-green-200" },
 };
 
-type StepCategory = "docs" | "financial" | "onsite";
-
-const CATEGORY_META: Record<StepCategory, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
-  docs: {
-    label: "Documente de pregătit",
-    icon: <FileText size={13} />,
-    color: "text-blue-700",
-    bg: "bg-blue-50",
-    border: "border-blue-200",
-  },
-  financial: {
-    label: "Plăți necesare",
-    icon: <CreditCard size={13} />,
-    color: "text-amber-700",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-  },
-  onsite: {
-    label: "Prezentare la ghișeu",
-    icon: <Building2 size={13} />,
-    color: "text-green-700",
-    bg: "bg-green-50",
-    border: "border-green-200",
-  },
-};
+const CATEGORY_ORDER: StepCategory[] = ["docs", "financial", "onsite"];
 
 // ─── Main panel ──────────────────────────────────────────────────────────────
 
@@ -79,30 +53,9 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
   const updateStep = useUpdateLifeEventStep();
   const autofillDrpciv = useAutofillDrpciv();
 
-<<<<<<< Updated upstream
   const [vehicleFields, setVehicleFields] = useState<VehicleFields>({ make: "", model: "", vin: "", current_plate: "" });
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [personalFields, setPersonalFields] = useState<PersonalFields>({ email: "", phone: "", county: "Cluj", bloc: "", scara: "", etaj: "", ap: "" });
-=======
-  const firstVehicle = vehicles?.[0];
-
-  const [vehicleFields, setVehicleFields] = useState<VehicleFields>({
-    make: "",
-    model: "",
-    vin: "",
-    current_plate: "",
-  });
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
-  const [personalFields, setPersonalFields] = useState<PersonalFields>({
-    email: "",
-    phone: "",
-    county: "Cluj",
-    bloc: "",
-    scara: "",
-    etaj: "",
-    ap: "",
-  });
->>>>>>> Stashed changes
   const [editingVehicle, setEditingVehicle] = useState(false);
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -112,9 +65,7 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
     setPersonalFields((p) => ({ ...p, email: p.email || profile.email || "", phone: p.phone || profile.phone || "" }));
   }, [profile]);
 
-  // Auto-select first vehicle on load
   useEffect(() => {
-<<<<<<< Updated upstream
     const first = vehicles?.[0];
     if (!first || selectedVehicleId) return;
     applyVehicle(first);
@@ -122,23 +73,6 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
 
   const applyVehicle = (v: Vehicle) => {
     setVehicleFields({ make: v.make ?? "", model: v.model ?? "", vin: v.vin ?? "", current_plate: v.plate_number ?? "" });
-    setSelectedVehicleId(v.id);
-    setEditingVehicle(false);
-  };
-=======
-    if (!firstVehicle || selectedVehicleId) return;
-    applyVehicle(firstVehicle);
-    setSelectedVehicleId(firstVehicle.id);
-  }, [firstVehicle]);
->>>>>>> Stashed changes
-
-  const applyVehicle = (v: Vehicle) => {
-    setVehicleFields({
-      make: v.make ?? "",
-      model: v.model ?? "",
-      vin: v.vin ?? "",
-      current_plate: v.plate_number ?? "",
-    });
     setSelectedVehicleId(v.id);
     setEditingVehicle(false);
   };
@@ -153,31 +87,25 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
   }
   if (!event) return null;
 
-  const step1Status: StepStatus = event.steps_status["step_1"] ?? "pending";
-  const step1Done = step1Status === "completed";
+  const step1Done = (event.steps_status["step_1"] ?? "pending") === "completed";
   const completedCount = Object.values(event.steps_status).filter((s) => s === "completed").length;
   const progressPct = event.total_steps > 0 ? (completedCount / event.total_steps) * 100 : 0;
   const missingPersonal = !profile?.full_name || !profile?.cnp || !profile?.address;
   const missingVehicle = !vehicleFields.make || !vehicleFields.vin;
 
-<<<<<<< Updated upstream
-  const step1Detail = event.step_details[0];
-  const subsequentSteps = event.step_details.slice(1);
-
-  // category comes from knowledge-base; cast to any to read it safely
-  const grouped: Record<StepCategory, typeof subsequentSteps> = { docs: [], financial: [], onsite: [] };
-  for (const step of subsequentSteps) {
-    const cat: StepCategory = ((step as Record<string, unknown>).category as StepCategory) ?? "onsite";
-=======
-  // Group subsequent steps by category
-  const subsequentSteps = event.step_details.slice(1);
-  const grouped: Record<StepCategory, typeof subsequentSteps> = { docs: [], financial: [], onsite: [] };
-  for (const step of subsequentSteps) {
-    const cat: StepCategory = (step as { category?: StepCategory }).category ?? "onsite";
->>>>>>> Stashed changes
+  // Group ALL steps by category
+  const grouped: Record<StepCategory, LifeEventStep[]> = { docs: [], financial: [], onsite: [] };
+  for (const step of event.step_details) {
+    const cat: StepCategory = step.category ?? "onsite";
     grouped[cat].push(step);
   }
-  const categoryOrder: StepCategory[] = ["docs", "financial", "onsite"];
+
+  const isStepUnlocked = (step: LifeEventStep): boolean => {
+    const status = event.steps_status[`step_${step.order}`] ?? "pending";
+    if (status === "completed") return true;
+    if (step.order === 1) return true;
+    return step1Done;
+  };
 
   const handleDownload = async () => {
     try {
@@ -209,7 +137,7 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
       <div className="rounded-2xl bg-surface border border-border shadow-card overflow-hidden">
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div>
-            <p className="font-display font-bold text-[15px] text-foreground">Înmatriculare vehicul cumpărat</p>
+            <p className="font-display font-bold text-[15px] text-foreground">{event.event_type.replace(/_/g, " ")}</p>
             <p className="text-[12px] text-text-secondary mt-0.5">{completedCount} din {event.total_steps} pași completați</p>
           </div>
           <span className="text-[12px] font-semibold text-primary bg-primary-light px-2.5 py-1 rounded-full">{Math.round(progressPct)}%</span>
@@ -219,301 +147,126 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
         </div>
       </div>
 
-<<<<<<< Updated upstream
-      {/* ── 📄 Documente de pregătit ── */}
-      <CategorySection meta={CATEGORY_META.docs} stepsDone={step1Done ? 1 : 0} stepsTotal={1}>
-        <div className="rounded-xl border border-border bg-white overflow-hidden">
-          <div className="flex items-center gap-3 px-3 py-3 bg-surface-secondary border-b border-border">
-            <StepCircle order={1} done={step1Done} unlocked />
-            <div className="flex-1 min-w-0">
-              <p className="font-display font-semibold text-[13px] text-foreground leading-tight">{step1Detail?.title ?? "Cererea solicitantului"}</p>
-              <p className="text-[11px] text-text-secondary mt-0.5">{step1Detail?.office ?? "DRPCIV"} · {step1Detail?.fee ?? "Gratuit"}</p>
-            </div>
-            {step1Done && <DoneChip />}
-=======
-      {/* Category roadmap overview */}
-      {categoryOrder.some((cat) => grouped[cat].length > 0) && (
-        <div className="rounded-2xl bg-surface border border-border shadow-card p-4">
-          <p className="font-display font-semibold text-[12px] text-text-secondary uppercase tracking-wide mb-3">
-            Ce urmează
-          </p>
-          <div className="flex flex-col gap-2">
-            {/* Step 1 always shown as docs */}
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-blue-50 text-blue-700 shrink-0">
-                <FileText size={12} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-[12px] font-semibold text-blue-700">Documente de pregătit</span>
-                <span className="text-[11px] text-text-tertiary ml-2">Pasul 1 · Gratuit</span>
-              </div>
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border-2 text-[10px] font-bold ${step1Done ? "bg-green-500 border-green-500 text-white" : "border-border text-text-tertiary"}`}>
-                {step1Done ? "✓" : "1"}
-              </span>
-            </div>
-            {categoryOrder.map((cat) => {
-              const steps = grouped[cat];
-              if (steps.length === 0) return null;
-              const meta = CATEGORY_META[cat];
-              const allDone = steps.every((s) => (event.steps_status[`step_${s.order}`] ?? "pending") === "completed");
-              const feeSummary = steps.map((s) => s.fee).filter((f) => f && f !== "Gratuit" && !f.startsWith("Inclus")).join(" + ") || "Gratuit";
-              return (
-                <div key={cat} className="flex items-center gap-2.5">
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${meta.bg} ${meta.color} shrink-0`}>
-                    {meta.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className={`text-[12px] font-semibold ${meta.color}`}>{meta.label}</span>
-                    <span className="text-[11px] text-text-tertiary ml-2">{steps.length} {steps.length === 1 ? "pas" : "pași"} · {feeSummary}</span>
-                  </div>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${allDone ? "bg-green-100 text-green-700" : step1Done ? "bg-surface text-text-secondary border border-border" : "bg-surface text-text-tertiary border border-border opacity-60"}`}>
-                    {allDone ? "✓ Gata" : step1Done ? "Urmează" : "Blocat"}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Step 1 — active card */}
-      <div className="rounded-2xl border-2 border-primary bg-white shadow-md overflow-hidden">
-        <div className="bg-primary px-4 py-3 flex items-center gap-3">
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-              step1Done ? "bg-green-500" : "bg-white/20 border-2 border-white/60"
-            }`}
-          >
-            {step1Done ? (
-              <Check size={14} className="text-white" />
-            ) : (
-              <span className="text-white font-bold text-[13px]">1</span>
-            )}
->>>>>>> Stashed changes
-          </div>
-
-          <div className="px-3 py-3 space-y-3">
-            {/* Personal data */}
-            <DataSection icon={<User size={13} />} title="Date personale" missing={missingPersonal} editMode={editingPersonal} onEdit={() => setEditingPersonal((v) => !v)}>
-              {editingPersonal ? (
-                <div className="space-y-2 mt-3">
-                  <FieldNote text="Datele principale (Nume, CNP, Adresă) se editează din Profil." />
-                  <InputRow label="Email" value={personalFields.email} onChange={(v) => setPersonalFields((p) => ({ ...p, email: v }))} placeholder="email@exemplu.ro" />
-                  <InputRow label="Telefon" value={personalFields.phone} onChange={(v) => setPersonalFields((p) => ({ ...p, phone: v }))} placeholder="07xx xxx xxx" />
-                  <InputRow label="Județ" value={personalFields.county} onChange={(v) => setPersonalFields((p) => ({ ...p, county: v }))} placeholder="Cluj" />
-                  <div className="grid grid-cols-3 gap-2">
-                    <InputRow label="Bloc" value={personalFields.bloc} onChange={(v) => setPersonalFields((p) => ({ ...p, bloc: v }))} placeholder="B1" />
-                    <InputRow label="Scara" value={personalFields.scara} onChange={(v) => setPersonalFields((p) => ({ ...p, scara: v }))} placeholder="1" />
-                    <InputRow label="Etaj" value={personalFields.etaj} onChange={(v) => setPersonalFields((p) => ({ ...p, etaj: v }))} placeholder="2" />
-                  </div>
-                  <InputRow label="Apartament" value={personalFields.ap} onChange={(v) => setPersonalFields((p) => ({ ...p, ap: v }))} placeholder="12" />
-                  <button onClick={() => setEditingPersonal(false)} className="press w-full py-2 rounded-xl bg-primary text-white text-[13px] font-semibold">Salvează</button>
-                </div>
-              ) : (
-                <div className="mt-2 space-y-1.5">
-                  <FieldRow label="Nume" value={profile?.full_name} required />
-                  <FieldRow label="CNP" value={profile?.cnp} required />
-                  <FieldRow label="Adresă" value={profile?.address ? `${profile.address}${personalFields.bloc ? `, bl. ${personalFields.bloc}` : ""}${personalFields.ap ? `, ap. ${personalFields.ap}` : ""}` : undefined} required />
-                  <FieldRow label="Localitate" value={profile?.city ?? "Cluj-Napoca"} />
-                  <FieldRow label="Județ" value={personalFields.county} />
-                  <FieldRow label="Email" value={personalFields.email || profile?.email} />
-                  <FieldRow label="Telefon" value={personalFields.phone || profile?.phone} />
-                </div>
-              )}
-            </DataSection>
-
-            {/* Vehicle data */}
-            <DataSection icon={<Car size={13} />} title="Date vehicul" missing={missingVehicle} editMode={editingVehicle} onEdit={() => setEditingVehicle((v) => !v)}>
-              {vehicles && vehicles.length > 0 && (
-                <div className="mt-3 mb-2">
-                  <p className="text-[11px] font-semibold text-text-secondary mb-1.5">Selectează vehiculul:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {vehicles.map((v) => (
-                      <button key={v.id} type="button" onClick={() => applyVehicle(v)}
-                        className={`press flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-semibold transition-all ${selectedVehicleId === v.id ? "bg-primary text-white border-primary" : "bg-surface-secondary text-foreground border-border hover:border-primary/50"}`}>
-                        <Car size={11} />
-                        {v.make ?? "?"} {v.model ?? ""}{v.plate_number ? ` · ${v.plate_number}` : ""}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(!vehicles || vehicles.length === 0) && !editingVehicle && (
-                <FieldNote text="Nu ai vehicule salvate. Completează manual sau adaugă din Profil." />
-              )}
-              {editingVehicle ? (
-                <div className="space-y-2 mt-2">
-                  <InputRow label="Marcă" value={vehicleFields.make} onChange={(v) => setVehicleFields((f) => ({ ...f, make: v }))} placeholder="ex. Volkswagen" />
-                  <InputRow label="Tip / Model" value={vehicleFields.model} onChange={(v) => setVehicleFields((f) => ({ ...f, model: v }))} placeholder="ex. Golf 7" />
-                  <InputRow label="Serie șasiu (VIN)" value={vehicleFields.vin} onChange={(v) => setVehicleFields((f) => ({ ...f, vin: v }))} placeholder="17 caractere" />
-                  <InputRow label="Nr. înmatriculare" value={vehicleFields.current_plate} onChange={(v) => setVehicleFields((f) => ({ ...f, current_plate: v }))} placeholder="ex. CJ-01-ABC" />
-                  <button onClick={() => setEditingVehicle(false)} className="press w-full py-2 rounded-xl bg-primary text-white text-[13px] font-semibold">Salvează</button>
-                </div>
-              ) : (
-                <div className="mt-2 space-y-1.5">
-                  <FieldRow label="Marcă" value={vehicleFields.make} required />
-                  <FieldRow label="Tip / Model" value={vehicleFields.model} />
-                  <FieldRow label="Serie șasiu (VIN)" value={vehicleFields.vin} required />
-                  <FieldRow label="Nr. înmatriculare" value={vehicleFields.current_plate} />
-                </div>
-              )}
-            </DataSection>
-
-            {(missingPersonal || missingVehicle) && (
-              <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
-                <AlertCircle size={13} className="text-orange-600 mt-0.5 shrink-0" />
-                <p className="text-[12px] text-orange-800">
-                  {missingPersonal ? "Profilul tău este incomplet. Completează Numele, CNP-ul și Adresa din Profil." : "Completează datele vehiculului (Marcă și VIN)."}
-                </p>
-              </div>
-            )}
-
-<<<<<<< Updated upstream
-            <button onClick={handleDownload} disabled={autofillDrpciv.isPending}
-              className="press w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold text-[13px] py-2.5 px-4 rounded-xl disabled:opacity-60">
-              {autofillDrpciv.isPending
-                ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />Se generează...</>
-                : <><Download size={14} />Descarcă cererea completată (PDF)</>}
-=======
-          {/* Vehicle data */}
-          <DataSection
-            icon={<Car size={13} />}
-            title="Date vehicul"
-            missing={missingVehicle}
-            editMode={editingVehicle}
-            onEdit={() => setEditingVehicle((v) => !v)}
-          >
-            {/* Vehicle selector */}
-            {vehicles && vehicles.length > 0 && (
-              <div className="mt-3 mb-2">
-                <p className="text-[11px] font-semibold text-text-secondary mb-1.5">Selectează vehiculul din profilul tău:</p>
-                <div className="flex flex-wrap gap-2">
-                  {vehicles.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => applyVehicle(v)}
-                      className={`press flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-semibold transition-all ${
-                        selectedVehicleId === v.id
-                          ? "bg-primary text-white border-primary"
-                          : "bg-surface-secondary text-foreground border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <Car size={11} />
-                      {v.make ?? "?"} {v.model ?? ""} {v.plate_number ? `· ${v.plate_number}` : ""}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(!vehicles || vehicles.length === 0) && !editingVehicle && (
-              <FieldNote text="Nu ai vehicule salvate. Completează datele manual sau adaugă un vehicul din Profil." />
-            )}
-
-            {editingVehicle ? (
-              <div className="space-y-2 mt-2">
-                <InputRow label="Marcă" value={vehicleFields.make} onChange={(v) => setVehicleFields((f) => ({ ...f, make: v }))} placeholder="ex. Volkswagen" />
-                <InputRow label="Tip / Model" value={vehicleFields.model} onChange={(v) => setVehicleFields((f) => ({ ...f, model: v }))} placeholder="ex. Golf 7" />
-                <InputRow label="Serie șasiu (VIN)" value={vehicleFields.vin} onChange={(v) => setVehicleFields((f) => ({ ...f, vin: v }))} placeholder="17 caractere" />
-                <InputRow label="Nr. înmatriculare curent" value={vehicleFields.current_plate} onChange={(v) => setVehicleFields((f) => ({ ...f, current_plate: v }))} placeholder="ex. CJ-01-ABC" />
-                <button onClick={() => setEditingVehicle(false)} className="press w-full py-2 rounded-xl bg-primary text-white text-[13px] font-semibold">Salvează</button>
-              </div>
-            ) : (
-              <div className="mt-2 space-y-1.5">
-                <FieldRow label="Marcă" value={vehicleFields.make} required />
-                <FieldRow label="Tip / Model" value={vehicleFields.model} />
-                <FieldRow label="Serie șasiu (VIN)" value={vehicleFields.vin} required />
-                <FieldRow label="Nr. înmatriculare curent" value={vehicleFields.current_plate} />
-              </div>
-            )}
-          </DataSection>
-
-          {/* Operation type */}
-          <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
-            <FileText size={13} className="text-blue-600 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-[11px] font-semibold text-blue-700">Tipul operației</p>
-              <p className="text-[12px] text-blue-800 mt-0.5">
-                Transcriere a transmiterii dreptului de proprietate (cumpărare vehicul)
-              </p>
-            </div>
-          </div>
-
-          {/* Missing data warning */}
-          {(missingPersonal || missingVehicle) && (
-            <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
-              <AlertCircle size={13} className="text-orange-600 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-orange-800">
-                {missingPersonal
-                  ? "Profilul tău este incomplet. Completează Numele, CNP-ul și Adresa din Profil."
-                  : "Completează datele vehiculului (Marcă și VIN)."}
-              </p>
-            </div>
-          )}
-
-          {/* Download */}
-          <button
-            onClick={handleDownload}
-            disabled={autofillDrpciv.isPending}
-            className="press w-full flex items-center justify-center gap-2 bg-primary text-white font-semibold text-[13px] py-3 px-4 rounded-xl disabled:opacity-60"
-          >
-            {autofillDrpciv.isPending ? (
-              <>
-                <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                Se generează...
-              </>
-            ) : (
-              <>
-                <Download size={15} />
-                Descarcă cererea completată (PDF)
-              </>
-            )}
-          </button>
-
-          {/* Confirm step */}
-          {!step1Done && (
-            <button
-              onClick={handleConfirmStep1}
-              disabled={!downloaded || updateStep.isPending}
-              className="press w-full flex items-center justify-center gap-2 border-2 border-green-500 text-green-700 font-semibold text-[13px] py-2.5 px-4 rounded-xl disabled:opacity-40 bg-green-50"
-              title={!downloaded ? "Descarcă cererea mai întâi" : ""}
-            >
-              <CheckCircle2 size={15} />
-              Am tipărit și semnat → Pasul 1 finalizat
->>>>>>> Stashed changes
-            </button>
-            {!step1Done ? (
-              <button onClick={() => handleMarkStep(1)} disabled={!downloaded || updateStep.isPending}
-                title={!downloaded ? "Descarcă cererea mai întâi" : ""}
-                className="press w-full flex items-center justify-center gap-2 border-2 border-green-500 text-green-700 font-semibold text-[13px] py-2 px-4 rounded-xl disabled:opacity-40 bg-green-50">
-                <CheckCircle2 size={14} />Am tipărit și semnat → Pasul 1 finalizat
-              </button>
-            ) : (
-              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
-                <CheckCircle2 size={14} className="text-green-500" />
-                <p className="text-[12px] font-semibold text-green-700">Cererea este pregătită — continuă cu pasul 2</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </CategorySection>
-
-      {/* ── Financial + Onsite category sections ── */}
-      {categoryOrder.map((cat) => {
+      {/* Steps grouped by category */}
+      {CATEGORY_ORDER.map((cat) => {
         const steps = grouped[cat];
         if (steps.length === 0) return null;
         const meta = CATEGORY_META[cat];
         const doneInCat = steps.filter((s) => (event.steps_status[`step_${s.order}`] ?? "pending") === "completed").length;
 
-<<<<<<< Updated upstream
         return (
           <CategorySection key={cat} meta={meta} stepsDone={doneInCat} stepsTotal={steps.length}>
             <div className="space-y-2">
               {steps.map((step) => {
                 const status: StepStatus = event.steps_status[`step_${step.order}`] ?? "pending";
-                const unlocked = step1Done || status === "completed";
-                const action = step.online_action as { label: string; type: string; url?: string } | undefined;
+                const unlocked = isStepUnlocked(step);
+                const action = step.online_action;
 
+                // Special expanded card for the cerere DRPCIV step
+                if (step.form_type === "cerere_drpciv" && status !== "completed") {
+                  return (
+                    <div key={step.order} className="rounded-xl border border-border bg-white overflow-hidden">
+                      <div className="flex items-center gap-3 px-3 py-3 bg-surface-secondary border-b border-border">
+                        <StepCircle order={step.order} done={false} unlocked />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-display font-semibold text-[13px] text-foreground leading-tight">{step.title}</p>
+                          <p className="text-[11px] text-text-secondary mt-0.5">{step.office} · {step.fee}</p>
+                        </div>
+                      </div>
+                      <div className="px-3 py-3 space-y-3">
+                        {/* Personal data */}
+                        <DataSection icon={<User size={13} />} title="Date personale" missing={missingPersonal} editMode={editingPersonal} onEdit={() => setEditingPersonal((v) => !v)}>
+                          {editingPersonal ? (
+                            <div className="space-y-2 mt-3">
+                              <FieldNote text="Datele principale (Nume, CNP, Adresă) se editează din Profil." />
+                              <InputRow label="Email" value={personalFields.email} onChange={(v) => setPersonalFields((p) => ({ ...p, email: v }))} placeholder="email@exemplu.ro" />
+                              <InputRow label="Telefon" value={personalFields.phone} onChange={(v) => setPersonalFields((p) => ({ ...p, phone: v }))} placeholder="07xx xxx xxx" />
+                              <InputRow label="Județ" value={personalFields.county} onChange={(v) => setPersonalFields((p) => ({ ...p, county: v }))} placeholder="Cluj" />
+                              <div className="grid grid-cols-3 gap-2">
+                                <InputRow label="Bloc" value={personalFields.bloc} onChange={(v) => setPersonalFields((p) => ({ ...p, bloc: v }))} placeholder="B1" />
+                                <InputRow label="Scara" value={personalFields.scara} onChange={(v) => setPersonalFields((p) => ({ ...p, scara: v }))} placeholder="1" />
+                                <InputRow label="Etaj" value={personalFields.etaj} onChange={(v) => setPersonalFields((p) => ({ ...p, etaj: v }))} placeholder="2" />
+                              </div>
+                              <InputRow label="Apartament" value={personalFields.ap} onChange={(v) => setPersonalFields((p) => ({ ...p, ap: v }))} placeholder="12" />
+                              <button onClick={() => setEditingPersonal(false)} className="press w-full py-2 rounded-xl bg-primary text-white text-[13px] font-semibold">Salvează</button>
+                            </div>
+                          ) : (
+                            <div className="mt-2 space-y-1.5">
+                              <FieldRow label="Nume" value={profile?.full_name} required />
+                              <FieldRow label="CNP" value={profile?.cnp} required />
+                              <FieldRow label="Adresă" value={profile?.address ? `${profile.address}${personalFields.bloc ? `, bl. ${personalFields.bloc}` : ""}${personalFields.ap ? `, ap. ${personalFields.ap}` : ""}` : undefined} required />
+                              <FieldRow label="Localitate" value={profile?.city ?? "Cluj-Napoca"} />
+                              <FieldRow label="Județ" value={personalFields.county} />
+                              <FieldRow label="Email" value={personalFields.email || profile?.email} />
+                              <FieldRow label="Telefon" value={personalFields.phone || profile?.phone} />
+                            </div>
+                          )}
+                        </DataSection>
+
+                        {/* Vehicle data */}
+                        <DataSection icon={<Car size={13} />} title="Date vehicul" missing={missingVehicle} editMode={editingVehicle} onEdit={() => setEditingVehicle((v) => !v)}>
+                          {vehicles && vehicles.length > 0 && (
+                            <div className="mt-3 mb-2">
+                              <p className="text-[11px] font-semibold text-text-secondary mb-1.5">Selectează vehiculul:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {vehicles.map((v) => (
+                                  <button key={v.id} type="button" onClick={() => applyVehicle(v)}
+                                    className={`press flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-semibold transition-all ${selectedVehicleId === v.id ? "bg-primary text-white border-primary" : "bg-surface-secondary text-foreground border-border hover:border-primary/50"}`}>
+                                    <Car size={11} />
+                                    {v.make ?? "?"} {v.model ?? ""}{v.plate_number ? ` · ${v.plate_number}` : ""}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {(!vehicles || vehicles.length === 0) && !editingVehicle && (
+                            <FieldNote text="Nu ai vehicule salvate. Completează manual sau adaugă din Profil." />
+                          )}
+                          {editingVehicle ? (
+                            <div className="space-y-2 mt-2">
+                              <InputRow label="Marcă" value={vehicleFields.make} onChange={(v) => setVehicleFields((f) => ({ ...f, make: v }))} placeholder="ex. Volkswagen" />
+                              <InputRow label="Tip / Model" value={vehicleFields.model} onChange={(v) => setVehicleFields((f) => ({ ...f, model: v }))} placeholder="ex. Golf 7" />
+                              <InputRow label="Serie șasiu (VIN)" value={vehicleFields.vin} onChange={(v) => setVehicleFields((f) => ({ ...f, vin: v }))} placeholder="17 caractere" />
+                              <InputRow label="Nr. înmatriculare" value={vehicleFields.current_plate} onChange={(v) => setVehicleFields((f) => ({ ...f, current_plate: v }))} placeholder="ex. CJ-01-ABC" />
+                              <button onClick={() => setEditingVehicle(false)} className="press w-full py-2 rounded-xl bg-primary text-white text-[13px] font-semibold">Salvează</button>
+                            </div>
+                          ) : (
+                            <div className="mt-2 space-y-1.5">
+                              <FieldRow label="Marcă" value={vehicleFields.make} required />
+                              <FieldRow label="Tip / Model" value={vehicleFields.model} />
+                              <FieldRow label="Serie șasiu (VIN)" value={vehicleFields.vin} required />
+                              <FieldRow label="Nr. înmatriculare" value={vehicleFields.current_plate} />
+                            </div>
+                          )}
+                        </DataSection>
+
+                        {(missingPersonal || missingVehicle) && (
+                          <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
+                            <AlertCircle size={13} className="text-orange-600 mt-0.5 shrink-0" />
+                            <p className="text-[12px] text-orange-800">
+                              {missingPersonal ? "Profilul tău este incomplet. Completează Numele, CNP-ul și Adresa din Profil." : "Completează datele vehiculului (Marcă și VIN)."}
+                            </p>
+                          </div>
+                        )}
+
+                        <button onClick={handleDownload} disabled={autofillDrpciv.isPending || missingVehicle || missingPersonal}
+                          className="press w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold text-[13px] py-2.5 px-4 rounded-xl disabled:opacity-60">
+                          {autofillDrpciv.isPending
+                            ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />Se generează...</>
+                            : <><Download size={14} />Descarcă cererea completată (PDF)</>}
+                        </button>
+
+                        <button onClick={() => handleMarkStep(step.order)} disabled={!downloaded || updateStep.isPending}
+                          title={!downloaded ? "Descarcă cererea mai întâi" : ""}
+                          className="press w-full flex items-center justify-center gap-2 border-2 border-green-500 text-green-700 font-semibold text-[13px] py-2 px-4 rounded-xl disabled:opacity-40 bg-green-50">
+                          <CheckCircle2 size={14} />Am tipărit și semnat → Pasul {step.order} finalizat
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Standard step card
                 return (
                   <div key={step.order}
                     className={`rounded-xl border overflow-hidden transition-all ${status === "completed" ? "border-green-300 bg-green-50" : unlocked ? "border-border bg-white" : "border-border bg-surface-secondary opacity-55"}`}>
@@ -526,7 +279,9 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
                           <p className={`text-[11px] font-semibold mt-0.5 ${meta.color}`}>{step.fee}</p>
                         )}
                       </div>
-                      {status === "completed" ? <DoneChip /> : !unlocked ? (
+                      {status === "completed" ? (
+                        <DoneChip />
+                      ) : !unlocked ? (
                         <span className="flex items-center gap-1 text-[10px] text-text-tertiary border border-border rounded-lg px-2 py-1 bg-surface shrink-0">
                           <Lock size={9} /> Blocat
                         </span>
@@ -535,9 +290,7 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
 
                     {unlocked && status !== "completed" && (
                       <div className="px-3 pb-3 flex flex-col gap-1.5">
-                        {action && (
-                          <ActionButton action={action} meta={meta} />
-                        )}
+                        {action && <ActionButton action={action} meta={meta} />}
                         <button onClick={() => handleMarkStep(step.order)} disabled={updateStep.isPending}
                           className="press w-full text-[11.5px] font-semibold text-text-secondary py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-secondary transition-colors">
                           Marchează ca finalizat
@@ -549,39 +302,6 @@ export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
               })}
             </div>
           </CategorySection>
-=======
-      {/* Grouped subsequent steps */}
-      {categoryOrder.map((cat) => {
-        const steps = grouped[cat];
-        if (steps.length === 0) return null;
-        const meta = CATEGORY_META[cat];
-        return (
-          <div key={cat}>
-            {/* Category header */}
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${meta.bg} ${meta.border} border mb-2`}>
-              <span className={meta.color}>{meta.icon}</span>
-              <span className={`font-display font-semibold text-[12px] ${meta.color}`}>{meta.label}</span>
-            </div>
-            <div className="space-y-2">
-              {steps.map((step) => {
-                const key = `step_${step.order}`;
-                const status: StepStatus = event.steps_status[key] ?? "pending";
-                const isUnlocked = step1Done || status === "completed";
-                return (
-                  <LockedStep
-                    key={step.order}
-                    order={step.order}
-                    title={step.title}
-                    office={step.office}
-                    fee={step.fee}
-                    status={status}
-                    unlocked={isUnlocked}
-                  />
-                );
-              })}
-            </div>
-          </div>
->>>>>>> Stashed changes
         );
       })}
 
@@ -614,9 +334,9 @@ function CategorySection({ meta, stepsDone, stepsTotal, children }: { meta: Step
   );
 }
 
-// ─── Action button ───────────────────────────────────────────────────���────────
+// ─── Action button ────────────────────────────────────────────────────────────
 
-function ActionButton({ action, meta }: { action: { label: string; type: string; url?: string }; meta: StepMeta }) {
+function ActionButton({ action, meta }: { action: NonNullable<LifeEventStep["online_action"]>; meta: StepMeta }) {
   const icon =
     action.type === "payment" ? <CreditCard size={13} /> :
     action.type === "pdf" ? <Download size={13} /> :

@@ -206,10 +206,9 @@ claudiaRoute.post('/', requireAuth, async (c) => {
           : '\n\n(Notă: răspuns de rezervă — verifică GEMINI_API_KEY și că backend-ul rulează.)'
         enqueue({
           type: 'text',
-          content: mock.text + fallbackNote,
+          content: mock.text + (quotaExceeded ? '' : fallbackNote),
         })
-        // On quota fallback: text only — skip tools so no PDF/map panels are triggered.
-        if (!quotaExceeded && mock.tool && mock.tool_input) {
+        if (mock.tool && mock.tool_input) {
           enqueue({
             type: 'tool_result',
             tool_name: mock.tool,

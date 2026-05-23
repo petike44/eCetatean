@@ -3,7 +3,6 @@ import { findProcedure, OFFICES } from './knowledge-base'
 export const DEMO_LIFE_EVENT_TYPES = new Set([
   'car_from_germany',
   'car_domestic',
-  'bought_car',
   'moving_to_cluj',
 ])
 

@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText } from "lucide-react";
+import { Send, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { TopBarButton } from "@/components/TopBar";
 import { LifeEventStepsPanel } from "@/components/LifeEventStepsPanel";
 import { locationsCatalog, type LocationItem } from "@/lib/office-locations";
 import type { DocItem } from "@/lib/chat-types";
@@ -269,8 +268,8 @@ function Chat() {
 
   const chatTopBar = (
     <header
-      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 flex items-center justify-between px-4 pointer-events-none"
-      style={{ background: "linear-gradient(to bottom, var(--bg) 30%, transparent 100%)" }}
+      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 flex items-center px-4 pointer-events-none"
+      style={{ background: "linear-gradient(to bottom, var(--bg) 55%, transparent 100%)" }}
       role="banner"
     >
       <div className="flex items-center gap-2 pointer-events-auto">
@@ -281,9 +280,6 @@ function Chat() {
           beta
         </span>
       </div>
-      <TopBarButton aria-label="Despre ClaudIA" className="pointer-events-auto">
-        <Info size={16} className="text-text-tertiary" />
-      </TopBarButton>
     </header>
   );
 
@@ -355,7 +351,11 @@ function Chat() {
           </div>
         ) : (
           /* ───── CONVERSATION STATE ───── */
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden relative">
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-14 z-10"
+              style={{ background: "linear-gradient(to bottom, var(--bg) 0%, transparent 100%)" }}
+            />
             <div ref={scrollRef} className="flex-1 overflow-y-auto">
               <div className="px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
                 {msgs.slice(1).map((m) => {

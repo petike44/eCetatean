@@ -167,6 +167,57 @@ export interface PDFGenerationRequest {
   additional_data?: Record<string, string>
 }
 
+export type PdfFieldSource = 'saved' | 'acroform' | 'heuristic'
+
+export interface PdfFormInputDefinition {
+  key: string
+  label: string
+  placeholder?: string
+  required?: boolean
+}
+
+export interface PdfAutofillField {
+  id: string
+  label: string
+  dataKey: string
+  page: number
+  x: number
+  y: number
+  width: number
+  height: number
+  value?: string
+  required: boolean
+  confidence: number
+  source: PdfFieldSource
+  acroFieldName?: string
+}
+
+export interface PdfForm {
+  id: string
+  slug: string
+  title: string
+  institution: string
+  description: string | null
+  category: string
+  tags: string[]
+  storage_bucket: string
+  storage_path: string
+  source_url: string | null
+  mapping: PdfAutofillField[]
+  required_inputs: PdfFormInputDefinition[]
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PdfFormAnalyzeResult {
+  form: PdfForm
+  fields: PdfAutofillField[]
+  missing_inputs: PdfFormInputDefinition[]
+  can_autofill_count: number
+  total_required_count: number
+}
+
 // —— ClaudIA Chat ——————————————————————————————————————————————
 
 export interface ChatMessage {

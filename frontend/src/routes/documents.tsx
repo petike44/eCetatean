@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, AlertTriangle, Calendar, IdCard, Plane, Briefcase, Baby, CarFront, Car, AlertCircle, ChevronRight } from "lucide-react";
+import { Bell, AlertTriangle, Calendar, IdCard, Plane, Briefcase, Baby, CarFront, Car, AlertCircle, ChevronRight, Wand2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { HomeTopBar } from "@/components/TopBar";
 import { Card, PrimaryButton, GhostButton, Badge } from "@/components/ui-bits";
@@ -111,6 +111,20 @@ function Documents() {
             {/* Quick actions */}
             <section className="px-5 mt-6 lg:px-0">
               <h2 className="font-display font-semibold text-[18px] text-text-primary mb-3">Începe o procedură</h2>
+              <Card className="mb-3" accent="green">
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-success-light text-success flex items-center justify-center shrink-0">
+                    <Wand2 size={20} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-display font-semibold text-[15px] text-text-primary">Autocompletare PDF</h3>
+                    <p className="text-[13px] text-text-secondary mt-0.5 mb-3">
+                      Caută formulare oficiale și completează-le cu datele din profil.
+                    </p>
+                    <GhostButton onClick={() => nav({ to: "/document-preview" })}>Caută formular</GhostButton>
+                  </div>
+                </div>
+              </Card>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                 {actions.map((a) => {
                   const I = iconFor[a.icon];

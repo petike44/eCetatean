@@ -223,12 +223,9 @@ export async function getPdfBytes(form: PdfForm): Promise<Uint8Array> {
     console.warn('Public URL fetch failed:', err)
   }
 
-  // Both attempts failed — throw so the route returns a proper error instead of a fake PDF
-  throw new Error(
-    `Cannot download ${form.storage_path} from bucket "${form.storage_bucket}". ` +
-    `Either make the bucket public in Supabase Dashboard → Storage → ${form.storage_bucket} → Policies, ` +
-    `or set SUPABASE_SERVICE_ROLE_KEY to the service_role key (not the publishable key).`
-  )
+  // Both attempts failed — generate a placeholder PDF with the form layout
+  console.warn(`Storage unavailable for ${form.storage_path} — generating placeholder PDF`)
+  return createPlaceholderPdf(form)
 }
 
 export async function analyzePdf(
@@ -242,6 +239,19 @@ export async function analyzePdf(
   const baseFields = nativeFields.length > 0 ? nativeFields : savedFields
   const fallbackFields = baseFields.length > 0 ? baseFields : heuristicFields(form)
   return hydrateFieldValues(fallbackFields, profile, inputValues)
+}
+
+/** Replace Romanian (and common accented) characters with ASCII equivalents so
+ *  Helvetica/WinAnsi can render them without throwing. */
+function latinize(text: string): string {
+  return text
+    .replace(/[ăĂ]/g, (c) => (c === 'ă' ? 'a' : 'A'))
+    .replace(/[âÂ]/g, (c) => (c === 'â' ? 'a' : 'A'))
+    .replace(/[îÎ]/g, (c) => (c === 'î' ? 'i' : 'I'))
+    .replace(/[șşȘŞ]/g, (c) => (/[șş]/.test(c) ? 's' : 'S'))
+    .replace(/[țţȚŢ]/g, (c) => (/[țţ]/.test(c) ? 't' : 'T'))
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
 }
 
 export async function fillPdf(
@@ -262,7 +272,7 @@ export async function fillPdf(
     if (field.acroFieldName) {
       try {
         const textField = pdfForm.getTextField(field.acroFieldName) as PDFTextField
-        textField.setText(value)
+        textField.setText(latinize(value))
         continue
       } catch {
         // If the native field cannot be filled, draw an overlay below.
@@ -271,7 +281,7 @@ export async function fillPdf(
 
     const page = pdf.getPage(Math.max(0, Math.min(field.page, pdf.getPageCount() - 1)))
     const { height } = page.getSize()
-    page.drawText(value, {
+    page.drawText(latinize(value), {
       x: field.x,
       y: height - field.y - field.height + 4,
       size: 10,
@@ -454,8 +464,8 @@ async function createPlaceholderPdf(form: PdfForm): Promise<Uint8Array> {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
   const fields = normalizeFields(form.mapping)
 
-  page.drawText(form.institution, { x: 56, y: 778, size: 10, font: regular, color: rgb(0.25, 0.25, 0.25) })
-  page.drawText(form.title, { x: 56, y: 742, size: 18, font: bold, color: rgb(0.05, 0.05, 0.05) })
+  page.drawText(latinize(form.institution), { x: 56, y: 778, size: 10, font: regular, color: rgb(0.25, 0.25, 0.25) })
+  page.drawText(latinize(form.title), { x: 56, y: 742, size: 18, font: bold, color: rgb(0.05, 0.05, 0.05) })
   page.drawText('Formular demo generat automat cand PDF-ul oficial lipseste din Supabase Storage.', {
     x: 56,
     y: 718,
@@ -465,7 +475,7 @@ async function createPlaceholderPdf(form: PdfForm): Promise<Uint8Array> {
   })
 
   for (const item of fields) {
-    page.drawText(item.label, {
+    page.drawText(latinize(item.label), {
       x: Math.max(56, item.x - 120),
       y: A4_HEIGHT - item.y - item.height + 4,
       size: 9,

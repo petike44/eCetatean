@@ -1,24 +1,83 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, MapPin, Check } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { PrimaryButton, GhostButton, Field, Textarea, Card } from "@/components/ui-bits";
+import { useToast } from "@/components/Toast";
+import { Protected } from "@/lib/auth-guard";
+import { useSubmitReport, type ReportCategory } from "@/lib/api-hooks";
 
 export const Route = createFileRoute("/report")({
   head: () => ({ meta: [{ title: "Sesizare nouă — eCetățean" }] }),
-  component: ReportPage,
+  component: () => (
+    <Protected>
+      <ReportPage />
+    </Protected>
+  ),
 });
 
-const CATEGORIES = ["Carosabil", "Iluminat", "Spații verzi", "Gunoi", "Alt motiv"];
+const CATEGORIES: { label: string; value: ReportCategory }[] = [
+  { label: "Carosabil", value: "groapa_asfalt" },
+  { label: "Iluminat", value: "iluminat_defect" },
+  { label: "Gunoi", value: "gunoi_ilegal" },
+  { label: "Mașină abandonată", value: "masina_abandonata" },
+  { label: "Trotuar", value: "trotuar_deteriorat" },
+  { label: "Alt motiv", value: "alt_problema" },
+];
 
 function ReportPage() {
   const nav = useNavigate();
-  const [cat, setCat] = useState("Carosabil");
-  const [photo, setPhoto] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const { show } = useToast();
+  const submit = useSubmitReport();
+  const [cat, setCat] = useState<ReportCategory>("groapa_asfalt");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [address, setAddress] = useState("Str. Horea, Cluj-Napoca");
+  const [submittedRef, setSubmittedRef] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
-  if (submitted) {
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60_000 },
+    );
+  }, []);
+
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setPhoto(f);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(f ? URL.createObjectURL(f) : null);
+  };
+
+  const onSubmit = async () => {
+    if (title.trim().length < 4) {
+      show("error", "Titlul trebuie să aibă minim 4 caractere");
+      return;
+    }
+    try {
+      const result = await submit.mutateAsync({
+        category: cat,
+        description: [title.trim(), description.trim()].filter(Boolean).join(" — "),
+        latitude: coords?.lat,
+        longitude: coords?.lng,
+        address,
+        photo: photo ?? undefined,
+      });
+      setSubmittedRef(result.reference_number);
+      show("success", `Sesizare înregistrată: ${result.reference_number}`);
+    } catch (err) {
+      show("error", err instanceof Error ? err.message : "Eroare la trimitere");
+    }
+  };
+
+  if (submittedRef) {
     return (
       <AppShell topBar={<TopBar title="Sesizare trimisă" />}>
         <div className="px-5 pt-8">
@@ -30,7 +89,7 @@ function ReportPage() {
           </div>
           <Card accent="green">
             <p className="text-[12px] text-text-tertiary font-medium uppercase tracking-wide">Număr de referință</p>
-            <p className="font-display font-bold text-[20px] text-text-primary mt-1">#CLJ-2026-7285</p>
+            <p className="font-display font-bold text-[20px] text-text-primary mt-1">{submittedRef}</p>
             <p className="text-[13.5px] text-text-secondary mt-3">
               Vei fi notificat când statusul se schimbă. Estimat: răspuns în 5 zile lucrătoare.
             </p>
@@ -52,21 +111,33 @@ function ReportPage() {
           <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
             {CATEGORIES.map((c) => (
               <button
-                key={c}
-                onClick={() => setCat(c)}
+                key={c.value}
+                onClick={() => setCat(c.value)}
                 className={`press shrink-0 px-4 py-2 rounded-full font-medium text-[13px] border ${
-                  cat === c ? "bg-accent-light text-accent-dark border-accent-light" : "bg-surface-secondary text-text-secondary border-transparent"
+                  cat === c.value ? "bg-accent-light text-accent-dark border-accent-light" : "bg-surface-secondary text-text-secondary border-transparent"
                 }`}
               >
-                {c}
+                {c.label}
               </button>
             ))}
           </div>
         </div>
 
-        <Field label="Titlu sesizare" placeholder="Ex: Groapă mare pe stradă" validator={(v) => v.length < 4 ? "Minim 4 caractere" : null} />
+        <Field
+          label="Titlu sesizare"
+          placeholder="Ex: Groapă mare pe stradă"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          validator={(v) => (v.length < 4 ? "Minim 4 caractere" : null)}
+        />
 
-        <Textarea label="Descriere" rows={4} placeholder="Descrie pe scurt problema..." />
+        <Textarea
+          label="Descriere"
+          rows={4}
+          placeholder="Descrie pe scurt problema..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
 
         <div>
           <p className="block text-[13px] font-medium text-text-secondary mb-1.5">Locație</p>
@@ -75,23 +146,34 @@ function ReportPage() {
               <MapPin size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-display font-semibold text-[14px] text-text-primary">Str. Horea</p>
-              <p className="text-[12.5px] text-text-tertiary">Cluj-Napoca, jud. Cluj</p>
+              <input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="font-display font-semibold text-[14px] text-text-primary bg-transparent w-full outline-none"
+              />
+              <p className="text-[12.5px] text-text-tertiary">
+                {coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "GPS indisponibil"}
+              </p>
             </div>
-            <button className="press text-[12.5px] text-primary font-semibold">Schimbă</button>
           </div>
         </div>
 
         <div>
           <p className="block text-[13px] font-medium text-text-secondary mb-1.5">Fotografie</p>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={onPhotoChange}
+            className="hidden"
+          />
           <button
-            onClick={() => setPhoto(true)}
+            onClick={() => fileInput.current?.click()}
             className="press w-full aspect-[16/10] rounded-2xl border-2 border-dashed border-border bg-surface-secondary flex flex-col items-center justify-center gap-2 text-text-tertiary overflow-hidden"
           >
-            {photo ? (
-              <div className="w-full h-full bg-gradient-to-br from-stone-200 via-stone-300 to-stone-400 flex items-center justify-center text-stone-600 text-xs font-medium">
-                Fotografie încărcată ✓
-              </div>
+            {photoPreview ? (
+              <img src={photoPreview} alt="Previzualizare" className="w-full h-full object-cover" />
             ) : (
               <>
                 <Camera size={28} />
@@ -102,7 +184,9 @@ function ReportPage() {
         </div>
 
         <div className="pt-2">
-          <PrimaryButton onClick={() => setSubmitted(true)}>Trimite sesizarea</PrimaryButton>
+          <PrimaryButton onClick={onSubmit} disabled={submit.isPending}>
+            {submit.isPending ? "Se trimite..." : "Trimite sesizarea"}
+          </PrimaryButton>
         </div>
       </div>
     </AppShell>

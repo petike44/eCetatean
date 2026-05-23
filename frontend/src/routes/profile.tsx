@@ -7,10 +7,15 @@ import { TopBar } from "@/components/TopBar";
 import { Card, PrimaryButton, GhostButton, Field, Badge } from "@/components/ui-bits";
 import { citizen, vehicle } from "@/lib/mock-data";
 import { useToast } from "@/components/Toast";
+import { Protected } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilul meu — eCetățean" }] }),
-  component: Profile,
+  component: () => (
+    <Protected>
+      <Profile />
+    </Protected>
+  ),
 });
 
 const TABS = ["Personal", "Vehicule", "Locuință", "Sănătate", "Educație"] as const;

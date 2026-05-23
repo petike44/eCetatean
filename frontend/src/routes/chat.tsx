@@ -4,10 +4,16 @@ import { Send, Info, FileText, MapPin, Clock, Phone, Navigation2, ChevronLeft, C
 import { AppShell } from "@/components/AppShell";
 import { citizen, locationsCatalog, type DocItem, type LocationItem } from "@/lib/mock-data";
 import { useToast } from "@/components/Toast";
+import { Protected } from "@/lib/auth-guard";
+import { useSendChatMessage, type ChatMessage, type ClaudIAStreamChunk } from "@/lib/api-hooks";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({ meta: [{ title: "ClaudIA — eCetățean" }] }),
-  component: Chat,
+  component: () => (
+    <Protected>
+      <Chat />
+    </Protected>
+  ),
 });
 
 type Reply = {
@@ -30,78 +36,109 @@ const SUGGESTIONS: { label: string; icon: typeof Car; query: string }[] = [
   { label: "Pașaport urgent", icon: Plane, query: "Vreau să îmi fac un pașaport" },
 ];
 
-function aiReply(text: string): Reply {
-  const t = text.toLowerCase();
-  if (t.includes("pașaport") || t.includes("pasaport")) {
-    return {
-      text: "Pentru a obține un pașaport simplu electronic în Cluj-Napoca ai nevoie de actele de mai jos. Procesul durează aproximativ 14 zile lucrătoare sau 3 zile în regim de urgență.",
-      bullets: [
-        "Carte de identitate valabilă",
-        "Două fotografii color 3,5×4,5 cm",
-        "Dovada plății taxei de pașaport (258 RON)",
-        "Dovada domiciliului (factură utilități)",
-      ],
-      info: [
-        { label: "Durată standard", value: "14 zile lucrătoare" },
-        { label: "Regim de urgență", value: "3 zile (taxă dublă)" },
-      ],
-      documents: [
-        { name: "Carte de identitate", status: "have" },
-        { name: "Fotografii 3,5×4,5 cm", status: "obtain", institution: "Foto Expres", address: "Str. Memorandumului 12" },
-        { name: "Cerere pașaport pre-completată", status: "generate" },
-        { name: "Dovadă plată taxă (258 RON)", status: "obtain", institution: "Trezoreria Cluj", address: "Calea Dorobanților 65" },
-      ],
-      locations: locationsCatalog.pasaport,
-    };
+// Local catalog used to enrich the backend's tool_result with locations.
+// The stub maps office_type → key; we surface the matching list from mock-data.
+const OFFICE_LOCATION_MAP: Record<string, LocationItem[] | undefined> = {
+  dgep: locationsCatalog.buletin,
+  spcep: locationsCatalog.buletin,
+  primarie: locationsCatalog.pasaport,
+  onrc: locationsCatalog.pfa,
+  drpciv: locationsCatalog.inmatriculare,
+};
+
+type ActionPlanProcedure = {
+  event_type: string;
+  title: string;
+  emoji?: string;
+  summary?: string;
+  total_estimated_time?: string;
+  steps?: Array<{
+    order: number;
+    title: string;
+    office?: string;
+    address?: string;
+    fee?: string;
+    deadline?: string;
+    documents?: string[];
+  }>;
+};
+
+function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
+  const textParts: string[] = [];
+  let bullets: string[] | undefined;
+  let info: { label: string; value: string }[] | undefined;
+  let documents: DocItem[] | undefined;
+  let locations: LocationItem[] | undefined;
+
+  for (const chunk of chunks) {
+    if (chunk.type === "text") {
+      if (chunk.content) textParts.push(chunk.content);
+      continue;
+    }
+
+    const r = chunk.result as Record<string, unknown>;
+    const kind = r.type as string | undefined;
+
+    if (kind === "action_plan") {
+      const procedure = r.procedure as ActionPlanProcedure | undefined;
+      if (procedure) {
+        textParts.push(`${procedure.emoji ?? ""} ${procedure.title}`.trim());
+        if (procedure.summary) textParts.push(procedure.summary);
+        if (procedure.steps?.length) {
+          bullets = procedure.steps.map((s) => `${s.order}. ${s.title}${s.office ? ` — ${s.office}` : ""}`);
+          documents = procedure.steps.flatMap<DocItem>((s) =>
+            (s.documents ?? []).map((d) => ({
+              name: d,
+              status: "obtain" as const,
+              institution: s.office,
+              address: s.address,
+            })),
+          );
+        }
+        if (procedure.total_estimated_time) {
+          info = [{ label: "Timp estimat", value: procedure.total_estimated_time }];
+        }
+      }
+    } else if (kind === "office_info") {
+      const office = r.office as { name?: string; address?: string; hours?: string; phone?: string } | undefined;
+      const officeType = r.office_type as string | undefined;
+      if (office) {
+        info = [
+          { label: "Birou", value: office.name ?? "—" },
+          ...(office.address ? [{ label: "Adresă", value: office.address }] : []),
+          ...(office.hours ? [{ label: "Program", value: office.hours }] : []),
+          ...(office.phone ? [{ label: "Telefon", value: office.phone }] : []),
+        ];
+      }
+      if (officeType) locations = OFFICE_LOCATION_MAP[officeType];
+    } else if (kind === "pdf_ready") {
+      const formType = r.form_type as string | undefined;
+      documents = [{ name: `Formular: ${formType ?? "necunoscut"}`, status: "generate" }];
+    } else if (kind === "reminder_set") {
+      const title = r.title as string | undefined;
+      const deadline = r.deadline_days as number | undefined;
+      info = [
+        ...(title ? [{ label: "Reminder", value: title }] : []),
+        ...(typeof deadline === "number" ? [{ label: "Termen", value: `${deadline} zile` }] : []),
+      ];
+    } else if (kind === "text_only") {
+      const m = r.message as string | undefined;
+      if (m) textParts.push(m);
+    }
   }
-  if (t.includes("buletin") || t.includes("identitate")) {
-    return {
-      text: "Reînnoirea buletinului se face la Serviciul de Evidență a Persoanelor. Taxa este de 7 RON și se eliberează în 10 zile lucrătoare.",
-      bullets: ["Buletinul vechi", "Certificat de naștere", "Dovada adresei", "Taxă 7 RON"],
-      info: [{ label: "Taxă", value: "7 RON" }, { label: "Durată", value: "10 zile lucrătoare" }],
-      documents: [
-        { name: "Carte de identitate veche", status: "have" },
-        { name: "Certificat de naștere", status: "have" },
-        { name: "Cerere reînnoire pre-completată", status: "generate" },
-        { name: "Dovadă adresă (factură)", status: "obtain", institution: "Electrica Furnizare", address: "Str. Bariței 8" },
-      ],
-      locations: locationsCatalog.buletin,
-    };
-  }
-  if (t.includes("pfa")) {
-    return {
-      text: "Pentru a deschide un PFA îți trebuie acte de calificare și un act de spațiu. Procedura se face la ONRC, durează 3 zile lucrătoare și costă 50 RON.",
-      bullets: ["Cerere de înregistrare", "Cazier fiscal", "Dovada calificării", "Act de spațiu"],
-      info: [{ label: "Taxă", value: "50 RON" }, { label: "Durată", value: "3 zile lucrătoare" }],
-      documents: [
-        { name: "Cerere înregistrare ONRC", status: "generate" },
-        { name: "Cazier fiscal", status: "obtain", institution: "ANAF Cluj", address: "Str. Mihai Viteazu 5" },
-        { name: "Diplomă / dovadă calificare", status: "have" },
-        { name: "Contract spațiu (comodat)", status: "generate" },
-      ],
-      locations: locationsCatalog.pfa,
-    };
-  }
-  if (t.includes("înmatriculare") || t.includes("inmatriculare") || t.includes("mașină") || t.includes("masina")) {
-    return {
-      text: "Pentru înmatricularea unei mașini ai nevoie de actele de vânzare-cumpărare, ITP valabil și RCA. Te pot ghida pas cu pas.",
-      bullets: ["Contract vânzare-cumpărare", "Fișa de înmatriculare", "ITP valabil", "RCA", "Dovada plății taxei de mediu"],
-      info: [{ label: "Taxă", value: "65 RON" }, { label: "Durată", value: "1 zi" }],
-      documents: [
-        { name: "Contract vânzare-cumpărare", status: "generate" },
-        { name: "Fișă de înmatriculare", status: "generate" },
-        { name: "ITP valabil", status: "obtain", institution: "Stație ITP Mărăști", address: "Str. Fabricii 110" },
-        { name: "Asigurare RCA", status: "have" },
-      ],
-      locations: locationsCatalog.inmatriculare,
-    };
-  }
+
   return {
-    text: "Mulțumesc pentru întrebare. Caut informații în surse oficiale și revin imediat cu un răspuns clar.",
+    text: textParts.join("\n\n") || "Răspuns gol primit de la ClaudIA.",
+    bullets,
+    info,
+    documents,
+    locations,
   };
 }
 
 function Chat() {
+  const { show } = useToast();
+  const sendChat = useSendChatMessage();
   const [msgs, setMsgs] = useState<Msg[]>([
     {
       id: 1,
@@ -112,28 +149,38 @@ function Chat() {
     },
   ]);
   const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
   const [panelReply, setPanelReply] = useState<Reply | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typing = sendChat.isPending;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs, typing]);
 
-  const send = (text: string) => {
+  const send = async (text: string) => {
     const t = text.trim();
     if (!t) return;
     setInput("");
     setPanelReply(null);
     setMsgs((p) => [...p, { id: Date.now(), role: "user", text: t }]);
-    setTyping(true);
-    setTimeout(() => {
-      const r = aiReply(t);
+
+    const history: ChatMessage[] = [];
+    for (const m of msgs.slice(1)) {
+      if (m.role === "user") history.push({ role: "user", content: m.text });
+      else history.push({ role: "assistant", content: m.reply.text });
+    }
+    history.push({ role: "user", content: t });
+
+    try {
+      const chunks = await sendChat.mutateAsync(history);
+      const r = mapChunksToReply(chunks);
       setMsgs((p) => [...p, { id: Date.now() + 1, role: "ai", reply: r }]);
-      setTyping(false);
-      // Only open the panel for rich replies
       if (r.bullets || r.documents || r.locations) setPanelReply(r);
-    }, 800);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Eroare necunoscută";
+      setMsgs((p) => [...p, { id: Date.now() + 1, role: "ai", reply: { text: `⚠️ ${message}` } }]);
+      show("error", message);
+    }
   };
 
   const isEmpty = msgs.length === 1;

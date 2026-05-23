@@ -3,10 +3,15 @@ import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { PrimaryButton, GhostButton } from "@/components/ui-bits";
 import { citizen } from "@/lib/mock-data";
+import { Protected } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/document-preview")({
   head: () => ({ meta: [{ title: "Previzualizare cerere — eCetățean" }] }),
-  component: DocPreview,
+  component: () => (
+    <Protected>
+      <DocPreview />
+    </Protected>
+  ),
 });
 
 function DocPreview() {

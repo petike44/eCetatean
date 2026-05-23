@@ -5,10 +5,15 @@ import { AppShell } from "@/components/AppShell";
 import { HomeTopBar } from "@/components/TopBar";
 import { Card, PrimaryButton, GhostButton, Badge } from "@/components/ui-bits";
 import { citizen, vehicle } from "@/lib/mock-data";
+import { Protected } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/documents")({
   head: () => ({ meta: [{ title: "Documente — eCetățean" }] }),
-  component: Documents,
+  component: () => (
+    <Protected>
+      <Documents />
+    </Protected>
+  ),
 });
 
 const iconFor: Record<string, typeof IdCard> = {

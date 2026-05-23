@@ -3,10 +3,15 @@ import { Search, Lock, Building2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { Card, Badge } from "@/components/ui-bits";
+import { Protected } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/staff")({
   head: () => ({ meta: [{ title: "Portal Funcționari — eCetățean" }] }),
-  component: Staff,
+  component: () => (
+    <Protected>
+      <Staff />
+    </Protected>
+  ),
 });
 
 function Staff() {

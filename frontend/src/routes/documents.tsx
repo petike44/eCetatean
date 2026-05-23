@@ -6,7 +6,7 @@ import { Bell, IdCard, Plane, Briefcase, Baby, CarFront, Car, AlertCircle, Chevr
 
 import { AppShell } from "@/components/AppShell";
 
-import { HomeTopBar } from "@/components/TopBar";
+import { HomeTopBar, TopBarButton } from "@/components/TopBar";
 
 import { FadeIn, StaggerItem, StaggerList } from "@/components/motion-primitives";
 
@@ -132,11 +132,9 @@ function Documents() {
 
           right={
 
-            <button aria-label="Notificări" className="press relative min-h-11 min-w-11 flex items-center justify-center rounded-xl">
-
-              <Bell size={22} className="text-text-primary" />
-
-            </button>
+            <TopBarButton aria-label="Notificări">
+              <Bell size={20} className="text-text-primary" />
+            </TopBarButton>
 
           }
 

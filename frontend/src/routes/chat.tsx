@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { TopBarButton } from "@/components/TopBar";
 import { LifeEventStepsPanel } from "@/components/LifeEventStepsPanel";
 import { locationsCatalog, type LocationItem } from "@/lib/office-locations";
 import type { DocItem } from "@/lib/chat-types";
@@ -267,26 +269,21 @@ function Chat() {
 
   const chatTopBar = (
     <header
-      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 border-b border-primary/20 flex items-center justify-between px-5 backdrop-blur-sm bg-background/95"
+      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 flex items-center justify-between px-4 pointer-events-none"
+      style={{ background: "linear-gradient(to bottom, var(--bg) 30%, transparent 100%)" }}
       role="banner"
     >
-      <div className="flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <Sparkles size={13} className="text-white" fill="currentColor" />
-        </div>
-        <h1 className="font-display font-semibold text-[16px] tracking-tight text-foreground leading-none">
+      <div className="flex items-center gap-2 pointer-events-auto">
+        <h1 className="font-display font-semibold text-[15px] tracking-tight text-foreground leading-none">
           ClaudIA
         </h1>
-        <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none">
+        <span className="text-[10px] font-semibold text-text-tertiary bg-surface-secondary border border-border px-1.5 py-0.5 rounded-md uppercase tracking-wider leading-none">
           beta
         </span>
       </div>
-      <button
-        aria-label="Despre ClaudIA"
-        className="press p-2 -mr-1.5 rounded-xl hover:bg-surface-secondary transition-colors"
-      >
-        <Info size={18} className="text-text-secondary" />
-      </button>
+      <TopBarButton aria-label="Despre ClaudIA" className="pointer-events-auto">
+        <Info size={16} className="text-text-tertiary" />
+      </TopBarButton>
     </header>
   );
 
@@ -294,7 +291,7 @@ function Chat() {
     <AppShell
       topBar={chatTopBar}
       desktopScrollable={false}
-      className="flex flex-col lg:flex-1 lg:overflow-hidden"
+      className="flex flex-col lg:flex-1 lg:overflow-hidden lg:!px-0 lg:!py-0"
     >
       <div
         className="flex flex-col min-h-[calc(100dvh-56px-64px)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
@@ -364,7 +361,7 @@ function Chat() {
                 {msgs.slice(1).map((m) => {
                   if (m.role === "steps") {
                     return (
-                      <div key={m.id} className="anim-fade-up">
+                      <div key={m.id} className="anim-fade-up max-w-[520px]">
                         <LifeEventStepsPanel eventId={m.eventId} />
                       </div>
                     );
@@ -444,10 +441,12 @@ function Chat() {
               </div>
             </div>
 
-            {/* Input bar — pinned below scroll area */}
+            {/* Input bar — pinned below scroll area, fade instead of hard border */}
+            <div className="relative shrink-0">
+              <div className="absolute -top-8 inset-x-0 h-8 pointer-events-none bg-gradient-to-t from-background/90 to-transparent" />
             <form
               onSubmit={(e) => { e.preventDefault(); send(input); }}
-              className="shrink-0 px-4 py-3 bg-background border-t border-primary/20 lg:pb-4"
+              className="px-4 pb-4 pt-2 bg-background lg:pb-5"
             >
               <div className="relative flex items-center lg:max-w-2xl lg:mx-auto">
                 <input
@@ -469,6 +468,7 @@ function Chat() {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         )}
       </div>
@@ -634,22 +634,40 @@ function ReplyExtras({
         {cats && (cats.docs > 0 || cats.financial > 0 || cats.onsite > 0) && (
           <div className="grid grid-cols-3 gap-2">
             {cats.docs > 0 && (
-              <div className="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 text-center">
-                <p className="font-display font-bold text-[13px] text-blue-700">{cats.docs}</p>
-                <p className="text-[11px] text-blue-500 font-medium mt-0.5">Documente</p>
-              </div>
+              <motion.div
+                className="rounded-xl bg-blue-50 border border-blue-100 px-2 py-3 flex flex-col items-center gap-1"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <DocFanIllustration count={cats.docs} />
+                <p className="font-display font-bold text-[14px] text-blue-700 leading-none">{cats.docs}</p>
+                <p className="text-[10px] text-blue-500 font-medium">Documente</p>
+              </motion.div>
             )}
             {cats.financial > 0 && (
-              <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 text-center">
-                <p className="font-display font-bold text-[13px] text-amber-700">{cats.financial}</p>
-                <p className="text-[11px] text-amber-500 font-medium mt-0.5">Financiar</p>
-              </div>
+              <motion.div
+                className="rounded-xl bg-amber-50 border border-amber-100 px-2 py-3 flex flex-col items-center gap-1"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+              >
+                <PiggyBankIllustration count={cats.financial} />
+                <p className="font-display font-bold text-[14px] text-amber-700 leading-none">{cats.financial}</p>
+                <p className="text-[10px] text-amber-500 font-medium">Financiar</p>
+              </motion.div>
             )}
             {cats.onsite > 0 && (
-              <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-center">
-                <p className="font-display font-bold text-[13px] text-emerald-700">{cats.onsite}</p>
-                <p className="text-[11px] text-emerald-500 font-medium mt-0.5">La ghișeu</p>
-              </div>
+              <motion.div
+                className="rounded-xl bg-emerald-50 border border-emerald-100 px-2 py-3 flex flex-col items-center gap-1"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+              >
+                <BuildingQueueIllustration count={cats.onsite} />
+                <p className="font-display font-bold text-[14px] text-emerald-700 leading-none">{cats.onsite}</p>
+                <p className="text-[10px] text-emerald-500 font-medium">La ghișeu</p>
+              </motion.div>
             )}
           </div>
         )}
@@ -702,6 +720,114 @@ function ReplyExtras({
           <PageMap locations={reply.locations} />
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Category breakdown illustrations ─── */
+
+function DocFanIllustration({ count }: { count: number }) {
+  const shown = Math.min(count, 5);
+  const angles = shown === 1
+    ? [0]
+    : Array.from({ length: shown }, (_, i) => -24 + (48 / (shown - 1)) * i);
+
+  return (
+    <div className="relative h-11" style={{ width: 52, margin: "0 auto", paddingBottom: 7 }}>
+      {angles.map((angle, i) => (
+        <div
+          key={i}
+          className="absolute"
+          style={{
+            bottom: 0,
+            left: "calc(50% - 12px)",
+            transformOrigin: "12px bottom",
+            transform: `rotate(${angle}deg)`,
+            zIndex: i,
+          }}
+        >
+          <svg width="24" height="30" viewBox="0 0 24 30" fill="none">
+            <rect x="1" y="1" width="22" height="28" rx="2.5" fill="white" stroke="#93C5FD" strokeWidth="1.5"/>
+            <path d="M15 1.5v6h6.5" fill="none" stroke="#93C5FD" strokeWidth="1.5" strokeLinejoin="round"/>
+            <line x1="4.5" y1="14" x2="16" y2="14" stroke="#BFDBFE" strokeWidth="1.1" strokeLinecap="round"/>
+            <line x1="4.5" y1="18" x2="16" y2="18" stroke="#BFDBFE" strokeWidth="1.1" strokeLinecap="round"/>
+            <line x1="4.5" y1="22" x2="11" y2="22" stroke="#BFDBFE" strokeWidth="1.1" strokeLinecap="round"/>
+          </svg>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PiggyBankIllustration({ count }: { count: number }) {
+  return (
+    <div className="h-11 flex items-center justify-center">
+      <svg width="54" height="38" viewBox="0 0 64 44" fill="none">
+        {/* Coin stack */}
+        <ellipse cx="7" cy="38" rx="5" ry="2.2" fill="#FCD34D" stroke="#F59E0B" strokeWidth="1"/>
+        <ellipse cx="7" cy="34" rx="5" ry="2.2" fill="#FDE68A" stroke="#F59E0B" strokeWidth="1"/>
+        <ellipse cx="7" cy="30" rx="5" ry="2.2" fill="#FCD34D" stroke="#F59E0B" strokeWidth="1"/>
+        {/* Curly tail — short line + 1 loop */}
+        <path d="M19 27 Q10 25 12 20 Q14 15 19 17" fill="none" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        {/* Body */}
+        <ellipse cx="35" cy="27" rx="16" ry="13" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="1.5"/>
+        {/* Coin slot */}
+        <rect x="29" y="13" width="12" height="2" rx="1" fill="#D97706"/>
+        {/* Head */}
+        <circle cx="50" cy="18" r="9" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="1.5"/>
+        {/* Ear */}
+        <ellipse cx="47" cy="11" rx="2.5" ry="1.8" transform="rotate(-15 47 11)" fill="#FDE68A" stroke="#F59E0B" strokeWidth="1"/>
+        {/* Eye */}
+        <circle cx="52" cy="15" r="1.3" fill="#92400E"/>
+        <circle cx="52.5" cy="14.5" r="0.45" fill="white"/>
+        {/* Snout */}
+        <ellipse cx="57" cy="21" rx="4" ry="3.2" fill="#FDE68A" stroke="#F59E0B" strokeWidth="1"/>
+        <circle cx="55.5" cy="21.5" r="0.75" fill="#D97706"/>
+        <circle cx="58.5" cy="21.5" r="0.75" fill="#D97706"/>
+        {/* Legs */}
+        <rect x="23" y="37" width="7" height="6" rx="2" fill="#FDE68A" stroke="#F59E0B" strokeWidth="1"/>
+        <rect x="33" y="37" width="7" height="6" rx="2" fill="#FDE68A" stroke="#F59E0B" strokeWidth="1"/>
+        {/* Count on body */}
+        <text x="35" y="31" textAnchor="middle" fontSize="13" fontWeight="800" fill="#D97706" fontFamily="system-ui, sans-serif">{count}</text>
+      </svg>
+    </div>
+  );
+}
+
+function BuildingQueueIllustration({ count }: { count: number }) {
+  const shown = Math.min(count, 5);
+  const personXs = Array.from({ length: shown }, (_, i) => {
+    const spacing = 46 / (shown + 1);
+    return 5 + spacing * (i + 1);
+  });
+
+  return (
+    <div className="h-11 flex items-center justify-center">
+      <svg width="48" height="42" viewBox="0 0 56 46" fill="none">
+        {/* Pediment (triangle roof) */}
+        <path d="M 9 14 L 28 4 L 47 14 Z" fill="#6EE7B7" stroke="#34D399" strokeWidth="1"/>
+        {/* Entablature */}
+        <rect x="9" y="14" width="38" height="3.5" rx="0.5" fill="#34D399"/>
+        {/* Left column */}
+        <rect x="13" y="17.5" width="5" height="12" rx="1" fill="#A7F3D0" stroke="#34D399" strokeWidth="0.75"/>
+        {/* Right column */}
+        <rect x="38" y="17.5" width="5" height="12" rx="1" fill="#A7F3D0" stroke="#34D399" strokeWidth="0.75"/>
+        {/* Centre column */}
+        <rect x="25.5" y="17.5" width="5" height="12" rx="1" fill="#A7F3D0" stroke="#34D399" strokeWidth="0.75"/>
+        {/* Door */}
+        <rect x="22" y="22" width="12" height="7.5" rx="1.5" fill="#34D399"/>
+        {/* Step 1 */}
+        <rect x="9" y="29.5" width="38" height="2.5" rx="0.5" fill="#34D399"/>
+        {/* Step 2 */}
+        <rect x="6" y="32" width="44" height="2" rx="0.5" fill="#34D399" opacity="0.55"/>
+        {/* People queue */}
+        {personXs.map((x, i) => (
+          <g key={i}>
+            <circle cx={x} cy="37.5" r="2.8" fill="#059669"/>
+            <ellipse cx={x} cy="43.5" rx="3.2" ry="2.5" fill="#059669"/>
+          </g>
+        ))}
+      </svg>
     </div>
   );
 }

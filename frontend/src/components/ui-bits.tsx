@@ -106,19 +106,19 @@ export function Card({
   accent?: "amber" | "green" | "red" | "gray" | "navy";
   interactive?: boolean;
 }) {
-  const borders = {
-    amber: "border-l-4 border-l-accent",
-    green: "border-l-4 border-l-success",
-    red: "border-l-4 border-l-error",
-    gray: "border-l-4 border-l-border",
+  const tints: Record<string, string> = {
+    amber: "bg-amber-50/60 border-amber-200/50",
+    green: "bg-emerald-50/60 border-emerald-200/50",
+    red: "bg-red-50/60 border-red-200/50",
+    gray: "",
     navy: "",
   };
   return (
     <div
       className={cn(
-        "bg-surface border border-border rounded-2xl p-5 shadow-card transition-all duration-200",
-        accent ? borders[accent] : "",
-        interactive && "lg:hover:shadow-elevated lg:hover:border-primary/20 lg:hover:-translate-y-0.5",
+        "bg-surface border border-border rounded-2xl p-5 transition-all duration-200",
+        accent ? tints[accent] : "",
+        interactive && "lg:hover:shadow-sm lg:hover:border-primary/20 lg:hover:-translate-y-0.5",
         className,
       )}
     >

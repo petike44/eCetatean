@@ -145,10 +145,11 @@ export async function downloadPdf(
   formType: string,
   getToken: GetToken,
   additionalData: Record<string, string> = {},
+  profile: Record<string, unknown> = {},
 ): Promise<void> {
   const blob = await apiPostJson<Blob>(
     "/api/pdf/generate",
-    { form_type: formType, profile: {}, additional_data: additionalData },
+    { form_type: formType, profile, additional_data: additionalData },
     getToken,
   );
   const url = URL.createObjectURL(blob);

@@ -196,11 +196,13 @@ export function useGeneratePdf() {
     mutationFn: async ({
       formType,
       additionalData = {},
+      profile: profileOverride,
     }: {
       formType: string;
       additionalData?: Record<string, string>;
+      profile?: CitizenProfile | null;
     }) => {
-      await downloadPdf(formType, getToken, additionalData);
+      await downloadPdf(formType, getToken, additionalData, profileOverride ?? undefined);
     },
   });
 }
@@ -496,5 +498,25 @@ export function useVehicles() {
     queryKey: ["vehicles"],
     queryFn: () => apiGet<Vehicle[]>("/api/vehicles", getToken),
     enabled: !!isSignedIn,
+  });
+}
+
+// —— PDF Autofill ———————————————————————————————————————————————
+
+export function useAutofillDrpciv() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (inputValues: Record<string, string>) => {
+      await downloadAutofilledPdf(
+        "demo-drpciv",
+        "cerere_drpciv.pdf",
+        getToken,
+        { additional_data: inputValues },
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
   });
 }

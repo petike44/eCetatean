@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronLeft,
   Check,
@@ -19,7 +19,7 @@ import { Protected } from "@/lib/auth-guard";
 import {
   useLifeEvent,
   useUpdateLifeEventStep,
-  useGeneratePdf,
+  useAutofillDrpciv,
   useProfile,
   useVehicles,
   type StepStatus,
@@ -65,7 +65,7 @@ function DrpcivFlow() {
   const { data: profile } = useProfile();
   const { data: vehicles } = useVehicles();
   const updateStep = useUpdateLifeEventStep();
-  const generatePdf = useGeneratePdf();
+  const autofillDrpciv = useAutofillDrpciv();
 
   // Step 1 — editable fields for anything not in the profile
   const firstVehicle = vehicles?.[0];
@@ -88,24 +88,26 @@ function DrpcivFlow() {
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
-  // Sync from profile/vehicles once they load
-  useState(() => {
-    if (profile) {
-      setPersonalFields((p) => ({
-        ...p,
-        email: p.email || profile.email || "",
-        phone: p.phone || profile.phone || "",
-      }));
-    }
-    if (firstVehicle) {
-      setVehicleFields((v) => ({
-        make: v.make || firstVehicle.make || "",
-        model: v.model || firstVehicle.model || "",
-        vin: v.vin || firstVehicle.vin || "",
-        current_plate: v.current_plate || firstVehicle.plate_number || "",
-      }));
-    }
-  });
+  // Sync from profile once it loads
+  useEffect(() => {
+    if (!profile) return;
+    setPersonalFields((p) => ({
+      ...p,
+      email: p.email || profile.email || "",
+      phone: p.phone || profile.phone || "",
+    }));
+  }, [profile]);
+
+  // Sync from vehicles once they load
+  useEffect(() => {
+    if (!firstVehicle) return;
+    setVehicleFields((v) => ({
+      make: v.make || firstVehicle.make || "",
+      model: v.model || firstVehicle.model || "",
+      vin: v.vin || firstVehicle.vin || "",
+      current_plate: v.current_plate || firstVehicle.plate_number || "",
+    }));
+  }, [firstVehicle]);
 
   if (isLoading) {
     return (
@@ -154,21 +156,20 @@ function DrpcivFlow() {
 
   const handleDownload = async () => {
     try {
-      await generatePdf.mutateAsync({
-        formType: "cerere_drpciv",
-        additionalData: {
-          make: vehicleFields.make,
-          model: vehicleFields.model,
-          vin: vehicleFields.vin,
-          current_plate: vehicleFields.current_plate,
-          email: personalFields.email,
-          phone: personalFields.phone,
-          county: personalFields.county,
-          bloc: personalFields.bloc,
-          scara: personalFields.scara,
-          etaj: personalFields.etaj,
-          ap: personalFields.ap,
-        },
+      // Vehicle + address detail inputs; core profile fields (full_name, cnp, address, city)
+      // are auto-loaded from DB on the backend via loadProfile(userId).
+      await autofillDrpciv.mutateAsync({
+        make: vehicleFields.make,
+        model: vehicleFields.model,
+        vin: vehicleFields.vin,
+        current_plate: vehicleFields.current_plate,
+        county: personalFields.county,
+        bloc: personalFields.bloc,
+        scara: personalFields.scara,
+        etaj: personalFields.etaj,
+        ap: personalFields.ap,
+        email: personalFields.email,
+        phone: personalFields.phone,
       });
       setDownloaded(true);
       show("success", "Cererea a fost descărcată. Tipărește-o și semnează-o.");
@@ -468,10 +469,10 @@ function DrpcivFlow() {
                 {/* ── Download button ───────────────────────────────── */}
                 <button
                   onClick={handleDownload}
-                  disabled={generatePdf.isPending}
+                  disabled={autofillDrpciv.isPending}
                   className="press w-full flex items-center justify-center gap-2.5 bg-[#1F4E79] text-white font-semibold text-[14px] py-3.5 px-4 rounded-xl disabled:opacity-60 transition-opacity"
                 >
-                  {generatePdf.isPending ? (
+                  {autofillDrpciv.isPending ? (
                     <>
                       <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
                       Se generează...

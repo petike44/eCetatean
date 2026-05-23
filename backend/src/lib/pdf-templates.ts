@@ -335,24 +335,27 @@ async function generateCerereDrpciv(
 }
 
 async function loadCerereDrpcivTemplate(): Promise<Uint8Array> {
-  // 1. Local assets folder (preferred — copy cerere_drpciv.pdf here)
+  // 1. Local assets folder (copy cerere_drpciv.pdf here for offline dev)
   const localPath = path.join(process.cwd(), 'src', 'assets', 'cerere_drpciv.pdf')
   if (fs.existsSync(localPath)) {
     return new Uint8Array(fs.readFileSync(localPath))
   }
 
-  // 2. Supabase storage fallback
+  // 2. Supabase storage — bucket: pdf-forms (Files → Buckets → pdf-forms)
   try {
     const { data, error } = await supabaseAdmin.storage
-      .from('pdf-templates')
+      .from('pdf-forms')
       .download('cerere_drpciv.pdf')
     if (data && !error) {
       return new Uint8Array(await data.arrayBuffer())
     }
-  } catch { /* fall through */ }
+    if (error) console.error('Supabase storage error:', error)
+  } catch (err) {
+    console.error('Supabase storage fetch failed:', err)
+  }
 
   throw new Error(
     'Template cerere_drpciv.pdf not found. ' +
-    'Copy the file to backend/src/assets/cerere_drpciv.pdf'
+    'Upload it to Supabase → Storage → pdf-forms bucket, or copy to backend/src/assets/cerere_drpciv.pdf'
   )
 }

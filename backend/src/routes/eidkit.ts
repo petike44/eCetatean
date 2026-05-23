@@ -193,21 +193,34 @@ eidKitRoute.post('/demo', requireAuth, async (c) => {
     scope: 'openid profile address cei:cnp cei:document',
   }
 
-  await persistVerifiedIdentity({
-    userId,
-    claims: demoClaims,
-    scopes: demoClaims.scope!,
-    level: 'demo_eidkit_sso',
-  })
+  try {
+    await persistVerifiedIdentity({
+      userId,
+      claims: demoClaims,
+      scopes: demoClaims.scope!,
+      level: 'demo_eidkit_sso',
+    })
 
-  await writeAuditEntry({
-    userId,
-    action: 'Identitate verificată demo prin EidKit',
-    actionType: 'identity_verified',
-    data: { provider: 'eidkit', demo: true },
-  })
+    await writeAuditEntry({
+      userId,
+      action: 'Identitate verificată demo prin EidKit',
+      actionType: 'identity_verified',
+      data: { provider: 'eidkit', demo: true },
+    })
 
-  return c.json({ success: true, data: await buildStatusForUser(userId) })
+    return c.json({ success: true, data: await buildStatusForUser(userId) })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Eroare necunoscută'
+    console.error('EidKit demo verification error:', err)
+    return c.json(
+      {
+        success: false,
+        error: `Verificarea demo EidKit a eșuat: ${message}`,
+        code: 'EIDKIT_DEMO_FAILED',
+      },
+      500
+    )
+  }
 })
 
 eidKitRoute.post('/unlink', requireAuth, async (c) => {

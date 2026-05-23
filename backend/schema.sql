@@ -49,6 +49,10 @@ alter table public.profiles add column if not exists identity_verification_level
 alter table public.profiles add column if not exists identity_verified_claims jsonb not null default '{}'::jsonb;
 create index if not exists profiles_eidkit_sub_idx on public.profiles (eidkit_sub);
 
+-- Local/demo schema uses backend service_role as the access boundary.
+-- Keep RLS disabled here; add production policies before enabling it.
+alter table public.profiles disable row level security;
+
 -- ─── identity_verification_sessions ─────────────────────────────
 -- Short-lived state for OIDC redirects. The callback from EidKit does
 -- not carry the user's Supabase bearer token, so we map state → user_id.
@@ -70,6 +74,7 @@ create index if not exists identity_verification_sessions_state_idx
   on public.identity_verification_sessions (state);
 create index if not exists identity_verification_sessions_user_created_idx
   on public.identity_verification_sessions (user_id, created_at desc);
+alter table public.identity_verification_sessions disable row level security;
 
 -- ─── identity_verifications ─────────────────────────────────────
 -- Historical verification records. Store normalized claims and token
@@ -91,6 +96,7 @@ create index if not exists identity_verifications_user_verified_idx
   on public.identity_verifications (user_id, verified_at desc);
 create index if not exists identity_verifications_provider_sub_idx
   on public.identity_verifications (provider, provider_sub);
+alter table public.identity_verifications disable row level security;
 
 -- ─── news ───────────────────────────────────────────────────────
 create table if not exists public.news (

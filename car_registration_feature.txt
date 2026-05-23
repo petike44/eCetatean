@@ -1,0 +1,718 @@
+CAR REGISTRATION FEATURE — CLAUDE CODE INSTRUCTIONS
+====================================================
+eCetățean / Digital Romania Hackathon 2026
+Read CLAUDE_CONTEXT.md first, then this file, then look at the existing code.
+
+
+WHAT YOU ARE BUILDING
+=====================
+A complete end-to-end car registration flow inside the eCetățean app.
+The user should be able to start and finish the entire registration
+process without ever opening Google. Every step that can be completed
+online is handled inside the app. Every step that requires a physical
+visit is made into one single prepared visit — the app generates all
+documents, books the appointment, and tells the user exactly what to
+bring.
+
+Two flows must be supported:
+  A) Domestic purchase (car bought in Romania) — 4 steps
+  B) EU/Germany import (car brought from Germany or another EU state) — 7 steps
+
+The user's entry point is the ClaudIA chat screen. They type something
+like "am cumpărat o mașină din Germania" and ClaudIA asks two
+clarifying questions, creates a life event record, and opens the
+Life Event Registration Dashboard for that specific process.
+
+
+READ THESE FILES FIRST
+======================
+Before writing any code, read:
+1. CLAUDE_CONTEXT.md (repo root) — full project context
+2. /backend/src/lib/knowledge-base.ts — existing life event data structure
+3. /backend/src/routes/claudia.ts — the AI stub and tool handlers
+4. /backend/src/lib/pdf-templates.ts — existing PDF template structure
+5. /backend/src/types/index.ts — all TypeScript interfaces
+6. /backend/src/lib/hash-chain.ts — audit log write function
+7. /frontend/src — scan the pages/routes that Lovable has already generated
+
+After reading, check: does /frontend/src have a life-event page or route?
+Look for any file matching: life-event, lifeEvent, life_event, registration.
+Report what you find before building anything.
+
+
+STEP-BY-STEP ANALYSIS: WHAT IS ONLINE VS PHYSICAL
+===================================================
+
+FLOW A — DOMESTIC PURCHASE (car bought in Romania from another person)
+
+  STEP 1: Notarize sale contract
+    Status: PHYSICAL (notary office, cannot be skipped)
+    App does:
+      - Generate pre-filled Contract de vânzare-cumpărare PDF
+        (seller name/CNP left blank — user fills at notary)
+        (buyer fields: full name, CNP, address from profile — pre-filled)
+        (vehicle fields: from profile if car already added, or user inputs)
+      - Show notary offices in Cluj with address and phone
+      - Estimated cost: 150–300 RON
+      - Action button: "Găsește notar" → link to harta notarilor publici
+
+  STEP 2: Transcription at DRPCIV
+    Status: PHYSICAL (mandatory counter visit) + ONLINE BOOKING
+    App does:
+      - Generate pre-filled Cerere tip DRPCIV (transcription request)
+      - Open DRPCIV booking: https://www.drpciv.ro/drpciv-booking/activities/21
+        in an in-app webview component (or deep link on mobile)
+      - Show complete document checklist for this visit
+      - Estimated time at counter: 30–45 minutes when file is complete
+      - Action buttons: "Rezervă programare DRPCIV" + "Descarcă cerere completată"
+
+  STEP 3: Declare for impozit auto at Primărie
+    Status: PARTIALLY ONLINE (ghișeu.ro for some primării + some accept email)
+    App does:
+      - Generate pre-filled Declarație impozit auto PDF
+      - Link to Primăria Cluj online portal for tax declaration
+      - Direct link: https://www.ghiseul.ro (for participating primării)
+      - Fallback: show Primăria Cluj address and Tax window hours
+      - Action buttons: "Declară online ghișeu.ro" + "Descarcă declarație"
+
+  STEP 4: Get RCA insurance
+    Status: FULLY ONLINE (can be done entirely in app)
+    App does:
+      - Open RCA comparison inside in-app webview
+      - Link: https://www.ieftine.ro/asigurari/rca (neutral aggregator)
+      - After purchase, user uploads confirmation to document wallet
+      - Action button: "Compară și cumpără RCA"
+
+
+FLOW B — EU/GERMANY IMPORT (car brought from Germany or EU)
+
+  STEP 1: Translate German documents
+    Status: ONLINE AVAILABLE (authorized online translators in Romania)
+    App does:
+      - Explain what needs to be translated:
+          Brief mare (Teil II / Fahrzeugbrief) + purchase invoice/Kaufvertrag
+      - Link to online authorized translation services:
+          https://www.traduceri.ro or https://traductori.ro (example providers)
+      - Show that both documents need stamps from authorized translator
+      - Estimated cost: 150–300 RON, same-day delivery common
+      - Action button: "Găsește traducător autorizat online"
+
+  STEP 2: RAR Omologare + ITP + CIV
+    Status: PHYSICAL (mandatory, car must be present) + ONLINE BOOKING
+    App does:
+      - Open RAR booking system: https://www.rar.ro/web/en/homologare
+      - Explain the 3 things RAR does in one visit:
+          CIV (Cartea de identitate a vehiculului) — 250 RON
+          ITP (Inspecție tehnică periodică) — 250 RON
+          Certificat de autenticitate — 250 RON
+          Total: 750 RON (more if car manufactured after Aug 2018 and no CoC)
+      - Check: does user have CoC (Certificate of Conformity)?
+          If car manufactured after Aug 2018 and no CoC: add 500 RON for RAR to issue it
+      - Note: if car has no valid export plates (Zollkennzeichen),
+          cannot be driven to RAR — must get red plates (numere roșii) from DRPCIV first
+      - Action buttons: "Rezervă programare RAR" + "Verifică dacă ai nevoie de CoC"
+
+  STEP 3: Get TVA Certificate from ANAF
+    Status: PARTIALLY ONLINE (SPV digital submission possible)
+    App does:
+      - Generate pre-filled Cerere certificat TVA ANAF
+      - Explain: for SH car bought from private person in Germany,
+          TVA is almost certainly 0, but certificate is still required
+      - Two paths:
+          Path A (has SPV account): submit via Spațiul Privat Virtual
+            Link: https://www.anaf.ro/anaf/internet/RO/spv
+          Path B (no SPV): physical visit to ANAF Cluj
+            Address: Str. Mihail Kogălniceanu 10, Cluj-Napoca
+            Hours: Luni–Vineri 08:30–16:30
+      - Action buttons: "Depune prin SPV" + "Descarcă cerere pentru ghișeu"
+
+  STEP 4: Register at Primărie — REMTII stamp + impozit auto
+    Status: PARTIALLY ONLINE
+    App does:
+      - Explain: the translated+notarized purchase contract needs
+          the REMTII registration number before DRPCIV will accept it
+      - Generate Declarație impozit auto PDF (pre-filled)
+      - Link to Primăria Cluj portal for online declaration
+      - Note: for EU imports this step must happen AFTER translation
+          because the REMTII stamp goes on the translated contract
+      - Action buttons: "Declară online" + "Descarcă declarație"
+
+  STEP 5: Pay DRPCIV fees via ghișeu.ro
+    Status: FULLY ONLINE (mandatory before counter visit)
+    App does:
+      - Direct link to ghișeu.ro payment for registration certificate (49 RON)
+        URL: https://www.ghiseul.ro/ghiseul/public/taxe/taxe-speciale
+        Service: "Certificate de înmatriculare"
+      - Separate payment for license plates (~200 RON)
+      - After payment, user saves receipt in document wallet
+      - Action button: "Plătește 49 RON pe ghișeu.ro" and "Plătește plăcuțe"
+
+  STEP 6: Get RCA insurance (in new Romanian owner's name)
+    Status: FULLY ONLINE
+    Same as Flow A Step 4.
+
+  STEP 7: DRPCIV final appointment + document submission
+    Status: PHYSICAL (mandatory counter visit) + ONLINE BOOKING
+    App does:
+      - Generate pre-filled Cerere tip DRPCIV
+      - Open DRPCIV booking: https://www.drpciv.ro/drpciv-booking/activities/21
+      - Show complete document checklist for final DRPCIV visit:
+          Cerere tip (generated by app)
+          Buletin original + copie
+          Contract vânzare-cumpărare autentificat + tradus cu REMTII stamp
+          CIV original (from RAR)
+          ITP valid (from RAR)
+          RCA valid (new Romanian policy)
+          Certificat de autenticitate (from RAR)
+          Certificat TVA ANAF
+          Dovada plată certificat înmatriculare (49 RON from ghișeu.ro)
+          Dovada plată plăcuțe (~200 RON)
+      - Action buttons: "Rezervă programare DRPCIV" + "Descarcă cerere completată"
+
+
+BACKEND CHANGES — DO THESE FIRST
+=================================
+
+1. ADD LIFE EVENT PROGRESS TABLE TO SUPABASE
+   Run this SQL in the Supabase SQL editor:
+
+   CREATE TABLE IF NOT EXISTS life_event_progress (
+     id              UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+     user_id         TEXT NOT NULL,
+     event_type      TEXT NOT NULL,
+     event_title     TEXT NOT NULL,
+     event_data      JSONB DEFAULT '{}',
+     steps_status    JSONB DEFAULT '{}',
+     current_step    INTEGER DEFAULT 1,
+     total_steps     INTEGER NOT NULL,
+     is_completed    BOOLEAN DEFAULT FALSE,
+     started_at      TIMESTAMPTZ DEFAULT NOW(),
+     updated_at      TIMESTAMPTZ DEFAULT NOW(),
+     completed_at    TIMESTAMPTZ
+   );
+
+   ALTER TABLE life_event_progress ENABLE ROW LEVEL SECURITY;
+
+   CREATE POLICY "citizen_manage_own_life_events" ON life_event_progress
+     FOR ALL USING ((auth.jwt() ->> 'sub') = user_id)
+     WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
+
+   Also add to .env.example a comment that this table must be created.
+
+
+2. ADD TO /backend/src/lib/knowledge-base.ts
+
+   Add two new entries to the LIFE_EVENTS object.
+   Follow the exact same TypeScript structure as the existing entries.
+
+   --- car_domestic entry ---
+   key: 'car_domestic'
+   title: 'Ai cumpărat o mașină în România'
+   emoji: '🚗'
+   summary: '4 pași pentru a înmatricula mașina cumpărată în România.'
+   total_estimated_time: '1–2 zile lucrătoare'
+   steps:
+     Step 1:
+       order: 1
+       title: 'Autentifici contractul de vânzare-cumpărare'
+       office: 'Orice birou notarial din Cluj-Napoca'
+       address: 'Orice notar — verifică harta notarilor'
+       hours: 'Luni–Vineri: 09:00–17:00'
+       phone: 'Variabil — sunați înainte'
+       documents: ['Buletin vânzător (original)', 'Buletin cumpărător (original)', 'CIV original', 'Contract completat și semnat']
+       fee: '150–300 RON'
+       deadline: 'Înainte de pasul 2'
+       form_type: 'sale_contract'
+       payment_url: null
+       tip: 'Generăm contractul pre-completat cu datele tale. Tipărește, semnează cu vânzătorul, mergi la notar.'
+       online_action: { label: 'Descarcă contract pre-completat', type: 'pdf', form_type: 'sale_contract' }
+
+     Step 2:
+       order: 2
+       title: 'Transcrieri mașina la DRPCIV'
+       office: 'DRPCIV Cluj — Înmatriculări'
+       address: 'Str. Traian Vuia 1-4, Cluj-Napoca'
+       hours: 'Luni–Vineri: 08:00–16:00'
+       phone: '0264-420.464'
+       documents: ['Buletin (original + copie)', 'Contract autentificat (original + copie)', 'CIV original', 'ITP valabil', 'RCA valabil', 'Dovada plată 49 RON certificat (ghișeu.ro)']
+       fee: '49 RON certificat + ~200 RON plăcuțe'
+       deadline: 'În 30 de zile de la cumpărare — penalizare după'
+       form_type: 'transcription'
+       payment_url: 'https://www.ghiseul.ro'
+       tip: 'Plătește taxa de 49 RON pe ghișeu.ro înainte să mergi la ghișeu — este obligatoriu.'
+       online_action: { label: 'Rezervă programare DRPCIV', type: 'url', url: 'https://www.drpciv.ro/drpciv-booking/activities/21' }
+
+     Step 3:
+       order: 3
+       title: 'Declari mașina la Primărie pentru impozit auto'
+       office: 'Primăria Cluj-Napoca — Taxe și Impozite'
+       address: 'Calea Moților 3, Cluj-Napoca'
+       hours: 'Luni–Joi: 08:00–16:00 | Vineri: 08:00–13:00'
+       phone: '0264-596.030'
+       documents: ['Buletin (original + copie)', 'Certificat înmatriculare nou (original + copie)', 'Contract vânzare (copie)']
+       fee: 'Gratuit (impozit calculat separat)'
+       deadline: 'În 30 de zile de la înmatriculare'
+       form_type: 'impozit_auto'
+       payment_url: 'https://www.ghiseul.ro'
+       tip: 'Poți plăti impozitul direct pe ghișeu.ro după declarare, fără a reveni la ghișeu.'
+       online_action: { label: 'Declară și plătește online', type: 'url', url: 'https://www.ghiseul.ro' }
+
+     Step 4:
+       order: 4
+       title: 'Cumpără asigurare RCA pe numele tău'
+       office: 'Online — orice asigurător autorizat ASF'
+       address: 'Online'
+       hours: 'Disponibil 24/7'
+       phone: 'Nu este necesar'
+       documents: ['Buletin', 'Certificat de înmatriculare']
+       fee: 'Variabil — de la ~400 RON/an'
+       deadline: 'Înainte de pasul 2'
+       form_type: null
+       payment_url: 'https://www.ieftine.ro/asigurari/rca'
+       tip: 'Compară prețurile înainte de a cumpăra. RCA trebuie să fie pe numele noului proprietar.'
+       online_action: { label: 'Compară prețuri RCA', type: 'url', url: 'https://www.ieftine.ro/asigurari/rca' }
+
+   --- car_from_germany entry ---
+   key: 'car_from_germany'
+   title: 'Înmatriculare mașină din Germania/UE'
+   emoji: '🇩🇪'
+   summary: '7 pași pentru a înmatricula o mașină adusă din Germania sau altă țară UE. Estimat total: ~1,150 RON.'
+   total_estimated_time: '2–3 săptămâni'
+   steps:
+     Step 1:
+       order: 1
+       title: 'Traduci documentele germane la traducător autorizat'
+       office: 'Traducător autorizat (online sau fizic)'
+       address: 'Online sau orice birou traduceri autorizate'
+       hours: 'Variabil'
+       phone: 'Variabil'
+       documents: ['Brief mare (Teil II / Fahrzeugbrief)', 'Factura de cumpărare sau Kaufvertrag']
+       fee: '150–300 RON'
+       deadline: 'Primul pas — blocant pentru toate celelalte'
+       form_type: null
+       payment_url: null
+       tip: 'Mulți traducători autorizați lucrează online. Trimiți scanuri, primești traducerile certificate prin email în aceeași zi.'
+       online_action: { label: 'Găsește traducător autorizat online', type: 'url', url: 'https://www.traduceri.ro' }
+
+     Step 2:
+       order: 2
+       title: 'Programare și vizită RAR — omologare, ITP, CIV'
+       office: 'Registrul Auto Român Cluj'
+       address: 'Str. Taietura Turcului 12A, Cluj-Napoca'
+       hours: 'Luni–Vineri: 08:00–16:00 (cu programare)'
+       phone: '0264-432.474'
+       documents: ['Brief mare tradus (original)', 'Factura/Kaufvertrag tradus', 'Buletin', 'CoC (dacă mașina e după aug 2018)']
+       fee: '750 RON (ITP 250 + CIV 250 + autenticitate 250) | +500 RON dacă lipsește CoC'
+       deadline: 'Înainte de pasul 3 — CIV e necesar la ANAF și DRPCIV'
+       form_type: null
+       payment_url: null
+       tip: 'Dacă mașina nu are plăcuțe valabile de export (Zollkennzeichen), nu o poți conduce la RAR. Scoate numere roșii mai întâi de la DRPCIV.'
+       online_action: { label: 'Rezervă programare RAR', type: 'url', url: 'https://www.rar.ro' }
+
+     Step 3:
+       order: 3
+       title: 'Obții certificatul TVA de la ANAF'
+       office: 'ANAF Cluj sau online prin SPV'
+       address: 'Str. Mihail Kogălniceanu 10, Cluj-Napoca'
+       hours: 'Luni–Vineri: 08:30–16:30'
+       phone: '0264-415.551'
+       documents: ['Cerere tip ANAF (o generăm noi)', 'Buletin', 'Brief mare tradus', 'Factura tradusă', 'CIV (de la RAR)']
+       fee: 'Gratuit'
+       deadline: 'Înainte de pasul 7 (DRPCIV)'
+       form_type: 'anaf_tva_certificate'
+       payment_url: null
+       tip: 'Dacă ai cont SPV, poți depune cererea online. Pentru mașini SH de la persoană fizică, TVA este de regulă 0 RON — certificatul doar confirmă acest lucru.'
+       online_action: { label: 'Depune prin SPV (online)', type: 'url', url: 'https://www.anaf.ro/anaf/internet/RO/spv' }
+
+     Step 4:
+       order: 4
+       title: 'Înregistrare la Primărie — ștampilă REMTII + impozit auto'
+       office: 'Primăria Cluj-Napoca — Taxe și Impozite'
+       address: 'Calea Moților 3, Cluj-Napoca'
+       hours: 'Luni–Joi: 08:00–16:00 | Vineri: 08:00–13:00'
+       phone: '0264-596.030'
+       documents: ['Contract tradus (trebuie să primească numărul REMTII)', 'Buletin', 'CIV (de la RAR)', 'Declarație impozit auto (o generăm noi)']
+       fee: 'Gratuit (impozit calculat separat)'
+       deadline: 'Înainte de pasul 7 — DRPCIV verifică numărul REMTII pe contract'
+       form_type: 'impozit_auto'
+       payment_url: 'https://www.ghiseul.ro'
+       tip: 'Numărul REMTII trebuie să apară pe contract când mergi la DRPCIV. Adă toate documentele la acest ghișeu într-o singură vizită.'
+       online_action: { label: 'Declară online ghișeu.ro', type: 'url', url: 'https://www.ghiseul.ro' }
+
+     Step 5:
+       order: 5
+       title: 'Plătești taxele DRPCIV pe ghișeu.ro'
+       office: 'Online — ghișeu.ro'
+       address: 'Online'
+       hours: 'Disponibil 24/7'
+       phone: 'Nu este necesar'
+       documents: ['CNP', 'Serie șasiu (VIN)']
+       fee: '49 RON certificat înmatriculare + ~200 RON plăcuțe'
+       deadline: 'Înainte de programarea DRPCIV — plata e obligatorie la ghișeu'
+       form_type: null
+       payment_url: 'https://www.ghiseul.ro'
+       tip: 'Achită ambele taxe pe ghișeu.ro și salvează chitanțele. La DRPCIV se verifică plata electronic — nu mai trebuie să aduci chitanță pe hârtie.'
+       online_action: { label: 'Plătește taxele pe ghișeu.ro', type: 'url', url: 'https://www.ghiseul.ro' }
+
+     Step 6:
+       order: 6
+       title: 'Cumperi asigurare RCA pe numele tău'
+       office: 'Online'
+       address: 'Online'
+       hours: '24/7'
+       phone: 'Nu este necesar'
+       documents: ['Buletin', 'CIV (de la RAR)']
+       fee: 'Variabil — de la ~400 RON/an'
+       deadline: 'Înainte de programarea DRPCIV'
+       form_type: null
+       payment_url: 'https://www.ieftine.ro/asigurari/rca'
+       tip: 'RCA-ul trebuie să fie pe numele tău (noul proprietar) nu al celui de la care ai cumpărat. Poți cumpăra 100% online.'
+       online_action: { label: 'Compară și cumpără RCA', type: 'url', url: 'https://www.ieftine.ro/asigurari/rca' }
+
+     Step 7:
+       order: 7
+       title: 'Programare și depunere dosar final la DRPCIV'
+       office: 'DRPCIV Cluj — Înmatriculări'
+       address: 'Str. Traian Vuia 1-4, Cluj-Napoca'
+       hours: 'Luni–Vineri: 08:00–16:00'
+       phone: '0264-420.464'
+       documents: ['Cerere tip DRPCIV (o generăm noi)', 'Buletin original + copie', 'Contract tradus cu ștampilă REMTII', 'CIV original (de la RAR)', 'ITP valabil (de la RAR)', 'RCA valabil (pe numele tău)', 'Certificat autenticitate (de la RAR)', 'Certificat TVA ANAF', 'Chitanță 49 RON certificat', 'Chitanță ~200 RON plăcuțe']
+       fee: 'Taxele deja plătite în pasul 5'
+       deadline: 'În 30 de zile de la intrarea mașinii în România'
+       form_type: 'cerere_drpciv'
+       payment_url: null
+       tip: 'Dosarul complet la DRPCIV durează 30–45 minute. Dacă ai toate actele din lista de mai sus, nu vei fi trimis înapoi.'
+       online_action: { label: 'Rezervă programare DRPCIV', type: 'url', url: 'https://www.drpciv.ro/drpciv-booking/activities/21' }
+
+   Also update the TypeScript interface LifeEventStep in /backend/src/types/index.ts
+   to add an optional field:
+     online_action?: {
+       label: string
+       type: 'pdf' | 'url' | 'payment'
+       url?: string
+       form_type?: string
+     }
+
+
+3. ADD TWO NEW PDF TEMPLATES TO /backend/src/lib/pdf-templates.ts
+
+   Template: anaf_tva_certificate
+   Fields to pre-fill from profile:
+     - Subsemnatul/a (full_name)
+     - CNP (cnp)
+     - Domiciliat(ă) (address + city)
+     - Buletin seria (buletin_series) nr. (buletin_number)
+     - Vehicul marca/model (from additional_data: make, model)
+     - Serie șasiu VIN (from additional_data: vin)
+     - Vânzător (from additional_data: seller_name, seller_country)
+     - Prețul de achiziție (from additional_data: purchase_price)
+     - Data achiziției (from additional_data: purchase_date)
+     - Scopul: atestarea plății/neplatei TVA în cazul achiziției intracomunitare
+     - Data (today)
+     - Semnătură field (empty — user signs)
+
+   Template: cerere_drpciv
+   Fields to pre-fill from profile:
+     - Subsemnatul/a (full_name)
+     - CNP (cnp)
+     - Domiciliat(ă) (address + city)
+     - Buletin seria (buletin_series) nr. (buletin_number)
+     - Solicit: înmatricularea autovehiculului
+     - Marca (from additional_data: make)
+     - Model (from additional_data: model)
+     - An fabricație (from additional_data: year)
+     - Număr de identificare VIN (from additional_data: vin)
+     - Număr înmatriculare anterior (from additional_data: previous_plate — optional)
+     - Data (today)
+     - Semnătură (empty — user signs)
+
+   Add both to the FormType union in /backend/src/types/index.ts:
+   'anaf_tva_certificate' | 'cerere_drpciv'
+
+   Add switch cases in the generatePDF function for both templates.
+
+
+4. ADD NEW API ROUTES TO /backend/src/routes/
+
+   Create a new file: /backend/src/routes/life-events.ts
+
+   This route manages the persistent life event progress tracker.
+
+   Endpoints:
+
+   POST /api/life-events
+     Body: { event_type: string, event_data: object }
+     Auth: requireAuth
+     Action:
+       - Look up the procedure from knowledge base using event_type
+       - Insert a new row in life_event_progress with:
+           user_id, event_type, event_title (from procedure), event_data,
+           steps_status (object with keys "step_1" through "step_N" all set to "pending"),
+           total_steps (length of steps array),
+           current_step: 1
+       - Write audit entry: "Eveniment civic pornit: [event_title]"
+       - Return the created record including all step details from knowledge base
+     Response: { success: true, data: { id, event_type, steps, step_details_from_kb } }
+
+   GET /api/life-events
+     Auth: requireAuth
+     Action: return all life events for user, ordered by started_at DESC
+     Include step_details merged from knowledge base for each event
+     Response: { success: true, data: [ ...events ] }
+
+   GET /api/life-events/:id
+     Auth: requireAuth
+     Action: return single life event with full step details from knowledge base
+     Verify user_id matches before returning
+     Response: { success: true, data: { ...event, step_details: [...from kb] } }
+
+   PATCH /api/life-events/:id/steps/:stepNumber
+     Body: { status: 'pending' | 'in_progress' | 'completed' | 'skipped' }
+     Auth: requireAuth
+     Action:
+       - Verify ownership
+       - Update steps_status JSONB: set steps_status["step_N"] = status
+       - If status is 'completed', advance current_step to next pending step
+       - If all steps completed, set is_completed = true, completed_at = now()
+       - Update updated_at = now()
+       - Write audit entry: "Pas [N] completat: [step_title] ([event_title])"
+     Response: { success: true, data: updated event }
+
+   Register this route in /backend/src/index.ts:
+     import { lifeEventsRoute } from './routes/life-events'
+     app.route('/api/life-events', lifeEventsRoute)
+
+
+5. UPDATE CLAUDIA STUB — /backend/src/routes/claudia.ts
+
+   In the getMockResponse function, improve the car detection logic.
+   When car keywords are detected, the stub should:
+     A) First ask a clarifying question (simulated conversation)
+     B) Then return an action_plan with the correct event type
+
+   Update detectCarFlow function:
+     If message contains 'germania' or 'germany' or 'ue' or 'europa' or 'strainatate':
+       Return { needs_clarification: false, event_type: 'car_from_germany' }
+     If message contains 'cumpar' or 'cumpărat' or 'masina' or 'mașin' (without germany):
+       Return { needs_clarification: true, question: 'Mașina a fost cumpărată din România sau din Germania/altă țară UE?' }
+
+   For the tool response when event type is known:
+     Return action_plan with the full procedure from knowledge base
+     AND include { create_life_event: true, event_type: 'car_from_germany' }
+     so the frontend knows to call POST /api/life-events after showing the plan
+
+   Add new tool definition to the tools list (for when real AI is added):
+     name: 'ask_clarification'
+     description: 'When a life event is detected but key information is missing (domestic vs EU import, etc.), ask the user a single clarifying question.'
+     input_schema: { question: string, options: string[] }
+
+
+FRONTEND CHANGES — DO THESE AFTER BACKEND
+==========================================
+
+First, scan all files in /frontend/src for any existing life-event page.
+Run: find /frontend/src -name "*life*" -o -name "*event*" -o -name "*registration*"
+Report findings before building.
+
+
+6. CREATE THE LIFE EVENT DASHBOARD PAGE
+
+   If the page does not exist, create it at the correct path for the project's routing.
+   Check how other pages are defined (look at how /dashboard or /profile is structured).
+
+   The page receives an eventId param from the URL.
+   On mount, it calls GET /api/life-events/:id to fetch the event and step details.
+
+   LAYOUT (mobile-first, 390px):
+
+   Top bar:
+     - Back arrow → previous page (or /dashboard)
+     - Event title (from event_data.title) + event emoji
+     - Subtitle: "X din N pași completați"
+     - Amber progress bar (width = completedSteps / totalSteps * 100%)
+
+   Cost summary card (below top bar):
+     - Navy (#1F4E79) background, white text
+     - "Cost total estimat: ~X RON"
+     - Row of chips: e.g. "RAR 750 RON" | "DRPCIV 250 RON" | "RCA ~400 RON"
+     - These costs come from the step fee fields in the knowledge base
+     - Parse fee strings and sum the numeric values
+
+   Steps section:
+     - Section label "Pașii tăi" (uppercase, small, gray)
+     - Each step renders as a card:
+
+       STEP CARD (collapsed by default, tap to expand):
+         Left: circle badge with step number (navy bg, white Sora bold)
+           → turns green checkmark SVG when status === 'completed'
+         Center top: step title (Sora 15px semibold)
+         Center bottom: office name (DM Sans 13px gray)
+         Right: status badge (pill shape):
+           'pending' → gray "De făcut"
+           'in_progress' → amber "În curs"
+           'completed' → green "✓ Completat"
+           'skipped' → light gray "Omis"
+
+       STEP CARD (expanded — tap to toggle):
+         All of the above, plus:
+         - Description / tip text (DM Sans 14px, #475569) with italic styling
+         - Two-column chip row: cost chip (amber) + deadline chip (gray)
+         - Documents collapsible section (tap "Documente necesare" to expand):
+             Bulleted list of required documents
+             Each document with a small checkbox icon (unchecked by default)
+         - Action button(s):
+             Primary amber button using step.online_action.label
+             On tap:
+               If type === 'pdf': call POST /api/pdf/generate with form_type
+                                  trigger file download
+               If type === 'url': open URL in system browser (window.open)
+               If type === 'payment': open URL in system browser
+         - "Marchează pasul ca finalizat" text link (small, #475569)
+             On tap: call PATCH /api/life-events/:id/steps/:stepNumber
+                     with status 'completed'
+                     Animate: circle badge turns green, card collapses,
+                               progress bar updates
+
+   Document wallet section:
+     - Section label "Documentele tale"
+     - Horizontal scrollable row of document cards (min-width 140px each)
+     - For each form_type in the steps that is not null:
+         Show a downloadable card:
+           PDF icon, document name, "Descarcă" amber button
+           On tap: calls POST /api/pdf/generate
+     - Empty upload slots for physical documents user needs to save:
+         Dashed border card, upload icon, document name, "Încarcă" gray button
+         On tap: opens file picker, uploads to Supabase Storage
+
+   Sticky bottom bar:
+     - White bg, border-top, padding 16px horizontal
+     - Left: sparkles icon + "Întrebări? Întreabă ClaudIA" tappable text
+         On tap: navigate to /chat with pre-filled context
+     - Right: amber button "Continuă cu pasul următor →"
+         Disabled and grayed if current step is already 'completed'
+         On tap: expand and scroll to next pending step
+
+
+7. CONNECT CHAT SCREEN TO LIFE EVENT DASHBOARD
+
+   In the ChatInterface component (wherever tool_result is handled):
+   When a tool_result arrives with type === 'action_plan':
+     Check if the result includes create_life_event: true
+     If yes:
+       Show the action plan cards as normal
+       Also show a prominent amber CTA button below the cards:
+         "Urmărește progresul și bifează pașii →"
+         On tap:
+           Call POST /api/life-events with { event_type, event_data: { vehicle info } }
+           Navigate to /life-event/[returned_id]
+     If no create_life_event flag: show cards normally without the CTA
+
+
+8. ADD ROUTE TO APP ROUTER
+
+   Register the new life-event page in the app's routing.
+   Check how other dynamic routes are defined in the project.
+   The URL pattern should be: /life-event/:id
+
+   Also add a link from /dashboard Quick Actions section:
+     If user has any active (incomplete) life events, show them in the dashboard
+     as urgency cards with "Continuă procesul →" link to /life-event/:id
+
+
+9. UPDATE THE CLAUDIA CHAT TO TRIGGER THE FLOW
+
+   In the suggested prompts on the empty chat state, add or update:
+     "🚗 Am cumpărat o mașină în România"
+     "🇩🇪 Am adus o mașină din Germania"
+
+   Both should trigger the car registration flow with correct event_type.
+
+
+TYPESCRIPT ADDITIONS NEEDED
+============================
+
+Add to /backend/src/types/index.ts:
+
+  // Life Event Progress
+  export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+
+  export interface LifeEventProgress {
+    id: string
+    user_id: string
+    event_type: string
+    event_title: string
+    event_data: Record<string, unknown>
+    steps_status: Record<string, StepStatus>  // e.g. { "step_1": "completed", "step_2": "pending" }
+    current_step: number
+    total_steps: number
+    is_completed: boolean
+    started_at: string
+    updated_at: string
+    completed_at: string | null
+  }
+
+  export interface LifeEventProgressWithDetails extends LifeEventProgress {
+    step_details: LifeEventStep[]  // merged from knowledge base
+    completion_percentage: number
+    estimated_total_cost: string
+  }
+
+  // Update LifeEventStep to include online_action
+  // (modify the existing interface, don't create a new one)
+  export interface LifeEventStep {
+    // ... all existing fields ...
+    online_action?: {
+      label: string
+      type: 'pdf' | 'url' | 'payment'
+      url?: string
+      form_type?: FormType
+    }
+  }
+
+
+TESTING CHECKLIST
+=================
+After building everything, verify these work:
+
+  Backend:
+  [ ] GET /api/health returns { status: 'ok', database: 'connected' }
+  [ ] POST /api/life-events with event_type 'car_from_germany' returns 7 steps
+  [ ] POST /api/life-events with event_type 'car_domestic' returns 4 steps
+  [ ] PATCH /api/life-events/:id/steps/1 with status 'completed' updates correctly
+  [ ] POST /api/pdf/generate with form_type 'cerere_drpciv' returns a PDF file
+  [ ] POST /api/pdf/generate with form_type 'anaf_tva_certificate' returns a PDF file
+  [ ] POST /api/claudia with message "am cumpărat o mașină din Germania" returns action_plan
+  [ ] GET /api/audit shows the new audit entries from life event creation and step completion
+
+  Frontend:
+  [ ] /life-event/:id page loads without errors
+  [ ] Step cards expand/collapse on tap
+  [ ] Status badge updates when step is marked complete (no page reload needed)
+  [ ] Progress bar updates when step is marked complete
+  [ ] Action button for URL steps opens the correct URL
+  [ ] Action button for PDF steps downloads a file
+  [ ] Back button works
+  [ ] Chat screen shows "Urmărește progresul →" button after car action plan
+  [ ] Tapping that button creates the life event and navigates to /life-event/:id
+  [ ] Works on 390px mobile width (no horizontal overflow)
+
+  End-to-end demo path:
+  [ ] User types "am adus o mașină din Germania" in chat
+  [ ] ClaudIA returns 7-step action plan
+  [ ] User taps "Urmărește progresul →"
+  [ ] App navigates to /life-event/[newId]
+  [ ] 7 steps visible with correct offices, costs, deadlines
+  [ ] User taps "Descarcă cerere DRPCIV" → PDF downloads with user's name/CNP pre-filled
+  [ ] User taps "Rezervă programare RAR" → rar.ro opens in browser
+  [ ] User marks step 1 complete → circle turns green, progress bar updates
+
+
+IMPORTANT REMINDERS
+===================
+- All Romanian text in the UI. No English visible to users.
+- Do NOT add transit, CTP, or ticket features.
+- Do NOT install @anthropic-ai/sdk (ClaudIA route stays as stub).
+- Do NOT add ANTHROPIC_API_KEY to any frontend file or VITE_ prefix.
+- Verify .gitignore covers .env*.local before any git operation.
+- The audit_log table is append-only — no DELETE or UPDATE on it.
+- Run the new Supabase SQL before testing (life_event_progress table + RLS policy).

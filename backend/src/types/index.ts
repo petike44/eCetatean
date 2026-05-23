@@ -60,6 +60,8 @@ export type AuditActionType =
   | 'deadline_added'
   | 'chat_session'
   | 'civil_servant_access'
+  | 'life_event_started'
+  | 'life_event_step_completed'
 
 export interface AuditEntry {
   id: string
@@ -115,6 +117,12 @@ export interface LifeEventStep {
   form_type: string | null
   payment_url: string | null
   tip: string | null
+  online_action?: {
+    label: string
+    type: 'pdf' | 'url' | 'payment'
+    url?: string
+    form_type?: FormType
+  }
 }
 
 export interface LifeEventProcedure {
@@ -144,6 +152,7 @@ export type FormType =
   | 'doctor_transfer'
   | 'scholarship_certificate'
   | 'anaf_tva_certificate_request'
+  | 'anaf_tva_certificate'
   | 'cerere_drpciv'
 
 export interface PDFGenerationRequest {
@@ -163,6 +172,31 @@ export interface ClaudIARequest {
   messages: ChatMessage[]
   profile?: Partial<Profile>
   vehicles?: Vehicle[]
+}
+
+// —— Life Event Progress ———————————————————————————————————————
+
+export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+
+export interface LifeEventProgress {
+  id: string
+  user_id: string
+  event_type: string
+  event_title: string
+  event_data: Record<string, unknown>
+  steps_status: Record<string, StepStatus>
+  current_step: number
+  total_steps: number
+  is_completed: boolean
+  started_at: string
+  updated_at: string
+  completed_at: string | null
+}
+
+export interface LifeEventProgressWithDetails extends LifeEventProgress {
+  step_details: LifeEventStep[]
+  completion_percentage: number
+  estimated_total_cost: string
 }
 
 // —— API Responses —————————————————————————————————————————————

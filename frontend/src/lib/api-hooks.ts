@@ -99,7 +99,25 @@ export type CitizenProfile = {
   phone?: string | null;
   buletin_series?: string | null;
   buletin_number?: string | null;
+  buletin_expiry?: string | null;
+  date_of_birth?: string | null;
 };
+
+export type NewsItem = {
+  id: string;
+  title: string;
+  summary: string;
+  body: string | null;
+  published_at: string | null;
+  created_at: string;
+};
+
+export function useNews() {
+  return useQuery({
+    queryKey: ["news"],
+    queryFn: () => apiGet<NewsItem[]>("/api/news", async () => null),
+  });
+}
 
 export function useProfile() {
   const getToken = useGetToken();

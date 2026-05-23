@@ -3,11 +3,27 @@ import { useAuth } from "@/lib/clerk-stub";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { Shield } from "lucide-react";
 import { useState } from "react";
+import { useProfile } from "@/lib/api-hooks";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Autentificare — eCetățean" }] }),
   component: Auth,
 });
+
+function AuthRedirect() {
+  const { data: profile, isLoading } = useProfile();
+  if (isLoading) {
+    return (
+      <div className="min-h-dvh bg-bg flex items-center justify-center">
+        <p className="text-sm text-text-secondary">Se încarcă...</p>
+      </div>
+    );
+  }
+  if (!profile?.full_name?.trim()) {
+    return <Navigate to="/profile-setup" replace />;
+  }
+  return <Navigate to="/chat" replace />;
+}
 
 function Auth() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -20,7 +36,7 @@ function Auth() {
   const [signUpDone, setSignUpDone] = useState(false);
 
   if (isLoaded && isSignedIn) {
-    return <Navigate to="/chat" replace />;
+    return <AuthRedirect />;
   }
 
   if (!isSupabaseConfigured) {
@@ -51,9 +67,8 @@ function Auth() {
           ? "Email sau parolă incorectă."
           : error.message
       );
-    } else {
-      navigate({ to: "/chat" });
     }
+    // Signed-in users are redirected by AuthRedirect on re-render.
   }
 
   async function handleSignUp(e: React.FormEvent) {
@@ -93,7 +108,6 @@ function Auth() {
             : "Înregistrare gratuită cu email și parolă."}
         </p>
 
-        {/* Tab switcher */}
         <div className="flex rounded-xl bg-surface border border-border p-1 mb-6 gap-1">
           <button
             type="button"
@@ -119,7 +133,7 @@ function Auth() {
           <div className="rounded-xl border border-border bg-surface p-5 text-center">
             <p className="text-sm font-semibold text-text-primary mb-1">Verifică emailul</p>
             <p className="text-sm text-text-secondary">
-              Am trimis un link de confirmare la <strong>{email}</strong>. Deschide-l pentru a activa contul.
+              Am trimis un link de confirmare la <strong>{email}</strong>. Deschide-l pentru a activa contul, apoi completează profilul.
             </p>
           </div>
         ) : (

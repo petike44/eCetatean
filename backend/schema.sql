@@ -37,6 +37,17 @@ create table if not exists public.profiles (
 create index if not exists profiles_user_id_idx on public.profiles (user_id);
 create index if not exists profiles_cnp_idx on public.profiles (cnp);
 
+-- ─── news ───────────────────────────────────────────────────────
+create table if not exists public.news (
+  id           uuid primary key default gen_random_uuid(),
+  title        text not null,
+  summary      text not null,
+  body         text,
+  published_at timestamptz,
+  created_at   timestamptz not null default now()
+);
+create index if not exists news_published_at_idx on public.news (published_at desc nulls last);
+
 -- ─── vehicles ───────────────────────────────────────────────────
 -- Defined in the type layer; no API endpoint hits it yet. Included
 -- so the schema is complete when vehicle features get wired up.
@@ -155,3 +166,16 @@ values
    'Stâlp de iluminat stins de câteva zile.',
    'Piața Unirii, Cluj-Napoca', 'CLJ-2026-1002-DEMO', 'in_lucru')
 on conflict (reference_number) do nothing;
+
+-- Sample civic news (optional for local demos).
+insert into public.news (id, title, summary, published_at)
+values
+  ('a1000000-0000-4000-8000-000000000001',
+   'Program prelungit la Direcția de Evidență',
+   'În perioada 20–31 mai, programul cu publicul este extins până la ora 20:00.',
+   now() - interval '2 days'),
+  ('a1000000-0000-4000-8000-000000000002',
+   'Declarația unică — termen final 27 mai',
+   'Persoanele fizice cu venituri independente trebuie să depună Declarația Unică până miercuri.',
+   now() - interval '5 days')
+on conflict (id) do nothing;

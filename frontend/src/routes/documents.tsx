@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Bell, AlertTriangle, Calendar, IdCard, Plane, Briefcase, Baby, CarFront, Car, AlertCircle, ChevronRight } from "lucide-react";
+import { Bell, IdCard, Plane, Briefcase, Baby, CarFront, Car, AlertCircle, ChevronRight, FileUp, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { HomeTopBar } from "@/components/TopBar";
 import { Card, PrimaryButton, GhostButton, Badge } from "@/components/ui-bits";
-import { citizen, vehicle } from "@/lib/mock-data";
 import { Protected } from "@/lib/auth-guard";
+import { useProfile, useLifeEvents } from "@/lib/api-hooks";
+import { profileCompletion, formatRoDate } from "@/lib/profile-utils";
 
 export const Route = createFileRoute("/documents")({
   head: () => ({ meta: [{ title: "Documente — eCetățean" }] }),
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/documents")({
 });
 
 const iconFor: Record<string, typeof IdCard> = {
-  "id-card": IdCard, "plane": Plane, "briefcase": Briefcase, "baby": Baby, "car-front": CarFront, "car": Car,
+  "id-card": IdCard, plane: Plane, briefcase: Briefcase, baby: Baby, "car-front": CarFront, car: Car,
 };
 
 const actions = [
@@ -31,8 +31,13 @@ const actions = [
 
 function Documents() {
   const nav = useNavigate();
-  const [pct, setPct] = useState(0);
-  useEffect(() => { const t = setTimeout(() => setPct(68), 100); return () => clearTimeout(t); }, []);
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: lifeEvents = [] } = useLifeEvents();
+  const { pct, filled, total } = profileCompletion(profile);
+  const activeEvents = lifeEvents.filter((e) => !e.is_completed);
+
+  const hasId =
+    profile?.buletin_series?.trim() && profile?.buletin_number?.trim();
 
   return (
     <AppShell
@@ -41,74 +46,122 @@ function Documents() {
           right={
             <button aria-label="Notificări" className="press relative p-2 -mr-2 rounded-xl">
               <Bell size={22} className="text-text-primary" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full anim-pulse-dot" />
             </button>
           }
         />
       }
     >
       <div className="lg:max-w-6xl lg:mx-auto">
-        {/* Page header */}
         <div className="px-5 pt-4 lg:px-8 lg:pt-6">
           <h1 className="font-display font-bold text-[22px] lg:text-[28px] text-text-primary">Documentele mele</h1>
-          <p className="text-text-secondary text-sm mt-0.5">Acte, alerte și proceduri în desfășurare.</p>
+          <p className="text-text-secondary text-sm mt-0.5">Acte, proceduri și date din profilul tău civic.</p>
         </div>
 
-        {/* Desktop two-column grid */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:px-8 lg:mt-6">
-          {/* Left column: completion + alerts */}
           <div>
-            {/* Profile completion */}
             <div className="px-5 mt-5 lg:px-0 lg:mt-0">
               <Card accent="amber">
-                <div className="flex items-baseline justify-between mb-3">
-                  <h3 className="font-display font-semibold text-[15px] text-text-primary">
-                    Profil completat <span className="text-accent-dark">{pct}%</span>
-                  </h3>
-                </div>
-                <div className="h-2 bg-surface-secondary rounded-full overflow-hidden mb-3">
-                  <div className="h-full bg-accent rounded-full transition-all duration-1000 ease-out" style={{ width: `${pct}%` }} />
-                </div>
-                <Link to="/profile" className="press text-[13px] font-medium text-primary inline-flex items-center gap-1">
-                  Adaugă CNP pentru a activa autocompletarea <ChevronRight size={14} />
-                </Link>
+                {profileLoading ? (
+                  <div className="flex items-center gap-2 text-text-secondary text-sm py-2">
+                    <Loader2 size={16} className="animate-spin" /> Se încarcă profilul...
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-baseline justify-between mb-3">
+                      <h3 className="font-display font-semibold text-[15px] text-text-primary">
+                        Profil completat <span className="text-accent-dark">{pct}%</span>
+                      </h3>
+                      <span className="text-[12px] text-text-tertiary">{filled}/{total} câmpuri</span>
+                    </div>
+                    <div className="h-2 bg-surface-secondary rounded-full overflow-hidden mb-3">
+                      <div
+                        className="h-full bg-accent rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <Link to="/profile" className="press text-[13px] font-medium text-primary inline-flex items-center gap-1">
+                      {pct < 100 ? "Completează profilul pentru autocompletare" : "Vezi profilul"}
+                      <ChevronRight size={14} />
+                    </Link>
+                  </>
+                )}
               </Card>
             </div>
 
-            {/* Alerts */}
             <section className="px-5 mt-6 lg:px-0">
-              <h2 className="font-display font-semibold text-[18px] text-text-primary mb-3">Alerte importante</h2>
-              <div className="space-y-3">
-                <Card accent="red">
-                  <div className="flex items-center gap-2 mb-2"><Badge tone="red">EXPIRAT</Badge><AlertTriangle size={14} className="text-error" /></div>
-                  <p className="font-display font-semibold text-[15px] text-text-primary mb-1">ITP {vehicle.plate}</p>
-                  <p className="text-[13.5px] text-text-secondary mb-3">ITP-ul vehiculului a expirat pe {vehicle.itp.date}.</p>
-                  <PrimaryButton className="py-3" onClick={() => nav({ to: "/chat" })}>Programează ITP</PrimaryButton>
+              <h2 className="font-display font-semibold text-[18px] text-text-primary mb-3">Proceduri în desfășurare</h2>
+              {activeEvents.length === 0 ? (
+                <Card>
+                  <p className="text-[14px] text-text-secondary">
+                    Nu ai proceduri active. Începe una din chat cu ClaudIA sau din secțiunea de mai jos.
+                  </p>
+                  <PrimaryButton className="py-3 mt-3" onClick={() => nav({ to: "/chat" })}>
+                    Deschide ClaudIA
+                  </PrimaryButton>
                 </Card>
-                <Card accent="amber">
-                  <div className="flex items-center gap-2 mb-2"><Badge tone="amber">5 ZILE</Badge><Calendar size={14} className="text-accent-dark" /></div>
-                  <p className="font-display font-semibold text-[15px] text-text-primary mb-1">RCA {vehicle.plate}</p>
-                  <p className="text-[13.5px] text-text-secondary mb-3">RCA-ul expiră pe {vehicle.rca.date}.</p>
-                  <PrimaryButton className="py-3" onClick={() => nav({ to: "/chat" })}>Reînnoiește RCA</PrimaryButton>
-                </Card>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {activeEvents.map((ev) => (
+                    <Card key={ev.id} accent="amber">
+                      <p className="font-display font-semibold text-[15px] text-text-primary mb-1">{ev.event_title}</p>
+                      <p className="text-[13px] text-text-secondary mb-3">
+                        Pasul {ev.current_step} din {ev.total_steps} • {ev.completion_percentage}% completat
+                      </p>
+                      <GhostButton onClick={() => nav({ to: "/chat" })}>Continuă în chat</GhostButton>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
 
-          {/* Right column: documents + procedures */}
           <div>
-            {/* Documentele mele */}
             <section className="px-5 mt-6 lg:px-0 lg:mt-0">
               <h2 className="font-display font-semibold text-[18px] text-text-primary mb-3">Actele mele</h2>
-              <div className="space-y-2">
-                <DocRow icon={IdCard} title="Carte de identitate" meta={`Seria ${citizen.idSerie} ${citizen.idNumber}`} badge={<Badge tone="green">VALABIL</Badge>} sub={`Expiră ${citizen.idExpiry}`} />
-                <DocRow icon={Plane} title="Pașaport simplu electronic" meta="Nu este înregistrat" badge={<Badge tone="neutral">LIPSĂ</Badge>} sub="Adaugă-l din profil" />
-                <DocRow icon={CarFront} title="Permis de conducere" meta="Categoria B" badge={<Badge tone="green">VALABIL</Badge>} sub="Expiră 22.06.2029" />
-                <DocRow icon={Car} title={`Talon ${vehicle.plate}`} meta={vehicle.model} badge={<Badge tone="amber">ATENȚIE</Badge>} sub="ITP expirat" />
-              </div>
+              {!hasId ? (
+                <Card>
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-primary-light text-primary flex items-center justify-center shrink-0">
+                      <FileUp size={20} />
+                    </div>
+                    <div>
+                      <p className="font-display font-semibold text-[15px] text-text-primary">Niciun act înregistrat</p>
+                      <p className="text-[13px] text-text-secondary mt-1">
+                        Adaugă datele buletinului în profil sau începe o procedură pentru a le urmări aici.
+                      </p>
+                      <Link
+                        to="/profile"
+                        className="press inline-flex items-center gap-1 text-[13px] font-medium text-primary mt-3"
+                      >
+                        Mergi la profil <ChevronRight size={14} />
+                      </Link>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  <DocRow
+                    icon={IdCard}
+                    title="Carte de identitate"
+                    meta={`Seria ${profile!.buletin_series} ${profile!.buletin_number}`}
+                    badge={<Badge tone="green">ÎNREGISTRAT</Badge>}
+                    sub={
+                      profile?.buletin_expiry
+                        ? `Expiră ${formatRoDate(profile.buletin_expiry)}`
+                        : "Completează data expirării în profil"
+                    }
+                  />
+                  <DocRow
+                    icon={Plane}
+                    title="Pașaport simplu electronic"
+                    meta="Nu este înregistrat"
+                    badge={<Badge tone="neutral">LIPSĂ</Badge>}
+                    sub="Adaugă-l din profil sau chat"
+                  />
+                </div>
+              )}
             </section>
 
-            {/* Quick actions */}
             <section className="px-5 mt-6 lg:px-0">
               <h2 className="font-display font-semibold text-[18px] text-text-primary mb-3">Începe o procedură</h2>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
@@ -130,7 +183,6 @@ function Documents() {
               </div>
             </section>
 
-            {/* Sesizare rapidă */}
             <section className="px-5 mt-6 lg:px-0">
               <Card>
                 <div className="flex items-start gap-3 mb-3">

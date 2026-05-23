@@ -2,13 +2,21 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { History, Loader2, Car, HeartPulse, GraduationCap, LogOut } from "lucide-react";
+import { History, Loader2, Car, HeartPulse, GraduationCap, LogOut, ShieldCheck, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { Card, PrimaryButton, GhostButton, Field } from "@/components/ui-bits";
 import { useToast } from "@/components/Toast";
 import { Protected } from "@/lib/auth-guard";
-import { useProfile, useUpsertProfile } from "@/lib/api-hooks";
+import {
+  type EidKitVerificationStatus,
+  useDemoEidKitVerification,
+  useEidKitStatus,
+  useProfile,
+  useStartEidKitVerification,
+  useUnlinkEidKitVerification,
+  useUpsertProfile,
+} from "@/lib/api-hooks";
 import { useAuth, useUser } from "@/lib/clerk-stub";
 import { profileCompletion, profileDisplayName, profileInitials, formatRoDate } from "@/lib/profile-utils";
 
@@ -31,6 +39,10 @@ function Profile() {
   const [loggingOut, setLoggingOut] = useState(false);
   const { show } = useToast();
   const { data: profile, isLoading } = useProfile();
+  const eidKitStatus = useEidKitStatus();
+  const startEidKit = useStartEidKitVerification();
+  const demoEidKit = useDemoEidKitVerification();
+  const unlinkEidKit = useUnlinkEidKitVerification();
   const { user } = useUser();
   const upsert = useUpsertProfile();
   const authEmail = user?.primaryEmailAddress?.emailAddress ?? null;
@@ -61,6 +73,21 @@ function Profile() {
     setIdNumber(profile?.buletin_number ?? "");
     setIdExpiry(profile?.buletin_expiry?.slice(0, 10) ?? "");
   }, [profile, authEmail]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const eidkit = params.get("eidkit");
+    if (eidkit === "verified") {
+      show("success", "Identitatea a fost verificată prin buletin electronic");
+      queryClient.invalidateQueries({ queryKey: ["eidkit-status"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (eidkit === "failed") {
+      show("error", "Verificarea EidKit a eșuat sau a fost anulată");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [queryClient, show]);
 
   const savePersonal = async () => {
     if (!fullName.trim()) {
@@ -143,6 +170,34 @@ function Profile() {
               <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
             </div>
           </Card>
+        </div>
+
+        <div className="px-5 mt-4 lg:px-8">
+          <EidKitCard
+            status={eidKitStatus.data}
+            loading={eidKitStatus.isLoading}
+            startPending={startEidKit.isPending}
+            demoPending={demoEidKit.isPending}
+            unlinkPending={unlinkEidKit.isPending}
+            startError={startEidKit.error instanceof Error ? startEidKit.error.message : null}
+            onStart={() => startEidKit.mutate()}
+            onDemo={async () => {
+              try {
+                await demoEidKit.mutateAsync();
+                show("success", "Verificarea demo EidKit a fost aplicată");
+              } catch {
+                show("error", "Verificarea demo EidKit a eșuat");
+              }
+            }}
+            onUnlink={async () => {
+              try {
+                await unlinkEidKit.mutateAsync();
+                show("success", "Verificarea EidKit a fost eliminată");
+              } catch {
+                show("error", "Nu am putut elimina verificarea EidKit");
+              }
+            }}
+          />
         </div>
 
         <div className="sticky top-14 lg:top-0 z-20 bg-bg pt-4">
@@ -293,6 +348,107 @@ function TabEmpty({
       </div>
     </Card>
   );
+}
+
+function EidKitCard({
+  status,
+  loading,
+  startPending,
+  demoPending,
+  unlinkPending,
+  startError,
+  onStart,
+  onDemo,
+  onUnlink,
+}: {
+  status: EidKitVerificationStatus | undefined;
+  loading: boolean;
+  startPending: boolean;
+  demoPending: boolean;
+  unlinkPending: boolean;
+  startError: string | null;
+  onStart: () => void;
+  onDemo: () => void;
+  onUnlink: () => void;
+}) {
+  const verified = Boolean(status?.verified);
+  const configured = Boolean(status?.configured);
+  const canDemo = Boolean(status?.demo_enabled);
+
+  return (
+    <Card accent={verified ? "green" : configured ? "navy" : "amber"}>
+      <div className="flex items-start gap-3">
+        <div
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+            verified ? "bg-success-light text-success" : "bg-accent-light text-accent-dark"
+          }`}
+        >
+          {verified ? <ShieldCheck size={21} /> : <ShieldAlert size={21} />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-display font-semibold text-[15px] text-text-primary">
+                {verified ? "Identitate verificată prin CEI" : "Verificare cu buletin electronic"}
+              </h3>
+              <p className="text-[13px] text-text-secondary mt-1">
+                {verified
+                  ? `Verificat ${formatRoDate(status?.verified_at) ?? "recent"} prin EidKit.`
+                  : "Leagă profilul de cartea electronică de identitate prin EidKit SSO."}
+              </p>
+            </div>
+            {loading && <Loader2 size={18} className="animate-spin text-text-tertiary shrink-0" />}
+          </div>
+
+          {verified && (
+            <div className="mt-3 rounded-xl bg-surface-secondary border border-border p-3 text-[12.5px] text-text-secondary space-y-1">
+              <p>
+                Nivel: <span className="font-semibold text-text-primary">{status?.verification_level ?? "eidkit_sso"}</span>
+              </p>
+              {status?.scopes?.length ? <p>Scopes: {status.scopes.join(", ")}</p> : null}
+              {status?.profile_fields?.cnp ? <p>CNP verificat: {maskCnp(status.profile_fields.cnp)}</p> : null}
+            </div>
+          )}
+
+          {startError && (
+            <p className="mt-3 rounded-xl bg-error-light/50 border border-error/20 px-3 py-2 text-[12.5px] text-error">
+              {startError}
+            </p>
+          )}
+
+          {!configured && !verified && (
+            <p className="mt-3 rounded-xl bg-accent-light/60 border border-accent-light px-3 py-2 text-[12.5px] text-accent-dark">
+              EidKit nu are încă `client_id` și `client_secret`. Poți folosi verificarea demo locală până obții acces CEI.
+            </p>
+          )}
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {!verified ? (
+              <>
+                <PrimaryButton className="py-3" onClick={onStart} disabled={!configured || startPending}>
+                  {startPending ? "Se pornește..." : "Verifică prin EidKit"}
+                </PrimaryButton>
+                {canDemo && (
+                  <GhostButton className="py-3" onClick={onDemo} disabled={demoPending}>
+                    {demoPending ? "Se aplică demo..." : "Simulează verificare"}
+                  </GhostButton>
+                )}
+              </>
+            ) : (
+              <GhostButton className="py-3 sm:col-span-2" onClick={onUnlink} disabled={unlinkPending}>
+                {unlinkPending ? "Se elimină..." : "Elimină verificarea EidKit"}
+              </GhostButton>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function maskCnp(cnp: string) {
+  if (cnp.length < 7) return cnp;
+  return `${cnp.slice(0, 3)}******${cnp.slice(-4)}`;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {

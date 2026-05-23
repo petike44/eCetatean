@@ -125,6 +125,10 @@ export function apiPatchJson<T>(path: string, body: unknown, getToken: GetToken)
   );
 }
 
+export function getApiUrl(path: string): string {
+  return `${getApiBaseUrl()}${path}`;
+}
+
 export async function apiStreamPost(
   path: string,
   body: unknown,

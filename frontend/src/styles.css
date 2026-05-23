@@ -1,0 +1,142 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display: "Sora", system-ui, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+
+  --color-background: var(--bg);
+  --color-foreground: var(--text-primary);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--text-inverse);
+  --color-primary-light: var(--primary-light);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--text-inverse);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-light: var(--accent-light);
+
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-error: var(--error);
+  --color-error-light: var(--error-light);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-inverse: var(--text-inverse);
+
+  --color-border: var(--border);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text-primary);
+  --color-muted: var(--surface-secondary);
+  --color-muted-foreground: var(--text-secondary);
+  --color-input: var(--surface-secondary);
+  --color-ring: var(--primary);
+
+  --color-metro: var(--metro);
+  --color-metro-light: var(--metro-light);
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-sheet: 0 -4px 24px rgba(0,0,0,0.10);
+  --shadow-fab: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+:root {
+  --primary: #0B2540;
+  --primary-light: #E8EEF6;
+  --accent: #0E7C66;
+  --accent-dark: #0B5F4E;
+  --accent-light: #DCF2EC;
+  --bg: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-secondary: #F6F8FB;
+  --text-primary: #0B1220;
+  --text-secondary: #4A5567;
+  --text-tertiary: #8A93A3;
+  --text-inverse: #FFFFFF;
+  --success: #0E7C66;
+  --success-light: #DCF2EC;
+  --error: #B42318;
+  --error-light: #FEE4E2;
+  --border: #E4E7EC;
+  --metro: #1F4E79;
+  --metro-light: #E8EEF6;
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: "DM Sans", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6, .font-display { font-family: "Sora", system-ui, sans-serif; }
+  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .font-display { font-family: "Sora", system-ui, sans-serif; }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .shadow-sheet { box-shadow: var(--shadow-sheet); }
+  .shadow-fab { box-shadow: var(--shadow-fab); }
+  .press { transition: transform 150ms ease-out, background-color 150ms ease-out, color 150ms ease-out; }
+  .press:active { transform: scale(0.97); }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .anim-fade-up { animation: fadeInUp 320ms ease-out both; }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .anim-slide-up { animation: slideUp 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.15); }
+  }
+  .anim-pulse-dot { animation: pulseDot 3s ease-in-out infinite; }
+
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+  .anim-typing > span:nth-child(1) { animation: typingBounce 1.2s infinite; }
+  .anim-typing > span:nth-child(2) { animation: typingBounce 1.2s infinite 0.15s; }
+  .anim-typing > span:nth-child(3) { animation: typingBounce 1.2s infinite 0.3s; }
+
+  @keyframes drawCheck {
+    to { stroke-dashoffset: 0; }
+  }
+  .anim-check path {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+    animation: drawCheck 300ms ease-out forwards;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+}

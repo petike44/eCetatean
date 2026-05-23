@@ -37,8 +37,9 @@ function Profile() {
         />
       }
     >
+      <div className="lg:max-w-3xl lg:mx-auto">
       {/* Header */}
-      <div className="px-5 pt-5">
+      <div className="px-5 pt-5 lg:px-8 lg:pt-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-[22px]">
             {citizen.initials}
@@ -51,7 +52,7 @@ function Profile() {
         </div>
       </div>
 
-      <div className="px-5 mt-5">
+      <div className="px-5 mt-5 lg:px-8">
         <Card accent="amber">
           <div className="flex justify-between items-baseline mb-2">
             <p className="font-display font-semibold text-[14px] text-text-primary">Profil 68% completat</p>
@@ -64,8 +65,8 @@ function Profile() {
       </div>
 
       {/* Tabs */}
-      <div className="sticky top-14 z-20 bg-bg pt-4">
-        <div className="flex gap-1 overflow-x-auto scrollbar-hide px-5 border-b border-border bg-bg">
+      <div className="sticky top-14 lg:top-0 z-20 bg-bg pt-4">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide px-5 lg:px-8 border-b border-border bg-bg">
           {TABS.map((t) => (
             <button
               key={t}
@@ -80,7 +81,7 @@ function Profile() {
         </div>
       </div>
 
-      <div className="px-5 pt-5">
+      <div className="px-5 pt-5 lg:px-8 lg:pb-8">
         {tab === "Personal" && (
           <div className="space-y-5">
             <SectionTitle>Identitate</SectionTitle>
@@ -162,6 +163,7 @@ function Profile() {
             <PrimaryButton onClick={() => show("success", "Salvat")}>Salvează</PrimaryButton>
           </div>
         )}
+      </div>
       </div>
     </AppShell>
   );

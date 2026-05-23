@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { BottomNav } from "@/components/BottomNav";
 import { TopBar } from "@/components/TopBar";
+import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { Newspaper, TrendingUp, AlertCircle, Calendar } from "lucide-react";
 
 export const Route = createFileRoute("/news")({
@@ -88,9 +89,11 @@ const categoryStyles: Record<Category, string> = {
 function NewsPage() {
   const [featured, ...rest] = NEWS;
   return (
-    <div className="min-h-dvh bg-background pb-20">
+    <div className="min-h-dvh bg-background pb-20 lg:flex lg:pb-0">
+      <DesktopSidebar />
+      <div className="lg:flex-1 lg:flex lg:flex-col lg:overflow-y-auto lg:h-dvh min-w-0">
       <TopBar />
-      <main className="max-w-2xl mx-auto px-5 pt-4">
+      <main className="max-w-2xl mx-auto px-5 pt-4 lg:pt-6 lg:pb-8">
         <header className="mb-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">
             Buletin civic
@@ -158,6 +161,7 @@ function NewsPage() {
         </div>
       </main>
       <BottomNav />
+      </div>
     </div>
   );
 }

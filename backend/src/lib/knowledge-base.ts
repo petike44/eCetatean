@@ -36,6 +36,13 @@ export const OFFICES: Record<string, OfficeInfo> = {
     phone: '0264-531.155',
     notes: 'Transferul medicului de familie se face direct la noul cabinet.',
   },
+  anaf_cluj: {
+    name: 'Agenția Națională de Administrare Fiscală — Cluj',
+    address: 'Str. Gh. Doja 67, Cluj-Napoca',
+    hours: 'Luni–Vineri: 08:00–16:30',
+    phone: '0264-591.890',
+    notes: 'Orice birou ANAF din țară poate emite certificatul de TVA.',
+  },
 }
 
 export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
@@ -260,6 +267,279 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       },
     ],
   },
+  car_domestic: {
+    event_type: 'car_domestic',
+    title: 'Ai cumpărat o mașină în România',
+    emoji: '🚗',
+    summary: '4 pași pentru a înmatricula mașina cumpărată în România.',
+    total_estimated_time: '1–2 zile lucrătoare',
+    steps: [
+      {
+        order: 1,
+        title: 'Autentifici contractul de vânzare-cumpărare',
+        office: 'Orice birou notarial din Cluj-Napoca',
+        address: 'Orice notar — verifică harta notarilor',
+        hours: 'Luni–Vineri: 09:00–17:00',
+        phone: 'Variabil — sunați înainte',
+        documents: [
+          'Buletin vânzător (original)',
+          'Buletin cumpărător (original)',
+          'CIV original',
+          'Contract completat și semnat',
+        ],
+        fee: '150–300 RON',
+        deadline: 'Înainte de pasul 2',
+        form_type: 'sale_contract',
+        payment_url: null,
+        tip: 'Generăm contractul pre-completat cu datele tale. Tipărește, semnează cu vânzătorul, mergi la notar.',
+        online_action: {
+          label: 'Descarcă contract pre-completat',
+          type: 'pdf',
+          form_type: 'sale_contract',
+        },
+      },
+      {
+        order: 2,
+        title: 'Transcrieri mașina la DRPCIV',
+        office: 'DRPCIV Cluj — Înmatriculări',
+        address: 'Str. Traian Vuia 1-4, Cluj-Napoca',
+        hours: 'Luni–Vineri: 08:00–16:00',
+        phone: '0264-420.464',
+        documents: [
+          'Buletin (original + copie)',
+          'Contract autentificat (original + copie)',
+          'CIV original',
+          'ITP valabil',
+          'RCA valabil',
+          'Dovada plată 49 RON certificat (ghișeu.ro)',
+        ],
+        fee: '49 RON certificat + ~200 RON plăcuțe',
+        deadline: 'În 30 de zile de la cumpărare — penalizare după',
+        form_type: 'transcription',
+        payment_url: 'https://www.ghiseul.ro',
+        tip: 'Plătește taxa de 49 RON pe ghișeu.ro înainte să mergi la ghișeu — este obligatoriu.',
+        online_action: {
+          label: 'Rezervă programare DRPCIV',
+          type: 'url',
+          url: 'https://www.drpciv.ro/drpciv-booking/activities/21',
+        },
+      },
+      {
+        order: 3,
+        title: 'Declari mașina la Primărie pentru impozit auto',
+        office: 'Primăria Cluj-Napoca — Taxe și Impozite',
+        address: 'Calea Moților 3, Cluj-Napoca',
+        hours: 'Luni–Joi: 08:00–16:00 | Vineri: 08:00–13:00',
+        phone: '0264-596.030',
+        documents: [
+          'Buletin (original + copie)',
+          'Certificat înmatriculare nou (original + copie)',
+          'Contract vânzare (copie)',
+        ],
+        fee: 'Gratuit (impozit calculat separat)',
+        deadline: 'În 30 de zile de la înmatriculare',
+        form_type: 'impozit_auto',
+        payment_url: 'https://www.ghiseul.ro',
+        tip: 'Poți plăti impozitul direct pe ghișeu.ro după declarare, fără a reveni la ghișeu.',
+        online_action: {
+          label: 'Declară și plătește online',
+          type: 'url',
+          url: 'https://www.ghiseul.ro',
+        },
+      },
+      {
+        order: 4,
+        title: 'Cumpără asigurare RCA pe numele tău',
+        office: 'Online — orice asigurător autorizat ASF',
+        address: 'Online',
+        hours: 'Disponibil 24/7',
+        phone: 'Nu este necesar',
+        documents: ['Buletin', 'Certificat de înmatriculare'],
+        fee: 'Variabil — de la ~400 RON/an',
+        deadline: 'Înainte de pasul 2',
+        form_type: null,
+        payment_url: 'https://www.ieftine.ro/asigurari/rca',
+        tip: 'Compară prețurile înainte de a cumpăra. RCA trebuie să fie pe numele noului proprietar.',
+        online_action: {
+          label: 'Compară prețuri RCA',
+          type: 'url',
+          url: 'https://www.ieftine.ro/asigurari/rca',
+        },
+      },
+    ],
+  },
+  car_from_germany: {
+    event_type: 'car_from_germany',
+    title: 'Înmatriculare mașină din Germania/UE',
+    emoji: '🇩🇪',
+    summary: '7 pași pentru a înmatricula o mașină adusă din Germania sau altă țară UE. Estimat total: ~1.150 RON.',
+    total_estimated_time: '2–3 săptămâni',
+    steps: [
+      {
+        order: 1,
+        title: 'Traduci documentele germane la traducător autorizat',
+        office: 'Traducător autorizat (online sau fizic)',
+        address: 'Online sau orice birou traduceri autorizate',
+        hours: 'Variabil',
+        phone: 'Variabil',
+        documents: [
+          'Brief mare (Teil II / Fahrzeugbrief)',
+          'Factura de cumpărare sau Kaufvertrag',
+        ],
+        fee: '150–300 RON',
+        deadline: 'Primul pas — blocant pentru toate celelalte',
+        form_type: null,
+        payment_url: null,
+        tip: 'Mulți traducători autorizați lucrează online. Trimiți scanuri, primești traducerile certificate prin email în aceeași zi.',
+        online_action: {
+          label: 'Găsește traducător autorizat online',
+          type: 'url',
+          url: 'https://www.traduceri.ro',
+        },
+      },
+      {
+        order: 2,
+        title: 'Programare și vizită RAR — omologare, ITP, CIV',
+        office: 'Registrul Auto Român Cluj',
+        address: 'Str. Taietura Turcului 12A, Cluj-Napoca',
+        hours: 'Luni–Vineri: 08:00–16:00 (cu programare)',
+        phone: '0264-432.474',
+        documents: [
+          'Brief mare tradus (original)',
+          'Factura/Kaufvertrag tradus',
+          'Buletin',
+          'CoC (dacă mașina e după aug 2018)',
+        ],
+        fee: '750 RON (ITP 250 + CIV 250 + autenticitate 250) | +500 RON dacă lipsește CoC',
+        deadline: 'Înainte de pasul 3 — CIV e necesar la ANAF și DRPCIV',
+        form_type: null,
+        payment_url: null,
+        tip: 'Dacă mașina nu are plăcuțe valabile de export (Zollkennzeichen), nu o poți conduce la RAR. Scoate numere roșii mai întâi de la DRPCIV.',
+        online_action: {
+          label: 'Rezervă programare RAR',
+          type: 'url',
+          url: 'https://www.rar.ro',
+        },
+      },
+      {
+        order: 3,
+        title: 'Obții certificatul TVA de la ANAF',
+        office: 'ANAF Cluj sau online prin SPV',
+        address: 'Str. Mihail Kogălniceanu 10, Cluj-Napoca',
+        hours: 'Luni–Vineri: 08:30–16:30',
+        phone: '0264-415.551',
+        documents: [
+          'Cerere tip ANAF (o generăm noi)',
+          'Buletin',
+          'Brief mare tradus',
+          'Factura tradusă',
+          'CIV (de la RAR)',
+        ],
+        fee: 'Gratuit',
+        deadline: 'Înainte de pasul 7 (DRPCIV)',
+        form_type: 'anaf_tva_certificate',
+        payment_url: null,
+        tip: 'Dacă ai cont SPV, poți depune cererea online. Pentru mașini SH de la persoană fizică, TVA este de regulă 0 RON — certificatul doar confirmă acest lucru.',
+        online_action: {
+          label: 'Depune prin SPV (online)',
+          type: 'url',
+          url: 'https://www.anaf.ro/anaf/internet/RO/spv',
+        },
+      },
+      {
+        order: 4,
+        title: 'Înregistrare la Primărie — ștampilă REMTII + impozit auto',
+        office: 'Primăria Cluj-Napoca — Taxe și Impozite',
+        address: 'Calea Moților 3, Cluj-Napoca',
+        hours: 'Luni–Joi: 08:00–16:00 | Vineri: 08:00–13:00',
+        phone: '0264-596.030',
+        documents: [
+          'Contract tradus (trebuie să primească numărul REMTII)',
+          'Buletin',
+          'CIV (de la RAR)',
+          'Declarație impozit auto (o generăm noi)',
+        ],
+        fee: 'Gratuit (impozit calculat separat)',
+        deadline: 'Înainte de pasul 7 — DRPCIV verifică numărul REMTII pe contract',
+        form_type: 'impozit_auto',
+        payment_url: 'https://www.ghiseul.ro',
+        tip: 'Numărul REMTII trebuie să apară pe contract când mergi la DRPCIV. Adă toate documentele la acest ghișeu într-o singură vizită.',
+        online_action: {
+          label: 'Declară online ghișeu.ro',
+          type: 'url',
+          url: 'https://www.ghiseul.ro',
+        },
+      },
+      {
+        order: 5,
+        title: 'Plătești taxele DRPCIV pe ghișeu.ro',
+        office: 'Online — ghișeu.ro',
+        address: 'Online',
+        hours: 'Disponibil 24/7',
+        phone: 'Nu este necesar',
+        documents: ['CNP', 'Serie șasiu (VIN)'],
+        fee: '49 RON certificat înmatriculare + ~200 RON plăcuțe',
+        deadline: 'Înainte de programarea DRPCIV — plata e obligatorie la ghișeu',
+        form_type: null,
+        payment_url: 'https://www.ghiseul.ro',
+        tip: 'Achită ambele taxe pe ghișeu.ro și salvează chitanțele. La DRPCIV se verifică plata electronic — nu mai trebuie să aduci chitanță pe hârtie.',
+        online_action: {
+          label: 'Plătește taxele pe ghișeu.ro',
+          type: 'url',
+          url: 'https://www.ghiseul.ro',
+        },
+      },
+      {
+        order: 6,
+        title: 'Cumperi asigurare RCA pe numele tău',
+        office: 'Online',
+        address: 'Online',
+        hours: '24/7',
+        phone: 'Nu este necesar',
+        documents: ['Buletin', 'CIV (de la RAR)'],
+        fee: 'Variabil — de la ~400 RON/an',
+        deadline: 'Înainte de programarea DRPCIV',
+        form_type: null,
+        payment_url: 'https://www.ieftine.ro/asigurari/rca',
+        tip: 'RCA-ul trebuie să fie pe numele tău (noul proprietar) nu al celui de la care ai cumpărat. Poți cumpăra 100% online.',
+        online_action: {
+          label: 'Compară și cumpără RCA',
+          type: 'url',
+          url: 'https://www.ieftine.ro/asigurari/rca',
+        },
+      },
+      {
+        order: 7,
+        title: 'Programare și depunere dosar final la DRPCIV',
+        office: 'DRPCIV Cluj — Înmatriculări',
+        address: 'Str. Traian Vuia 1-4, Cluj-Napoca',
+        hours: 'Luni–Vineri: 08:00–16:00',
+        phone: '0264-420.464',
+        documents: [
+          'Cerere tip DRPCIV (o generăm noi)',
+          'Buletin original + copie',
+          'Contract tradus cu ștampilă REMTII',
+          'CIV original (de la RAR)',
+          'ITP valabil (de la RAR)',
+          'RCA valabil (pe numele tău)',
+          'Certificat autenticitate (de la RAR)',
+          'Certificat TVA ANAF',
+          'Chitanță 49 RON certificat',
+          'Chitanță ~200 RON plăcuțe',
+        ],
+        fee: 'Taxele deja plătite în pasul 5',
+        deadline: 'În 30 de zile de la intrarea mașinii în România',
+        form_type: 'cerere_drpciv',
+        payment_url: null,
+        tip: 'Dosarul complet la DRPCIV durează 30–45 minute. Dacă ai toate actele din lista de mai sus, nu vei fi trimis înapoi.',
+        online_action: {
+          label: 'Rezervă programare DRPCIV',
+          type: 'url',
+          url: 'https://www.drpciv.ro/drpciv-booking/activities/21',
+        },
+      },
+    ],
+  },
 }
 
 export function findProcedure(eventType: string): LifeEventProcedure | null {
@@ -268,6 +548,17 @@ export function findProcedure(eventType: string): LifeEventProcedure | null {
 
 export function detectEventType(message: string): string | null {
   const msg = message.toLowerCase()
+
+  // Car from Germany / EU (higher priority than generic bought_car)
+  if (
+    (msg.includes('mașin') || msg.includes('masin') || msg.includes('auto')) &&
+    (msg.includes('germania') || msg.includes('germani') || msg.includes('ue') ||
+     msg.includes('europa') || msg.includes('intracomunitara') || msg.includes('import') ||
+     msg.includes('din afar') || msg.includes('din strain'))
+  )
+    return 'car_from_germany'
+
+  // Generic domestic car purchase
   if (
     msg.includes('mașin') ||
     msg.includes('masin') ||
@@ -275,7 +566,8 @@ export function detectEventType(message: string): string | null {
     msg.includes('cumpărat') ||
     msg.includes('cumparat')
   )
-    return 'bought_car'
+    return 'car_domestic'
+
   if (
     msg.includes('facultate') ||
     msg.includes('universitate') ||

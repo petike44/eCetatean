@@ -16,9 +16,15 @@ node_modules/
 /out/
 /build
 /dist
+frontend/dist/
+backend/dist/
 
 # Vercel
 .vercel
+
+# TanStack Start
+frontend/.output/
+frontend/.vinxi/
 
 # PWA (auto-generated)
 public/sw.js
@@ -27,6 +33,7 @@ public/workbox-*.js
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Editor
 .vscode/
@@ -38,3 +45,7 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+
+# TypeScript
+*.tsbuildinfo

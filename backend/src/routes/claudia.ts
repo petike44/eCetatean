@@ -26,6 +26,8 @@ import type { ClaudIARequest } from '../types'
 
 export const claudiaRoute = new Hono()
 
+const CAR_LIFE_EVENT_TYPES = new Set(['car_from_germany', 'car_domestic'])
+
 function handleToolCall(
   toolName: string,
   input: Record<string, string>
@@ -39,7 +41,12 @@ function handleToolCall(
           message: 'Nu am informații despre acest eveniment încă.',
         }
       }
-      return { type: 'action_plan', procedure }
+      return {
+        type: 'action_plan',
+        procedure,
+        create_life_event: CAR_LIFE_EVENT_TYPES.has(input.event_type),
+        event_type: input.event_type,
+      }
     }
     case 'find_office_info': {
       const office = OFFICES[input.office_type]
@@ -48,6 +55,13 @@ function handleToolCall(
     }
     case 'generate_pdf': {
       return { type: 'pdf_ready', form_type: input.form_type }
+    }
+    case 'ask_clarification': {
+      return {
+        type: 'clarification',
+        question: input.question,
+        options: JSON.parse(input.options ?? '[]'),
+      }
     }
     case 'set_reminder': {
       return {
@@ -62,7 +76,86 @@ function handleToolCall(
   }
 }
 
+function detectCarSubflow(msg: string): {
+  needs_clarification: boolean
+  event_type?: string
+  question?: string
+  options?: string[]
+} {
+  const lower = msg.toLowerCase()
+  const hasGermany =
+    lower.includes('germania') ||
+    lower.includes('germani') ||
+    lower.includes('germany') ||
+    lower.includes('ue') ||
+    lower.includes('europa') ||
+    lower.includes('strainatate') ||
+    lower.includes('străinătate') ||
+    lower.includes('import') ||
+    lower.includes('din afar')
+  const hasCar =
+    lower.includes('mașin') ||
+    lower.includes('masin') ||
+    lower.includes('masina') ||
+    lower.includes('auto')
+  const hasDomestic =
+    lower.includes('romania') ||
+    lower.includes('românia') ||
+    lower.includes('intern') ||
+    lower.includes('local')
+
+  if (hasCar && hasGermany) {
+    return { needs_clarification: false, event_type: 'car_from_germany' }
+  }
+  if (hasCar && hasDomestic) {
+    return { needs_clarification: false, event_type: 'car_domestic' }
+  }
+  if (hasCar) {
+    return {
+      needs_clarification: true,
+      question: 'Mașina a fost cumpărată din România sau din Germania/altă țară UE?',
+      options: ['Din România', 'Din Germania/UE'],
+    }
+  }
+  return { needs_clarification: false }
+}
+
 function getMockResponse(lastMessage: string) {
+  const lower = lastMessage.toLowerCase()
+  const hasCar =
+    lower.includes('mașin') ||
+    lower.includes('masin') ||
+    lower.includes('masina') ||
+    lower.includes('auto') ||
+    lower.includes('cumpărat') ||
+    lower.includes('cumparat') ||
+    lower.includes('adus') ||
+    lower.includes('aduc')
+
+  if (hasCar) {
+    const carFlow = detectCarSubflow(lastMessage)
+    if (carFlow.needs_clarification) {
+      return {
+        text: carFlow.question!,
+        tool: 'ask_clarification' as string | null,
+        tool_input: {
+          question: carFlow.question!,
+          options: JSON.stringify(carFlow.options ?? []),
+        } as Record<string, string> | null,
+      }
+    }
+    if (carFlow.event_type) {
+      const procedure = findProcedure(carFlow.event_type)
+      return {
+        text: procedure
+          ? `Am înțeles! ${procedure.title}. Iată planul tău complet:`
+          : 'Te pot ajuta cu asta. Iată ce trebuie să faci:',
+        tool: 'handle_life_event' as string | null,
+        tool_input: { event_type: carFlow.event_type } as Record<string, string> | null,
+      }
+    }
+  }
+
   const eventType = detectEventType(lastMessage)
 
   if (eventType) {
@@ -71,8 +164,8 @@ function getMockResponse(lastMessage: string) {
       text: procedure
         ? `Am înțeles! ${procedure.title}. Iată planul tău:`
         : 'Te pot ajuta cu asta. Iată ce trebuie să faci:',
-      tool: 'handle_life_event',
-      tool_input: { event_type: eventType },
+      tool: 'handle_life_event' as string | null,
+      tool_input: { event_type: eventType } as Record<string, string> | null,
     }
   }
 

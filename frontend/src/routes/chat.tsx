@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import { Send, Info, FileText, MapPin, Clock, Phone, Navigation2, ChevronLeft, ChevronRight, X, Check, Sparkles, Car, IdCard, Briefcase, Plane } from "lucide-react";
+import { Send, Info, FileText, MapPin, Clock, Phone, Navigation2, ChevronLeft, ChevronRight, X, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { citizen, locationsCatalog, type DocItem, type LocationItem } from "@/lib/mock-data";
 import { useToast } from "@/components/Toast";
 import { Protected } from "@/lib/auth-guard";
-import { useSendChatMessage, type ChatMessage, type ClaudIAStreamChunk } from "@/lib/api-hooks";
+import { useSendChatMessage, useCreateLifeEvent, type ChatMessage, type ClaudIAStreamChunk } from "@/lib/api-hooks";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({ meta: [{ title: "ClaudIA — eCetățean" }] }),
@@ -23,6 +23,8 @@ type Reply = {
   info?: { label: string; value: string }[];
   documents?: DocItem[];
   locations?: LocationItem[];
+  create_life_event?: boolean;
+  event_type?: string;
 };
 
 type Msg =
@@ -30,10 +32,10 @@ type Msg =
   | { id: number; role: "ai"; reply: Reply };
 
 const SUGGESTIONS: { label: string; icon: typeof Car; query: string }[] = [
-  { label: "Înmatriculare mașină", icon: Car, query: "Înmatriculare mașină" },
+  { label: "Mașină din Germania", icon: Car, query: "Am adus o mașină din Germania" },
+  { label: "Mașină din România", icon: Car, query: "Am cumpărat o mașină în România" },
   { label: "Reînnoire buletin", icon: IdCard, query: "Reînnoire buletin" },
   { label: "Înregistrare PFA", icon: Briefcase, query: "Înregistrare PFA" },
-  { label: "Pașaport urgent", icon: Plane, query: "Vreau să îmi fac un pașaport" },
 ];
 
 // Local catalog used to enrich the backend's tool_result with locations.
@@ -69,6 +71,8 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
   let info: { label: string; value: string }[] | undefined;
   let documents: DocItem[] | undefined;
   let locations: LocationItem[] | undefined;
+  let create_life_event: boolean | undefined;
+  let event_type: string | undefined;
 
   for (const chunk of chunks) {
     if (chunk.type === "text") {
@@ -81,6 +85,8 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
 
     if (kind === "action_plan") {
       const procedure = r.procedure as ActionPlanProcedure | undefined;
+      if (r.create_life_event) create_life_event = true;
+      if (r.event_type) event_type = r.event_type as string;
       if (procedure) {
         textParts.push(`${procedure.emoji ?? ""} ${procedure.title}`.trim());
         if (procedure.summary) textParts.push(procedure.summary);
@@ -133,6 +139,8 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
     info,
     documents,
     locations,
+    create_life_event,
+    event_type,
   };
 }
 
@@ -465,13 +473,29 @@ function ResultPanel({ reply, onClose }: { reply: Reply; onClose: () => void }) 
 
 function PageAnswer({ reply }: { reply: Reply }) {
   const nav = useNavigate();
+  const createLifeEvent = useCreateLifeEvent();
+  const { show } = useToast();
+  const [creating, setCreating] = useState(false);
+
+  const handleTrackProgress = async () => {
+    if (!reply.event_type) return;
+    setCreating(true);
+    try {
+      const result = await createLifeEvent.mutateAsync({ event_type: reply.event_type });
+      nav({ to: "/life-event/$id", params: { id: result.id } });
+    } catch {
+      show("error", "Eroare la crearea evenimentului civic");
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="pt-2 space-y-4">
       <div className="bg-surface border border-border rounded-2xl p-4 shadow-card">
         <p className="text-[14.5px] leading-relaxed text-text-primary">{reply.text}</p>
         {reply.bullets && (
           <div className="mt-4">
-            <p className="font-display font-semibold text-[13px] text-text-primary mb-2">Documente necesare</p>
+            <p className="font-display font-semibold text-[13px] text-text-primary mb-2">Pașii necesari</p>
             <ul className="text-[13.5px] text-text-secondary space-y-1 list-disc list-inside marker:text-accent">
               {reply.bullets.map((b) => <li key={b}>{b}</li>)}
             </ul>
@@ -489,6 +513,22 @@ function PageAnswer({ reply }: { reply: Reply }) {
         )}
       </div>
       <div className="flex flex-col gap-2">
+        {reply.create_life_event && reply.event_type && (
+          <button
+            onClick={handleTrackProgress}
+            disabled={creating}
+            className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {creating ? (
+              "Se crează..."
+            ) : (
+              <>
+                Urmărește progresul și bifează pașii
+                <ArrowRight size={16} />
+              </>
+            )}
+          </button>
+        )}
         <button onClick={() => nav({ to: "/action-plan" })} className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl">
           Generează plan complet
         </button>

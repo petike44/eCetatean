@@ -1,7 +1,7 @@
 import { useAuth } from "@/lib/clerk-stub";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { apiGet, apiPostForm, apiStreamPost, type GetToken } from "./api";
+import { apiGet, apiPostJson, apiPatchJson, apiPostForm, apiStreamPost, type GetToken } from "./api";
 
 function useGetToken(): GetToken {
   const { getToken } = useAuth();
@@ -179,5 +179,107 @@ export function useAuditLog(limit = 50) {
     queryKey: ["audit", limit],
     queryFn: () => apiGet<AuditLogResult>(`/api/audit?limit=${limit}`, getToken),
     enabled: !!isSignedIn,
+  });
+}
+
+// —— Life Events ——————————————————————————————————————————————
+
+export type StepStatus = "pending" | "in_progress" | "completed" | "skipped";
+
+export type LifeEventStep = {
+  order: number;
+  title: string;
+  office: string;
+  address: string;
+  hours: string;
+  phone: string;
+  documents: string[];
+  fee: string;
+  deadline: string;
+  form_type: string | null;
+  payment_url: string | null;
+  tip: string | null;
+  online_action?: {
+    label: string;
+    type: "pdf" | "url" | "payment";
+    url?: string;
+    form_type?: string;
+  };
+};
+
+export type LifeEventProgressWithDetails = {
+  id: string;
+  user_id: string;
+  event_type: string;
+  event_title: string;
+  event_data: Record<string, unknown>;
+  steps_status: Record<string, StepStatus>;
+  current_step: number;
+  total_steps: number;
+  is_completed: boolean;
+  started_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  step_details: LifeEventStep[];
+  completion_percentage: number;
+  estimated_total_cost: string;
+};
+
+export function useLifeEvents() {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["life-events"],
+    queryFn: () => apiGet<LifeEventProgressWithDetails[]>("/api/life-events", getToken),
+    enabled: !!isSignedIn,
+  });
+}
+
+export function useLifeEvent(id: string | undefined) {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["life-events", id],
+    queryFn: () => apiGet<LifeEventProgressWithDetails>(`/api/life-events/${id}`, getToken),
+    enabled: !!isSignedIn && !!id,
+  });
+}
+
+export function useCreateLifeEvent() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { event_type: string; event_data?: Record<string, unknown> }) =>
+      apiPostJson<LifeEventProgressWithDetails>("/api/life-events", body, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["life-events"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useUpdateLifeEventStep() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      stepNumber,
+      status,
+    }: {
+      id: string;
+      stepNumber: number;
+      status: StepStatus;
+    }) =>
+      apiPatchJson<LifeEventProgressWithDetails>(
+        `/api/life-events/${id}/steps/${stepNumber}`,
+        { status },
+        getToken,
+      ),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["life-events", vars.id] });
+      qc.invalidateQueries({ queryKey: ["life-events"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
   });
 }

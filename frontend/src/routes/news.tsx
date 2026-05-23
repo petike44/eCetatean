@@ -95,10 +95,10 @@ function NewsPage() {
                 {rest.map((n) => (
                   <article
                     key={n.id}
-                    className="bg-surface border border-border rounded-xl p-4 shadow-card"
+                    className="bg-surface border border-border rounded-2xl p-4 shadow-card"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="shrink-0 w-10 h-10 rounded-lg bg-surface-secondary flex items-center justify-center text-primary">
+                      <div className="shrink-0 w-11 h-11 rounded-2xl bg-primary-light flex items-center justify-center text-primary">
                         <Newspaper size={18} strokeWidth={1.8} />
                       </div>
                       <div className="min-w-0 flex-1">

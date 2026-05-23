@@ -5,6 +5,7 @@ import { Protected } from "@/lib/auth-guard";
 import { useUpsertProfile } from "@/lib/api-hooks";
 import { useToast } from "@/components/Toast";
 import { useUser } from "@/lib/clerk-stub";
+import { Loader2, ChevronLeft } from "lucide-react";
 
 export const Route = createFileRoute("/profile-setup")({
   head: () => ({ meta: [{ title: "Completează profilul — eCetățean" }] }),
@@ -100,7 +101,7 @@ function ProfileSetup() {
         <form onSubmit={(e) => void submit(e)} className="space-y-4">
           {step === 0 ? (
             <>
-              <SetupField label="Nume complet *" value={fullName} onChange={setFullName} placeholder="Maria Popescu" required />
+              <SetupField label="Nume complet *" value={fullName} onChange={setFullName} placeholder="Prenume Nume" required autoComplete="name" />
               <SetupField label="Email" value={email} onChange={setEmail} type="email" placeholder={authEmail || "nume@exemplu.ro"} />
               <SetupField label="Telefon" value={phone} onChange={setPhone} type="tel" placeholder="+407..." />
               <SetupField label="Oraș" value={city} onChange={setCity} placeholder="Cluj-Napoca" />
@@ -119,25 +120,38 @@ function ProfileSetup() {
                   type="date"
                   value={idExpiry}
                   onChange={(e) => setIdExpiry(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-border px-4 py-3 text-[15px]"
+                  className="mt-1 w-full rounded-2xl border border-border bg-surface-secondary px-4 py-3.5 text-[15px] min-h-11 focus:bg-surface focus:border-primary outline-none"
                 />
               </label>
             </>
           )}
 
-          <button
-            type="submit"
-            disabled={upsert.isPending}
-            className="press w-full bg-accent text-white font-semibold text-[15px] py-3.5 rounded-xl disabled:opacity-60 mt-2"
-          >
-            {upsert.isPending ? "Se salvează..." : step === 0 ? "Continuă" : "Continuă la ClaudIA"}
-          </button>
+          <div className="flex gap-3 pt-2">
+            {step === 1 && (
+              <button
+                type="button"
+                onClick={() => setStep(0)}
+                className="press shrink-0 min-h-11 min-w-11 rounded-2xl border border-border flex items-center justify-center text-text-secondary"
+                aria-label="Pasul anterior"
+              >
+                <ChevronLeft size={20} />
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={upsert.isPending}
+              className="press flex-1 bg-accent text-white font-semibold text-[15px] py-3.5 min-h-11 rounded-2xl disabled:opacity-60 inline-flex items-center justify-center gap-2"
+            >
+              {upsert.isPending && <Loader2 size={18} className="animate-spin" />}
+              {upsert.isPending ? "Se salvează..." : step === 0 ? "Continuă" : "Continuă la ClaudIA"}
+            </button>
+          </div>
 
           {step === 1 && (
             <button
               type="button"
               onClick={() => nav({ to: "/chat" })}
-              className="press w-full text-[14px] text-text-secondary py-2"
+              className="press w-full text-[14px] text-text-secondary py-3 min-h-11"
             >
               Sari peste pentru moment
             </button>
@@ -164,7 +178,7 @@ function SetupField({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl border border-border px-4 py-3 text-[15px]"
+        className="mt-1 w-full rounded-2xl border border-border bg-surface-secondary px-4 py-3.5 text-[15px] min-h-11 focus:bg-surface focus:border-primary outline-none"
         {...rest}
       />
     </label>

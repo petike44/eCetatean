@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { History, Settings, Loader2 } from "lucide-react";
+import { History, Loader2, Car, HeartPulse, GraduationCap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { Card, PrimaryButton, GhostButton, Field } from "@/components/ui-bits";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/profile")({
 const TABS = ["Personal", "Vehicule", "Locuință", "Sănătate", "Educație"] as const;
 
 function Profile() {
+  const nav = useNavigate();
   const [tab, setTab] = useState<(typeof TABS)[number]>("Personal");
   const { show } = useToast();
   const { data: profile, isLoading } = useProfile();
@@ -107,9 +108,11 @@ function Profile() {
                 {phone || authEmail || "Completează datele de contact"}
               </p>
             </div>
-            <button aria-label="Setări" className="press p-2 rounded-xl text-text-tertiary">
-              <Settings size={20} />
-            </button>
+            {profile?.city && (
+              <span className="text-[12px] text-text-tertiary shrink-0 px-2 py-1 rounded-full bg-surface-secondary border border-border">
+                {profile.city}
+              </span>
+            )}
           </div>
         </div>
 
@@ -133,8 +136,8 @@ function Profile() {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`press shrink-0 px-4 py-3 text-[14px] font-semibold border-b-2 transition-colors ${
-                  tab === t ? "border-accent text-text-primary" : "border-transparent text-text-tertiary"
+                className={`press shrink-0 px-4 py-3 min-h-11 text-[14px] font-semibold border-b-2 transition-colors ${
+                  tab === t ? "border-primary text-text-primary" : "border-transparent text-text-tertiary"
                 }`}
               >
                 {t}
@@ -160,7 +163,7 @@ function Profile() {
                   type="date"
                   value={idExpiry}
                   onChange={(e) => setIdExpiry(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-border bg-surface-secondary px-4 py-3.5 text-[15px]"
+                  className="mt-1 w-full rounded-2xl border border-border bg-surface-secondary px-4 py-3.5 min-h-11 text-[15px]"
                 />
               </label>
               {profile?.buletin_expiry && (
@@ -183,16 +186,13 @@ function Profile() {
           )}
 
           {tab === "Vehicule" && (
-            <div className="space-y-3">
-              <Card>
-                <p className="text-[14px] text-text-secondary">
-                  Nu ai vehicule înregistrate. Adaugă unul din chat cu ClaudIA când funcția va fi disponibilă.
-                </p>
-              </Card>
-              <GhostButton onClick={() => show("success", "Folosește ClaudIA pentru înmatriculare sau ITP")}>
-                Deschide ClaudIA
-              </GhostButton>
-            </div>
+            <TabEmpty
+              icon={Car}
+              title="Niciun vehicul"
+              description="Pentru înmatriculare, ITP sau schimbări de proprietar, ClaudIA te ghidează pas cu pas."
+              cta="Întreabă despre vehicule"
+              onCta={() => nav({ to: "/chat" })}
+            />
           )}
 
           {tab === "Locuință" && (
@@ -209,29 +209,54 @@ function Profile() {
           )}
 
           {tab === "Sănătate" && (
-            <div className="space-y-4">
-              <Field label="Medic de familie" placeholder="—" />
-              <Field label="Casa de asigurări" placeholder="ex. CAS Cluj" />
-              <Field label="Grupă sanguină" placeholder="—" />
-              <PrimaryButton onClick={() => show("success", "Salvat local — sincronizare în curând")}>
-                Salvează
-              </PrimaryButton>
-            </div>
+            <TabEmpty
+              icon={HeartPulse}
+              title="Date medicale"
+              description="Secțiunea pentru medic de familie și asigurări va fi disponibilă în curând."
+            />
           )}
 
           {tab === "Educație" && (
-            <div className="space-y-4">
-              <Field label="Nivel studii" placeholder="—" />
-              <Field label="Instituție absolvită" placeholder="—" />
-              <Field label="Anul absolvirii" placeholder="—" />
-              <PrimaryButton onClick={() => show("success", "Salvat local — sincronizare în curând")}>
-                Salvează
-              </PrimaryButton>
-            </div>
+            <TabEmpty
+              icon={GraduationCap}
+              title="Date educaționale"
+              description="Poți salva studiile și diplomele aici — funcția vine în curând."
+            />
           )}
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function TabEmpty({
+  icon: Icon,
+  title,
+  description,
+  cta,
+  onCta,
+}: {
+  icon: typeof Car;
+  title: string;
+  description: string;
+  cta?: string;
+  onCta?: () => void;
+}) {
+  return (
+    <Card>
+      <div className="flex flex-col items-center text-center py-4">
+        <div className="w-14 h-14 rounded-2xl bg-primary-light text-primary flex items-center justify-center mb-4">
+          <Icon size={26} strokeWidth={1.8} />
+        </div>
+        <p className="font-display font-semibold text-[16px] text-text-primary">{title}</p>
+        <p className="text-[14px] text-text-secondary mt-2 max-w-xs">{description}</p>
+        {cta && onCta && (
+          <GhostButton className="mt-4" onClick={onCta}>
+            {cta}
+          </GhostButton>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -255,7 +280,7 @@ function ProfileInput({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl border border-border bg-surface-secondary px-4 py-3.5 text-[15px] text-text-primary focus:bg-surface focus:border-primary outline-none"
+        className="mt-1 w-full rounded-2xl border border-border bg-surface-secondary px-4 py-3.5 min-h-11 text-[15px] text-text-primary focus:bg-surface focus:border-primary outline-none"
         {...rest}
       />
     </label>

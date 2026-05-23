@@ -2,8 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { PrimaryButton, GhostButton } from "@/components/ui-bits";
-import { citizen } from "@/lib/mock-data";
 import { Protected } from "@/lib/auth-guard";
+import { useProfile } from "@/lib/api-hooks";
+import { useUser } from "@/lib/clerk-stub";
+import { profileDisplayName } from "@/lib/profile-utils";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/document-preview")({
   head: () => ({ meta: [{ title: "Previzualizare cerere — eCetățean" }] }),
@@ -15,50 +18,88 @@ export const Route = createFileRoute("/document-preview")({
 });
 
 function DocPreview() {
+  const { data: profile, isLoading } = useProfile();
+  const { user } = useUser();
+  const authEmail = user?.primaryEmailAddress?.emailAddress ?? null;
+  const name = profileDisplayName(profile, authEmail);
+
+  const filledCount = [
+    name,
+    profile?.cnp,
+    profile?.address,
+    profile?.city,
+    profile?.email ?? authEmail,
+    profile?.phone,
+    profile?.buletin_series,
+    profile?.buletin_number,
+  ].filter((v) => v != null && String(v).trim() !== "").length;
+  const totalFields = 11;
+
   return (
     <AppShell topBar={<TopBar showBack title="Previzualizare cerere" />}>
       <div className="px-5 pt-5 pb-36">
-        <div className="bg-white border border-border rounded-2xl shadow-card p-6 space-y-5">
-          <header className="text-center border-b border-border pb-4">
-            <p className="text-[11px] uppercase tracking-wider text-text-tertiary">Direcția Generală de Pașapoarte</p>
-            <h2 className="font-display font-bold text-[18px] text-text-primary mt-1">Cerere eliberare pașaport simplu electronic</h2>
-          </header>
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="animate-spin text-text-tertiary" />
+          </div>
+        ) : (
+          <div className="bg-white border border-border rounded-2xl shadow-card p-6 space-y-5">
+            <header className="text-center border-b border-border pb-4">
+              <p className="text-[11px] uppercase tracking-wider text-text-tertiary">Direcția Generală de Pașapoarte</p>
+              <h2 className="font-display font-bold text-[18px] text-text-primary mt-1">Cerere eliberare pașaport simplu electronic</h2>
+            </header>
 
-          <Section title="Date personale">
-            <Filled label="Nume și prenume" value={citizen.name} />
-            <Filled label="CNP" value={citizen.cnp} />
-            <Filled label="Data nașterii" value={citizen.birth} />
-            <Filled label="Locul nașterii" value="Cluj-Napoca" />
-          </Section>
+            <Section title="Date personale">
+              <Filled label="Nume și prenume" value={name} />
+              {profile?.cnp ? <Filled label="CNP" value={profile.cnp} /> : <Empty label="CNP" />}
+              <Empty label="Data nașterii" />
+              <Filled label="Locul nașterii" value={profile?.city ?? "—"} />
+            </Section>
 
-          <Section title="Adresă de domiciliu">
-            <Filled label="Adresă completă" value={`${citizen.address}, ${citizen.city}`} />
-            <Empty label="Cod poștal" />
-          </Section>
+            <Section title="Adresă de domiciliu">
+              {profile?.address ? (
+                <Filled label="Adresă completă" value={`${profile.address}, ${profile.city ?? "Cluj-Napoca"}`} />
+              ) : (
+                <Empty label="Adresă completă" />
+              )}
+              <Empty label="Cod poștal" />
+            </Section>
 
-          <Section title="Date contact">
-            <Filled label="Email" value={citizen.email} />
-            <Filled label="Telefon" value="+40 7XX XXX XX3" />
-          </Section>
+            <Section title="Date contact">
+              {profile?.email || authEmail ? (
+                <Filled label="Email" value={profile?.email ?? authEmail!} />
+              ) : (
+                <Empty label="Email" />
+              )}
+              {profile?.phone ? <Filled label="Telefon" value={profile.phone} /> : <Empty label="Telefon" />}
+            </Section>
 
-          <Section title="Date suplimentare">
-            <Filled label="Serie buletin" value={`${citizen.idSerie} ${citizen.idNumber}`} />
-            <Empty label="Loc de muncă" />
-            <Empty label="Studii" />
-          </Section>
+            <Section title="Date suplimentare">
+              {profile?.buletin_series && profile?.buletin_number ? (
+                <Filled label="Serie buletin" value={`${profile.buletin_series} ${profile.buletin_number}`} />
+              ) : (
+                <Empty label="Serie buletin" />
+              )}
+              <Empty label="Loc de muncă" />
+              <Empty label="Studii" />
+            </Section>
 
-          <Section title="Semnătură">
-            <div className="bg-surface-secondary rounded-lg h-20 border border-dashed border-border flex items-center justify-center text-text-tertiary text-[12px]">
-              Va fi adăugată la depunere
-            </div>
-          </Section>
-        </div>
+            <Section title="Semnătură">
+              <div className="bg-surface-secondary rounded-lg h-20 border border-dashed border-border flex items-center justify-center text-text-tertiary text-[12px]">
+                Va fi adăugată la depunere
+              </div>
+            </Section>
+          </div>
+        )}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-border">
         <div className="mx-auto max-w-[440px] md:max-w-[640px] lg:max-w-[480px] px-5 py-4">
           <p className="text-[12.5px] text-text-secondary mb-3 text-center">
-            Câmpuri completate: <span className="font-display font-semibold text-text-primary">8/11</span>
+            Câmpuri completate:{" "}
+            <span className="font-display font-semibold text-text-primary">
+              {filledCount}/{totalFields}
+            </span>
           </p>
           <div className="grid grid-cols-2 gap-2">
             <GhostButton>Completează manual</GhostButton>

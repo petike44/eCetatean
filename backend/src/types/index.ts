@@ -143,6 +143,8 @@ export type FormType =
   | 'viza_flotant'
   | 'doctor_transfer'
   | 'scholarship_certificate'
+  | 'anaf_tva_certificate_request'
+  | 'cerere_drpciv'
 
 export interface PDFGenerationRequest {
   form_type: FormType

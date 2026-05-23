@@ -10,13 +10,14 @@ import { generate } from '@pdfme/generator'
 import { BLANK_PDF } from '@pdfme/common'
 import type { Template } from '@pdfme/common'
 import type { FormType } from '../types'
+import { supabaseAdmin } from './supabase'
 
 const FONT_SIZE = 11
 const LINE_HEIGHT = 8
 
-function buildSimpleTextTemplate(fields: string[]): Template {
+function buildSimpleTextTemplate(fields: string[], basePdf: string | Uint8Array | ArrayBuffer = BLANK_PDF): Template {
   return {
-    basePdf: BLANK_PDF,
+    basePdf,
     schemas: [
       fields.map((field, index) => ({
         name: field,
@@ -152,12 +153,60 @@ export async function generatePDF(
       ]
       break
 
+    case 'anaf_tva_certificate_request':
+      inputs = [
+        {
+          'Solicitant — Nume': profile.full_name ?? '_______________',
+          'Solicitant — CNP': profile.cnp ?? '_______________',
+          'Solicitant — Adresă': `${profile.address ?? ''}, ${profile.city ?? 'Cluj-Napoca'}`,
+          'Vehicul — Marcă și Model': additionalData.vehicle ?? '_______________',
+          'Număr de identificare (VIN)': additionalData.vin ?? '_______________',
+          'Data achiziției din UE': additionalData.purchase_date ?? '_______________',
+          Data: today,
+          Semnătură: '_______________',
+        },
+      ]
+      break
+
+    case 'cerere_drpciv':
+      inputs = [
+        {
+          'Subsemnatul/a': profile.full_name ?? '_______________',
+          CNP: profile.cnp ?? '_______________',
+          'Domiciliat(ă) în': `${profile.address ?? ''}, ${profile.city ?? 'Cluj-Napoca'}`,
+          'Act de identitate seria': `${profile.buletin_series ?? '___'} nr. ${profile.buletin_number ?? '___________'}`,
+          'Solicit înmatricularea auto': additionalData.vehicle ?? '_______________',
+          'Număr de identificare (VIN)': additionalData.vin ?? '_______________',
+          'Culoare': additionalData.color ?? '_______________',
+          'An fabricație': additionalData.year ?? '_______________',
+          Data: today,
+          Semnătură: '_______________',
+        },
+      ]
+      break
+
     default:
       throw new Error(`Tip de formular necunoscut: ${formType}`)
   }
 
   const fieldNames = Object.keys(inputs[0])
-  const template = buildSimpleTextTemplate(fieldNames)
+  
+  let basePdfData: string | Uint8Array | ArrayBuffer = BLANK_PDF
+
+  try {
+    const { data, error } = await supabaseAdmin.storage
+      .from('pdf-templates')
+      .download(`${formType}.pdf`)
+    
+    if (data && !error) {
+      const arrayBuffer = await data.arrayBuffer()
+      basePdfData = new Uint8Array(arrayBuffer)
+    }
+  } catch (err) {
+    console.error('Error fetching base PDF from Supabase:', err)
+  }
+
+  const template = buildSimpleTextTemplate(fieldNames, basePdfData)
 
   const pdf = await generate({ template, inputs })
   return Buffer.from(pdf)

@@ -109,3 +109,21 @@ export async function apiStreamPost(
     getToken,
   );
 }
+
+export async function downloadPdf(
+  formType: string,
+  getToken: GetToken,
+  additionalData: Record<string, string> = {},
+): Promise<void> {
+  const blob = await apiPostJson<Blob>(
+    "/api/pdf/generate",
+    { form_type: formType, profile: {}, additional_data: additionalData },
+    getToken,
+  );
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${formType}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

@@ -1,7 +1,15 @@
 import { useAuth } from "@/lib/clerk-stub";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { apiGet, apiPostJson, apiPatchJson, apiPostForm, apiStreamPost, type GetToken } from "./api";
+import {
+  apiGet,
+  apiPostJson,
+  apiPatchJson,
+  apiPostForm,
+  apiStreamPost,
+  downloadPdf,
+  type GetToken,
+} from "./api";
 
 function useGetToken(): GetToken {
   const { getToken } = useAuth();
@@ -56,7 +64,11 @@ export type AuditActionType =
   | "report_submitted"
   | "deadline_added"
   | "chat_session"
-  | "civil_servant_access";
+  | "civil_servant_access"
+  | "life_event_started"
+  | "life_event_step_completed"
+  | "payment_simulated"
+  | "appointment_simulated";
 
 export type AuditEntry = {
   id: string;
@@ -78,13 +90,61 @@ export type AuditLogResult = {
 
 // —— Hooks ————————————————————————————————————————————————————
 
+export type CitizenProfile = {
+  full_name?: string | null;
+  cnp?: string | null;
+  address?: string | null;
+  city?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  buletin_series?: string | null;
+  buletin_number?: string | null;
+};
+
+export function useProfile() {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["profile"],
+    queryFn: () => apiGet<CitizenProfile | null>("/api/profile", getToken),
+    enabled: !!isSignedIn,
+  });
+}
+
+export function useUpsertProfile() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CitizenProfile) => apiPostJson<CitizenProfile>("/api/profile", body, getToken),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+  });
+}
+
+export function useGeneratePdf() {
+  const getToken = useGetToken();
+  return useMutation({
+    mutationFn: async ({
+      formType,
+      additionalData = {},
+    }: {
+      formType: string;
+      additionalData?: Record<string, string>;
+    }) => {
+      await downloadPdf(formType, getToken, additionalData);
+    },
+  });
+}
+
 export function useSendChatMessage() {
   const getToken = useGetToken();
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (messages: ChatMessage[]) => {
-      const response = await apiStreamPost("/api/claudia", { messages }, getToken);
+    mutationFn: async (payload: {
+      messages: ChatMessage[];
+      profile?: CitizenProfile | null;
+    }) => {
+      const response = await apiStreamPost("/api/claudia", payload, getToken);
       const chunks: ClaudIAStreamChunk[] = [];
 
       if (!response.body) {
@@ -201,9 +261,13 @@ export type LifeEventStep = {
   tip: string | null;
   online_action?: {
     label: string;
-    type: "pdf" | "url" | "payment";
+    type: "pdf" | "url" | "payment" | "appointment";
     url?: string;
     form_type?: string;
+    amount_ron?: number;
+    description?: string;
+    office?: string;
+    slot_hint?: string;
   };
 };
 

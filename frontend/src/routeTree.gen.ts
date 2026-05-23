@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ReportRouteImport } from './routes/report'
+import { Route as ProfileSetupRouteImport } from './routes/profile-setup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
@@ -37,6 +38,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ReportRoute = ReportRouteImport.update({
   id: '/report',
   path: '/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileSetupRoute = ProfileSetupRouteImport.update({
+  id: '/profile-setup',
+  path: '/profile-setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/onboarding'
     | '/profile'
+    | '/profile-setup'
     | '/report'
     | '/sitemap.xml'
     | '/staff'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/onboarding'
     | '/profile'
+    | '/profile-setup'
     | '/report'
     | '/sitemap.xml'
     | '/staff'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/onboarding'
     | '/profile'
+    | '/profile-setup'
     | '/report'
     | '/sitemap.xml'
     | '/staff'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   NewsRoute: typeof NewsRoute
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
+  ProfileSetupRoute: typeof ProfileSetupRoute
   ReportRoute: typeof ReportRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StaffRoute: typeof StaffRoute
@@ -233,6 +246,13 @@ declare module '@tanstack/react-router' {
       path: '/report'
       fullPath: '/report'
       preLoaderRoute: typeof ReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile-setup': {
+      id: '/profile-setup'
+      path: '/profile-setup'
+      fullPath: '/profile-setup'
+      preLoaderRoute: typeof ProfileSetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -326,6 +346,7 @@ const rootRouteChildren: RootRouteChildren = {
   NewsRoute: NewsRoute,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
+  ProfileSetupRoute: ProfileSetupRoute,
   ReportRoute: ReportRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StaffRoute: StaffRoute,

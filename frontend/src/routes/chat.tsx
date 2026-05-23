@@ -5,7 +5,14 @@ import { AppShell } from "@/components/AppShell";
 import { citizen, locationsCatalog, type DocItem, type LocationItem } from "@/lib/mock-data";
 import { useToast } from "@/components/Toast";
 import { Protected } from "@/lib/auth-guard";
-import { useSendChatMessage, useCreateLifeEvent, type ChatMessage, type ClaudIAStreamChunk } from "@/lib/api-hooks";
+import {
+  useSendChatMessage,
+  useCreateLifeEvent,
+  useGeneratePdf,
+  useProfile,
+  type ChatMessage,
+  type ClaudIAStreamChunk,
+} from "@/lib/api-hooks";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({ meta: [{ title: "ClaudIA — eCetățean" }] }),
@@ -25,6 +32,7 @@ type Reply = {
   locations?: LocationItem[];
   create_life_event?: boolean;
   event_type?: string;
+  clarification?: { question: string; options: string[] };
 };
 
 type Msg =
@@ -34,6 +42,7 @@ type Msg =
 const SUGGESTIONS: { label: string; icon: typeof Car; query: string }[] = [
   { label: "Mașină din Germania", icon: Car, query: "Am adus o mașină din Germania" },
   { label: "Mașină din România", icon: Car, query: "Am cumpărat o mașină în România" },
+  { label: "Mă mut la Cluj", icon: Plane, query: "Mă mut la Cluj pentru facultate" },
   { label: "Reînnoire buletin", icon: IdCard, query: "Reînnoire buletin" },
   { label: "Înregistrare PFA", icon: Briefcase, query: "Înregistrare PFA" },
 ];
@@ -73,6 +82,7 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
   let locations: LocationItem[] | undefined;
   let create_life_event: boolean | undefined;
   let event_type: string | undefined;
+  let clarification: { question: string; options: string[] } | undefined;
 
   for (const chunk of chunks) {
     if (chunk.type === "text") {
@@ -119,7 +129,19 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
       if (officeType) locations = OFFICE_LOCATION_MAP[officeType];
     } else if (kind === "pdf_ready") {
       const formType = r.form_type as string | undefined;
-      documents = [{ name: `Formular: ${formType ?? "necunoscut"}`, status: "generate" }];
+      documents = [
+        {
+          name: `Formular: ${formType ?? "necunoscut"}`,
+          status: "generate",
+          form_type: formType,
+        },
+      ];
+    } else if (kind === "clarification") {
+      const question = r.question as string | undefined;
+      const options = r.options as string[] | undefined;
+      if (question && options?.length) {
+        clarification = { question, options };
+      }
     } else if (kind === "reminder_set") {
       const title = r.title as string | undefined;
       const deadline = r.deadline_days as number | undefined;
@@ -141,21 +163,32 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
     locations,
     create_life_event,
     event_type,
+    clarification,
   };
 }
 
 function Chat() {
   const { show } = useToast();
   const sendChat = useSendChatMessage();
-  const [msgs, setMsgs] = useState<Msg[]>([
-    {
-      id: 1,
-      role: "ai",
-      reply: {
-        text: `Bună ziua, ${citizen.name.split(" ")[0]}! Sunt ClaudIA, asistentul tău civic. Cu ce te pot ajuta azi? Poți întreba despre acte, formulare, taxe sau orice altceva legat de instituțiile statului.`,
+  const { data: profile } = useProfile();
+  const displayName =
+    profile?.full_name?.split(" ")[0] ?? citizen.name.split(" ")[0];
+  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [greetingReady, setGreetingReady] = useState(false);
+
+  useEffect(() => {
+    if (greetingReady) return;
+    setMsgs([
+      {
+        id: 1,
+        role: "ai",
+        reply: {
+          text: `Bună ziua, ${displayName}! Sunt ClaudIA, asistentul tău civic. Cu ce te pot ajuta azi? Poți întreba despre acte, formulare, taxe sau orice altceva legat de instituțiile statului.`,
+        },
       },
-    },
-  ]);
+    ]);
+    setGreetingReady(true);
+  }, [displayName, greetingReady]);
   const [input, setInput] = useState("");
   const [panelReply, setPanelReply] = useState<Reply | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -180,7 +213,10 @@ function Chat() {
     history.push({ role: "user", content: t });
 
     try {
-      const chunks = await sendChat.mutateAsync(history);
+      const chunks = await sendChat.mutateAsync({
+        messages: history,
+        profile: profile ?? undefined,
+      });
       const r = mapChunksToReply(chunks);
       setMsgs((p) => [...p, { id: Date.now() + 1, role: "ai", reply: r }]);
       if (r.bullets || r.documents || r.locations) setPanelReply(r);
@@ -191,7 +227,7 @@ function Chat() {
     }
   };
 
-  const isEmpty = msgs.length === 1;
+  const isEmpty = msgs.length <= 1;
 
   return (
     <AppShell
@@ -293,6 +329,20 @@ function Chat() {
                   <p className="text-[14.5px] leading-relaxed whitespace-pre-line">
                     {m.role === "user" ? m.text : m.reply.text}
                   </p>
+                  {m.role === "ai" && m.reply.clarification && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {m.reply.clarification.options.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => send(opt)}
+                          className="press text-[12.5px] font-semibold px-3 py-1.5 rounded-full border border-primary text-primary bg-primary-light"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -554,11 +604,17 @@ function PageDocs({ documents }: { documents: DocItem[] }) {
 
 function DocCard({ doc }: { doc: DocItem }) {
   const { show } = useToast();
-  const [state, setState] = useState<"idle" | "loading" | "done">("idle");
-  const start = () => {
-    if (state !== "idle") return;
-    setState("loading");
-    setTimeout(() => { setState("done"); show("success", `${doc.name} descărcat`); }, 1400);
+  const generatePdf = useGeneratePdf();
+  const [done, setDone] = useState(false);
+  const start = async () => {
+    if (!doc.form_type || generatePdf.isPending || done) return;
+    try {
+      await generatePdf.mutateAsync({ formType: doc.form_type });
+      setDone(true);
+      show("success", `${doc.name} descărcat`);
+    } catch {
+      show("error", "Eroare la generarea PDF-ului");
+    }
   };
   const chip =
     doc.status === "have" ? <span className="inline-flex items-center gap-1 bg-success-light text-success font-display font-bold text-[11px] px-2.5 py-1 rounded-full"><Check size={11} strokeWidth={3} /> Ai deja</span> :
@@ -579,21 +635,21 @@ function DocCard({ doc }: { doc: DocItem }) {
       )}
       {doc.status === "generate" && (
         <button
-          onClick={start}
-          disabled={state !== "idle"}
-          className="press relative overflow-hidden w-full bg-accent text-white font-semibold text-[13px] py-2.5 px-4 rounded-xl mt-2"
+          onClick={() => void start()}
+          disabled={!doc.form_type || generatePdf.isPending || done}
+          className="press w-full bg-accent text-white font-semibold text-[13px] py-2.5 px-4 rounded-xl mt-2 disabled:opacity-60"
         >
-          {state === "loading" && (
-            <span className="absolute inset-y-0 left-0 bg-accent-dark/40" style={{ animation: "grow 1.4s ease-out forwards" }} />
-          )}
-          <span className="relative inline-flex items-center justify-center gap-1.5">
-            {state === "idle" && <>Generează completat</>}
-            {state === "loading" && <>Se generează...</>}
-            {state === "done" && <><Check size={14} strokeWidth={3} /> Descărcat</>}
+          <span className="inline-flex items-center justify-center gap-1.5">
+            {generatePdf.isPending && <>Se generează...</>}
+            {!generatePdf.isPending && !done && <>Generează completat</>}
+            {done && (
+              <>
+                <Check size={14} strokeWidth={3} /> Descărcat
+              </>
+            )}
           </span>
         </button>
       )}
-      <style>{`@keyframes grow { from { width: 0% } to { width: 100% } }`}</style>
     </article>
   );
 }

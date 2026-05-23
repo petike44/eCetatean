@@ -82,6 +82,24 @@ create table if not exists public.civic_reports (
 );
 create index if not exists civic_reports_user_id_idx on public.civic_reports (user_id);
 
+-- ─── life_event_progress ────────────────────────────────────────
+create table if not exists public.life_event_progress (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         text not null,
+  event_type      text not null,
+  event_title     text not null,
+  event_data      jsonb default '{}'::jsonb,
+  steps_status    jsonb default '{}'::jsonb,
+  current_step    integer default 1,
+  total_steps     integer not null,
+  is_completed    boolean default false,
+  started_at      timestamptz default now(),
+  updated_at      timestamptz default now(),
+  completed_at    timestamptz
+);
+create index if not exists life_event_progress_user_id_idx
+  on public.life_event_progress (user_id);
+
 -- ─── audit_log (hash-chained, append-only) ──────────────────────
 create table if not exists public.audit_log (
   id            uuid primary key default gen_random_uuid(),

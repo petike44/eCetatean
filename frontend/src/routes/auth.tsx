@@ -70,6 +70,7 @@ function Auth() {
       );
     } else {
       setSignUpDone(true);
+      navigate({ to: "/profile-setup" });
     }
   }
 

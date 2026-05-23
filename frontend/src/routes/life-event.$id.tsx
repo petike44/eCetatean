@@ -12,8 +12,15 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Protected } from "@/lib/auth-guard";
-import { useLifeEvent, useUpdateLifeEventStep, type LifeEventStep, type StepStatus } from "@/lib/api-hooks";
+import {
+  useLifeEvent,
+  useUpdateLifeEventStep,
+  useGeneratePdf,
+  type LifeEventStep,
+  type StepStatus,
+} from "@/lib/api-hooks";
 import { useToast } from "@/components/Toast";
+import { PaymentModal, AppointmentModal } from "@/components/SimulatedActionModals";
 
 export const Route = createFileRoute("/life-event/$id")({
   head: () => ({ meta: [{ title: "Progres eveniment civic — eCetățean" }] }),
@@ -44,7 +51,16 @@ function LifeEventDashboard() {
   const { show } = useToast();
   const { data: event, isLoading, error } = useLifeEvent(id);
   const updateStep = useUpdateLifeEventStep();
+  const generatePdf = useGeneratePdf();
   const [expandedStep, setExpandedStep] = useState<number | null>(1);
+  const [paymentModal, setPaymentModal] = useState<{
+    amount: number;
+    description: string;
+  } | null>(null);
+  const [appointmentModal, setAppointmentModal] = useState<{
+    office: string;
+    slotHint?: string;
+  } | null>(null);
 
   if (isLoading) {
     return (
@@ -100,32 +116,41 @@ function LifeEventDashboard() {
     }
   };
 
-  const handleAction = async (step: LifeEventStep) => {
-    if (!step.online_action) return;
+  const handleDownloadForm = async (formType: string) => {
+    try {
+      await generatePdf.mutateAsync({ formType });
+      show("success", "PDF descărcat");
+    } catch {
+      show("error", "Eroare la descărcarea PDF-ului");
+    }
+  };
+
+  const handleAction = (step: LifeEventStep) => {
     const action = step.online_action;
-    if (action.type === "pdf") {
-      const base = import.meta.env.VITE_API_URL as string | undefined;
-      if (!base) { show("error", "API URL neconfigurat"); return; }
-      try {
-        const res = await fetch(`${base}/api/pdf/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ form_type: action.form_type, profile: {}, additional_data: {} }),
-        });
-        if (!res.ok) throw new Error("Eroare server");
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${action.form_type ?? "formular"}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-        show("success", "PDF descărcat");
-      } catch {
-        show("error", "Eroare la descărcarea PDF-ului");
-      }
-    } else if (action.url) {
+    if (action?.type === "pdf" && action.form_type) {
+      void handleDownloadForm(action.form_type);
+      return;
+    }
+    if (action?.type === "payment") {
+      setPaymentModal({
+        amount: action.amount_ron ?? 49,
+        description: action.description ?? step.title,
+      });
+      return;
+    }
+    if (action?.type === "appointment") {
+      setAppointmentModal({
+        office: action.office ?? step.office,
+        slotHint: action.slot_hint,
+      });
+      return;
+    }
+    if (action?.type === "url" && action.url) {
       window.open(action.url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (step.form_type) {
+      void handleDownloadForm(step.form_type);
     }
   };
 
@@ -133,6 +158,22 @@ function LifeEventDashboard() {
 
   return (
     <AppShell className="flex flex-col">
+      <PaymentModal
+        open={paymentModal !== null}
+        amountRon={paymentModal?.amount ?? 0}
+        description={paymentModal?.description ?? ""}
+        onClose={() => setPaymentModal(null)}
+        onSuccess={() => show("success", "Plată reușită — chitanța a fost salvată")}
+      />
+      <AppointmentModal
+        open={appointmentModal !== null}
+        office={appointmentModal?.office ?? ""}
+        slotHint={appointmentModal?.slotHint}
+        onClose={() => setAppointmentModal(null)}
+        onSuccess={(slot, ref) =>
+          show("success", `Programare confirmată — ${slot} (ref. ${ref})`)
+        }
+      />
       <div className="flex-1 overflow-y-auto pb-24">
         {/* Top bar */}
         <div className="sticky top-0 z-30 bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 pt-4 pb-3">
@@ -206,6 +247,9 @@ function LifeEventDashboard() {
                     isUpdating={updateStep.isPending && updateStep.variables?.stepNumber === step.order}
                     onToggle={() => setExpandedStep(isExpanded ? null : step.order)}
                     onMarkComplete={() => handleMarkComplete(step.order)}
+                    onDownloadForm={
+                      step.form_type ? () => handleDownloadForm(step.form_type!) : undefined
+                    }
                     onAction={() => handleAction(step)}
                   />
                 );
@@ -224,7 +268,8 @@ function LifeEventDashboard() {
                   <DocumentCard
                     key={step.order}
                     step={step}
-                    onAction={() => handleAction(step)}
+                    downloading={generatePdf.isPending}
+                    onDownload={() => step.form_type && handleDownloadForm(step.form_type)}
                   />
                 ))}
               </div>
@@ -268,6 +313,7 @@ function StepCard({
   isUpdating,
   onToggle,
   onMarkComplete,
+  onDownloadForm,
   onAction,
 }: {
   step: LifeEventStep;
@@ -276,6 +322,7 @@ function StepCard({
   isUpdating: boolean;
   onToggle: () => void;
   onMarkComplete: () => void;
+  onDownloadForm?: () => void;
   onAction: () => void;
 }) {
   const [docsExpanded, setDocsExpanded] = useState(false);
@@ -370,7 +417,6 @@ function StepCard({
             </div>
           )}
 
-          {/* Action button */}
           {step.online_action && (
             <button
               onClick={onAction}
@@ -378,12 +424,40 @@ function StepCard({
             >
               {step.online_action.type === "pdf" ? (
                 <FileText size={15} />
+              ) : step.online_action.type === "payment" ? (
+                <FileText size={15} />
+              ) : step.online_action.type === "appointment" ? (
+                <FileText size={15} />
               ) : (
                 <ExternalLink size={15} />
               )}
               {step.online_action.label}
             </button>
           )}
+          {onDownloadForm &&
+            step.form_type &&
+            step.online_action?.type !== "pdf" && (
+              <button
+                onClick={onDownloadForm}
+                className="press w-full flex items-center justify-center gap-2 border border-[#1F4E79] text-[#1F4E79] font-semibold text-[13px] py-2.5 rounded-xl"
+              >
+                <FileText size={15} />
+                Descarcă formular completat
+              </button>
+            )}
+          {step.online_action?.url &&
+            (step.online_action.type === "payment" ||
+              step.online_action.type === "appointment") && (
+              <button
+                type="button"
+                onClick={() =>
+                  window.open(step.online_action!.url, "_blank", "noopener,noreferrer")
+                }
+                className="press w-full text-center text-[12px] text-[#1F4E79] font-medium py-1"
+              >
+                Deschide site-ul oficial ↗
+              </button>
+            )}
 
           {/* Mark complete link */}
           {status !== "completed" && (
@@ -405,10 +479,12 @@ function StepCard({
 
 function DocumentCard({
   step,
-  onAction,
+  downloading,
+  onDownload,
 }: {
   step: LifeEventStep;
-  onAction: () => void;
+  downloading: boolean;
+  onDownload: () => void;
 }) {
   const formName = step.form_type?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) ?? "Document";
   return (
@@ -420,10 +496,11 @@ function DocumentCard({
         {formName}
       </p>
       <button
-        onClick={onAction}
-        className="press w-full bg-[#F59E0B] text-white font-semibold text-[11px] py-1.5 rounded-lg"
+        onClick={onDownload}
+        disabled={downloading}
+        className="press w-full bg-[#F59E0B] text-white font-semibold text-[11px] py-1.5 rounded-lg disabled:opacity-50"
       >
-        Descarcă
+        {downloading ? "..." : "Descarcă"}
       </button>
     </div>
   );

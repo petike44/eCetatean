@@ -47,11 +47,16 @@ export async function generatePDF(
   profile: ProfileData,
   additionalData: Record<string, string> = {}
 ): Promise<Buffer> {
+  const resolvedType: FormType =
+    formType === 'anaf_tva_certificate'
+      ? 'anaf_tva_certificate_request'
+      : formType
+
   const today = new Date().toLocaleDateString('ro-RO')
 
   let inputs: Record<string, string>[] = []
 
-  switch (formType) {
+  switch (resolvedType) {
     case 'sale_contract':
       inputs = [
         {
@@ -222,7 +227,7 @@ export async function generatePDF(
   try {
     const { data, error } = await supabaseAdmin.storage
       .from('pdf-templates')
-      .download(`${formType}.pdf`)
+      .download(`${resolvedType}.pdf`)
     
     if (data && !error) {
       const arrayBuffer = await data.arrayBuffer()

@@ -11,6 +11,8 @@ import type {
 
 export const lifeEventsRoute = new Hono()
 
+const mockLifeEventStore = new Map<string, LifeEventProgress>()
+
 function buildStepStatuses(totalSteps: number): Record<string, StepStatus> {
   const statuses: Record<string, StepStatus> = {}
   for (let i = 1; i <= totalSteps; i++) {
@@ -85,7 +87,6 @@ lifeEventsRoute.post('/', requireAuth, async (c) => {
   const stepsStatus = buildStepStatuses(totalSteps)
 
   if (!isSupabaseConfigured) {
-    // Return a mock record when Supabase isn't configured (dev without DB)
     const mock: LifeEventProgress = {
       id: `mock-${Date.now()}`,
       user_id: userId,
@@ -100,6 +101,7 @@ lifeEventsRoute.post('/', requireAuth, async (c) => {
       updated_at: new Date().toISOString(),
       completed_at: null,
     }
+    mockLifeEventStore.set(mock.id, mock)
     return c.json({ success: true, data: enrichWithDetails(mock) })
   }
 
@@ -137,7 +139,10 @@ lifeEventsRoute.get('/', requireAuth, async (c) => {
   const userId = c.get('userId')
 
   if (!isSupabaseConfigured) {
-    return c.json({ success: true, data: [] })
+    const mocks = [...mockLifeEventStore.values()]
+      .filter((e) => e.user_id === userId)
+      .map(enrichWithDetails)
+    return c.json({ success: true, data: mocks })
   }
 
   const { data, error } = await supabaseAdmin
@@ -160,7 +165,11 @@ lifeEventsRoute.get('/:id', requireAuth, async (c) => {
   const id = c.req.param('id')
 
   if (!isSupabaseConfigured) {
-    return c.json({ success: false, error: 'Eveniment negăsit' }, 404)
+    const mock = mockLifeEventStore.get(id)
+    if (!mock || mock.user_id !== userId) {
+      return c.json({ success: false, error: 'Eveniment negăsit' }, 404)
+    }
+    return c.json({ success: true, data: enrichWithDetails(mock) })
   }
 
   const { data, error } = await supabaseAdmin
@@ -197,7 +206,19 @@ lifeEventsRoute.patch('/:id/steps/:stepNumber', requireAuth, async (c) => {
   }
 
   if (!isSupabaseConfigured) {
-    return c.json({ success: false, error: 'Baza de date nu este configurată' }, 503)
+    const mock = mockLifeEventStore.get(id)
+    if (!mock || mock.user_id !== userId) {
+      return c.json({ success: false, error: 'Eveniment negăsit' }, 404)
+    }
+    const stepKey = `step_${stepNumber}`
+    const updatedStepsStatus = { ...mock.steps_status, [stepKey]: status }
+    const updated: LifeEventProgress = {
+      ...mock,
+      steps_status: updatedStepsStatus,
+      updated_at: new Date().toISOString(),
+    }
+    mockLifeEventStore.set(id, updated)
+    return c.json({ success: true, data: enrichWithDetails(updated) })
   }
 
   // Fetch current record

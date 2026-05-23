@@ -62,6 +62,8 @@ export type AuditActionType =
   | 'civil_servant_access'
   | 'life_event_started'
   | 'life_event_step_completed'
+  | 'payment_simulated'
+  | 'appointment_simulated'
 
 export interface AuditEntry {
   id: string
@@ -119,9 +121,13 @@ export interface LifeEventStep {
   tip: string | null
   online_action?: {
     label: string
-    type: 'pdf' | 'url' | 'payment'
+    type: 'pdf' | 'url' | 'payment' | 'appointment'
     url?: string
     form_type?: FormType
+    amount_ron?: number
+    description?: string
+    office?: string
+    slot_hint?: string
   }
 }
 

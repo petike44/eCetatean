@@ -46,7 +46,13 @@ export const quickActions = [
 ];
 
 export type DocStatus = "have" | "obtain" | "generate";
-export type DocItem = { name: string; status: DocStatus; institution?: string; address?: string };
+export type DocItem = {
+  name: string;
+  status: DocStatus;
+  institution?: string;
+  address?: string;
+  form_type?: string;
+};
 export type LocationItem = {
   name: string;
   address: string;

@@ -8,6 +8,7 @@ import { auditRoute } from './routes/audit'
 import { civilServantRoute } from './routes/civil-servant'
 import { healthRoute } from './routes/health'
 import { lifeEventsRoute } from './routes/life-events'
+import { profileRoute } from './routes/profile'
 
 const app = new Hono()
 
@@ -23,6 +24,7 @@ app.route('/api/audit', auditRoute)
 app.route('/api/civil-servant', civilServantRoute)
 app.route('/api/health', healthRoute)
 app.route('/api/life-events', lifeEventsRoute)
+app.route('/api/profile', profileRoute)
 
 // —— Root ——————————————————————————————————————————————————————
 app.get('/', (c) =>

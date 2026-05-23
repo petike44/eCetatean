@@ -1,80 +1,12 @@
-// ────────────────────────────────────────────────────────────────
-// ⚠️  CLAUDIA AI AGENT — STUB ONLY
-// ────────────────────────────────────────────────────────────────
-// DO NOT install @anthropic-ai/sdk here.
-// DO NOT reference ANTHROPIC_API_KEY in this file.
-// This stub returns realistic mock responses so the frontend
-// works completely during development and demo.
-//
-// TO ADD THE REAL CLAUDIA INTEGRATION LATER:
-// 1. npm install @anthropic-ai/sdk
-// 2. Add ANTHROPIC_API_KEY to .env.local
-// 3. Replace the mock handler below with real Anthropic streaming
-// 4. The tool definitions, knowledge base, and audit logging
-//    are already wired up correctly — only the AI call changes
-// ────────────────────────────────────────────────────────────────
-
 import { Hono } from 'hono'
 import { requireAuth } from '../middleware/auth'
 import { writeAuditEntry } from '../lib/hash-chain'
-import {
-  findProcedure,
-  detectEventType,
-  OFFICES,
-} from '../lib/knowledge-base'
+import { handleToolCall } from '../lib/claudia-tools'
+import { isGeminiConfigured, streamGeminiClaudia } from '../lib/gemini-claudia'
+import { findProcedure, detectEventType } from '../lib/knowledge-base'
 import type { ClaudIARequest } from '../types'
 
 export const claudiaRoute = new Hono()
-
-const CAR_LIFE_EVENT_TYPES = new Set(['car_from_germany', 'car_domestic'])
-
-function handleToolCall(
-  toolName: string,
-  input: Record<string, string>
-) {
-  switch (toolName) {
-    case 'handle_life_event': {
-      const procedure = findProcedure(input.event_type)
-      if (!procedure) {
-        return {
-          type: 'text_only',
-          message: 'Nu am informații despre acest eveniment încă.',
-        }
-      }
-      return {
-        type: 'action_plan',
-        procedure,
-        create_life_event: CAR_LIFE_EVENT_TYPES.has(input.event_type),
-        event_type: input.event_type,
-      }
-    }
-    case 'find_office_info': {
-      const office = OFFICES[input.office_type]
-      if (!office) return { type: 'text_only', message: 'Birou negăsit.' }
-      return { type: 'office_info', office, office_type: input.office_type }
-    }
-    case 'generate_pdf': {
-      return { type: 'pdf_ready', form_type: input.form_type }
-    }
-    case 'ask_clarification': {
-      return {
-        type: 'clarification',
-        question: input.question,
-        options: JSON.parse(input.options ?? '[]'),
-      }
-    }
-    case 'set_reminder': {
-      return {
-        type: 'reminder_set',
-        title: input.title,
-        deadline_days: Number(input.deadline_days),
-        category: input.category,
-      }
-    }
-    default:
-      return { type: 'text_only', message: '' }
-  }
-}
 
 function detectCarSubflow(msg: string): {
   needs_clarification: boolean
@@ -202,7 +134,7 @@ function getMockResponse(lastMessage: string) {
   }
 
   return {
-    text: 'Bună! Sunt ClaudIA, asistentul tău civic. Descrie situația ta — de exemplu "mi-am cumpărat o mașină" sau "mă mut la Cluj" — și îți ofer un plan complet cu toți pașii necesari. (Notă: aceasta este o versiune demo — integrarea AI completă va fi adăugată de echipa de backend.)',
+    text: 'Bună! Sunt ClaudIA, asistentul tău civic. Descrie situația ta — de exemplu "mi-am cumpărat o mașină" sau "mă mut la Cluj" — și îți ofer un plan complet cu toți pașii necesari.',
     tool: null as string | null,
     tool_input: null as Record<string, string> | null,
   }
@@ -218,7 +150,7 @@ claudiaRoute.post('/', requireAuth, async (c) => {
     return c.json({ success: false, error: 'Request body invalid' }, 400)
   }
 
-  const { messages } = body
+  const { messages, profile } = body
   if (!messages || messages.length === 0) {
     return c.json({ success: false, error: 'Mesajele lipsesc' }, 400)
   }
@@ -234,33 +166,52 @@ claudiaRoute.post('/', requireAuth, async (c) => {
   })
 
   const encoder = new TextEncoder()
+  const useGemini = isGeminiConfigured()
 
   const stream = new ReadableStream({
     async start(controller) {
-      await new Promise((resolve) => setTimeout(resolve, 900))
+      const enqueue = (obj: object) => {
+        controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
+      }
 
-      const mock = getMockResponse(lastUserMessage)
-
-      controller.enqueue(
-        encoder.encode(
-          JSON.stringify({ type: 'text', content: mock.text }) + '\n'
-        )
-      )
-
-      if (mock.tool && mock.tool_input) {
-        const toolResult = handleToolCall(
-          mock.tool,
-          mock.tool_input as Record<string, string>
-        )
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
+      try {
+        if (useGemini) {
+          await streamGeminiClaudia(messages, profile, enqueue)
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 600))
+          const mock = getMockResponse(lastUserMessage)
+          enqueue({ type: 'text', content: mock.text })
+          if (mock.tool && mock.tool_input) {
+            const toolResult = handleToolCall(
+              mock.tool,
+              mock.tool_input as Record<string, string>
+            )
+            enqueue({
               type: 'tool_result',
               tool_name: mock.tool,
               result: toolResult,
-            }) + '\n'
-          )
-        )
+            })
+          }
+        }
+      } catch (err) {
+        console.error('ClaudIA error:', err)
+        const mock = getMockResponse(lastUserMessage)
+        enqueue({
+          type: 'text',
+          content:
+            mock.text +
+            '\n\n(Notă: răspuns de rezervă — verifică GEMINI_API_KEY.)',
+        })
+        if (mock.tool && mock.tool_input) {
+          enqueue({
+            type: 'tool_result',
+            tool_name: mock.tool,
+            result: handleToolCall(
+              mock.tool,
+              mock.tool_input as Record<string, string>
+            ),
+          })
+        }
       }
 
       controller.close()

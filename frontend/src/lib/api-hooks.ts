@@ -502,6 +502,61 @@ export function useVehicles() {
   });
 }
 
+// —— EidKit ————————————————————————————————————————————————————
+
+export type EidKitVerificationStatus = {
+  verified: boolean;
+  configured: boolean;
+  demo_enabled: boolean;
+  verified_at?: string;
+  verification_level?: string;
+  scopes?: string[];
+  profile_fields?: { cnp?: string };
+};
+
+export function useEidKitStatus() {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["eidkit-status"],
+    queryFn: () => apiGet<EidKitVerificationStatus>("/api/eidkit/status", getToken),
+    enabled: !!isSignedIn,
+  });
+}
+
+export function useStartEidKitVerification() {
+  const getToken = useGetToken();
+  return useMutation({
+    mutationFn: () =>
+      apiPostJson<{ redirect_url: string }>("/api/eidkit/start", {}, getToken).then((data) => {
+        if (data.redirect_url) window.location.href = data.redirect_url;
+      }),
+  });
+}
+
+export function useDemoEidKitVerification() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPostJson<EidKitVerificationStatus>("/api/eidkit/demo", {}, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["eidkit-status"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+export function useUnlinkEidKitVerification() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPostJson<void>("/api/eidkit/unlink", {}, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["eidkit-status"] });
+    },
+  });
+}
+
 // —— PDF Autofill ———————————————————————————————————————————————
 
 export function useAutofillDrpciv() {

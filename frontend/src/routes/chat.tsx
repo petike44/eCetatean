@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText, CreditCard, Building2 } from "lucide-react";
+import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { DrpcivStepsPanel } from "@/components/DrpcivStepsPanel";
+import { LifeEventStepsPanel } from "@/components/LifeEventStepsPanel";
 import { locationsCatalog, type LocationItem } from "@/lib/office-locations";
 import type { DocItem } from "@/lib/chat-types";
 import { useUser } from "@/lib/clerk-stub";
@@ -37,6 +37,8 @@ type Reply = {
   create_life_event?: boolean;
   event_type?: string;
   clarification?: { question: string; options: string[] };
+  category_counts?: { docs: number; financial: number; onsite: number };
+  estimated_cost?: number;
 };
 
 type Msg =
@@ -62,24 +64,6 @@ const OFFICE_LOCATION_MAP: Record<string, LocationItem[] | undefined> = {
   drpciv: locationsCatalog.inmatriculare,
 };
 
-/** PDF slug in document-preview for a life-event type */
-const PREVIEW_FORM_BY_EVENT: Record<string, string> = {
-  car_from_germany: "cerere-inmatriculare-drpciv",
-  car_domestic: "cerere-inmatriculare-drpciv",
-  bought_car: "cerere-inmatriculare-drpciv",
-  moving_to_cluj: "cerere-viza-flotant",
-  renewal_id: "cerere-viza-flotant",
-  pfa_registration: "cerere-certificat-fiscal",
-};
-
-function navigateAfterLifeEvent(
-  nav: ReturnType<typeof useNavigate>,
-  eventType: string,
-  eventId: string,
-) {
-  nav({ to: "/life-event/$id", params: { id: eventId } });
-}
-
 type ActionPlanProcedure = {
   event_type: string;
   title: string;
@@ -94,8 +78,18 @@ type ActionPlanProcedure = {
     fee?: string;
     deadline?: string;
     documents?: string[];
+    category?: "docs" | "financial" | "onsite";
   }>;
 };
+
+function parseFeeLei(fee: string | undefined): number {
+  if (!fee) return 0;
+  const lower = fee.toLowerCase();
+  if (lower.includes("gratuit") || lower.includes("gratis")) return 0;
+  const match = lower.match(/[\d]+(?:[.,][\d]+)?/);
+  if (!match) return 0;
+  return parseFloat(match[0].replace(",", "."));
+}
 
 function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
   const textParts: string[] = [];
@@ -106,6 +100,8 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
   let create_life_event: boolean | undefined;
   let event_type: string | undefined;
   let clarification: { question: string; options: string[] } | undefined;
+  let category_counts: { docs: number; financial: number; onsite: number } | undefined;
+  let estimated_cost: number | undefined;
 
   for (const chunk of chunks) {
     if (chunk.type === "text") {
@@ -133,6 +129,15 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
               address: s.address,
             })),
           );
+          const counts = { docs: 0, financial: 0, onsite: 0 };
+          let totalCost = 0;
+          for (const s of procedure.steps) {
+            const cat = s.category ?? "onsite";
+            counts[cat]++;
+            totalCost += parseFeeLei(s.fee);
+          }
+          if (counts.docs + counts.financial + counts.onsite > 0) category_counts = counts;
+          estimated_cost = totalCost;
         }
         if (procedure.total_estimated_time) {
           info = [{ label: "Timp estimat", value: procedure.total_estimated_time }];
@@ -187,6 +192,8 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
     create_life_event,
     event_type,
     clarification,
+    category_counts,
+    estimated_cost,
   };
 }
 
@@ -341,7 +348,7 @@ function Chat() {
               if (m.role === "steps") {
                 return (
                   <div key={m.id} className="anim-fade-up">
-                    <DrpcivStepsPanel eventId={m.eventId} />
+                    <LifeEventStepsPanel eventId={m.eventId} />
                   </div>
                 );
               }
@@ -460,66 +467,19 @@ function Chat() {
 
 /* ───────────── Inline reply extras ───────────── */
 
-const DRPCIV_EVENT_TYPES = new Set(["bought_car", "car_domestic", "car_from_germany"]);
-
-type CategoryChip = { icon: React.ReactNode; label: string; detail: string; color: string; bg: string };
-const EVENT_CATEGORY_CHIPS: Record<string, CategoryChip[]> = {
-  bought_car:       [
-    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
-    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "~100 RON taxe",          color: "text-amber-700", bg: "bg-amber-50" },
-    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "Notar + DRPCIV",          color: "text-green-700", bg: "bg-green-50" },
-  ],
-  car_domestic:     [
-    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
-    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "~100 RON taxe",          color: "text-amber-700", bg: "bg-amber-50" },
-    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "Notar + DRPCIV",          color: "text-green-700", bg: "bg-green-50" },
-  ],
-  car_from_germany: [
-    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
-    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "~100 RON taxe",          color: "text-amber-700", bg: "bg-amber-50" },
-    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "DRPCIV + RAR",            color: "text-green-700", bg: "bg-green-50" },
-  ],
-  moving_to_cluj:   [
-    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
-    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "DGEP Cluj",               color: "text-green-700", bg: "bg-green-50" },
-  ],
-  renewal_id:       [
-    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
-    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "~7 RON taxă",            color: "text-amber-700", bg: "bg-amber-50" },
-    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "SPCLEP Cluj",             color: "text-green-700", bg: "bg-green-50" },
-  ],
-  pfa_registration: [
-    { icon: <FileText size={12} />,   label: "Documente",    detail: "Dosar complet",          color: "text-blue-700",  bg: "bg-blue-50" },
-    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "Taxe ONRC",              color: "text-amber-700", bg: "bg-amber-50" },
-    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "ONRC Cluj",               color: "text-green-700", bg: "bg-green-50" },
-  ],
-};
-
 function ReplyExtras({
   reply,
   onTrackProgress,
-  onSend,
 }: {
   reply: Reply;
   onTrackProgress: (id: string, type: string) => void;
   onSend: (text: string) => void;
 }) {
-  const nav = useNavigate();
   const createLifeEvent = useCreateLifeEvent();
   const { show } = useToast();
   const [creating, setCreating] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
-  const hasBullets = (reply.bullets?.length ?? 0) > 0;
-  const previewBullets = reply.bullets?.slice(0, 2) ?? [];
-  const totalSteps = reply.bullets?.length ?? 0;
-  const hasMore =
-    totalSteps > 2 ||
-    (reply.info?.length ?? 0) > 0 ||
-    (reply.documents?.length ?? 0) > 0 ||
-    (reply.locations?.length ?? 0) > 0;
-
-  const createAndOpenPlan = async () => {
+  const openPlan = async () => {
     if (!reply.event_type) {
       show("error", "Nu am identificat tipul procedurii — descrie situația ta în chat.");
       return;
@@ -527,98 +487,90 @@ function ReplyExtras({
     setCreating(true);
     try {
       const result = await createLifeEvent.mutateAsync({ event_type: reply.event_type });
-      if (DRPCIV_EVENT_TYPES.has(reply.event_type)) {
-        onTrackProgress(result.id, reply.event_type);
-      } else {
-        navigateAfterLifeEvent(nav, reply.event_type, result.id);
-      }
+      onTrackProgress(result.id, reply.event_type);
     } catch {
-      show("error", "Eroare la crearea evenimentului civic");
+      show("error", "Eroare la crearea planului");
       setCreating(false);
     }
   };
 
-  const handlePreviewRequest = () => {
-    const formSlug =
-      (reply.event_type && PREVIEW_FORM_BY_EVENT[reply.event_type]) ||
-      "cerere-inmatriculare-drpciv";
-    nav({ to: "/document-preview", search: { form: formSlug } });
-  };
+  // ── Action plan response ──
+  if (reply.event_type) {
+    const totalSteps = reply.bullets?.length ?? 0;
+    const timeEstimate = reply.info?.find((i) => i.label === "Timp estimat")?.value;
+    const cats = reply.category_counts;
+    const cost = reply.estimated_cost;
 
-  return (
-    <div className="flex flex-col gap-2.5">
-      {/* Compact preview card */}
-      {hasBullets && (
-        <div className="bg-surface border border-border rounded-2xl p-4 shadow-card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="font-display font-semibold text-[13px] text-text-primary">
-              Plan în {totalSteps} pași
-            </p>
-            {reply.info?.find((i) => i.label === "Timp estimat") && (
-              <span className="text-[11px] font-semibold text-primary bg-primary-light px-2 py-0.5 rounded-full">
-                {reply.info.find((i) => i.label === "Timp estimat")!.value}
-              </span>
-            )}
-          </div>
-          <ul className="text-[13px] text-text-secondary space-y-1 list-disc list-inside marker:text-accent">
-            {previewBullets.map((b) => <li key={b}>{b}</li>)}
-          </ul>
-          {!expanded && hasMore && (
-            <p className="text-[12px] text-text-tertiary mt-1.5 ml-0.5">
-              +{totalSteps - 2} pași suplimentari...
-            </p>
+    return (
+      <div className="flex flex-col gap-2.5">
+        {/* Quick summary chip row */}
+        <div className="flex flex-wrap gap-2">
+          {totalSteps > 0 && (
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl bg-primary-light text-primary border border-primary/15">
+              <FileText size={12} /> {totalSteps} pași
+            </span>
           )}
-
-          {/* Expanded content */}
-          {expanded && (
-            <div className="mt-3 flex flex-col gap-3">
-              {totalSteps > 2 && (
-                <ul className="text-[13px] text-text-secondary space-y-1 list-disc list-inside marker:text-accent">
-                  {reply.bullets!.slice(2).map((b) => <li key={b}>{b}</li>)}
-                </ul>
-              )}
-              {reply.info && reply.info.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {reply.info.map((i) => (
-                    <div key={i.label} className="bg-primary-light rounded-xl p-3">
-                      <p className="font-display font-semibold text-[12px] text-primary">{i.label}</p>
-                      <p className="text-[12.5px] text-text-secondary mt-0.5">{i.value}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {reply.documents && reply.documents.length > 0 && (
-                <div>
-                  <p className="font-display font-semibold text-[12px] text-text-primary mb-2">Documente necesare</p>
-                  <div className="space-y-2">
-                    {reply.documents.map((d) => <DocCard key={d.name} doc={d} />)}
-                  </div>
-                </div>
-              )}
-              {reply.locations && reply.locations.length > 0 && (
-                <div>
-                  <p className="font-display font-semibold text-[12px] text-text-primary mb-2">Locații</p>
-                  <PageMap locations={reply.locations} />
-                </div>
-              )}
-            </div>
+          {timeEstimate && (
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl bg-surface border border-border text-text-secondary">
+              <Clock size={12} /> {timeEstimate}
+            </span>
           )}
-
-          {/* Expand / collapse toggle */}
-          {hasMore && (
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="press mt-3 w-full text-[12.5px] font-semibold text-primary bg-primary-light rounded-xl py-2 flex items-center justify-center gap-1.5"
-            >
-              {expanded ? "Restrânge" : "Arată planul complet"}
-              <ArrowRight size={13} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
-            </button>
+          {typeof cost === "number" && (
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
+              {cost === 0 ? "Gratuit" : `~${cost} RON`}
+            </span>
           )}
         </div>
-      )}
 
-      {/* Info-only (no bullets) */}
-      {!hasBullets && reply.info && reply.info.length > 0 && (
+        {/* Category breakdown */}
+        {cats && (cats.docs > 0 || cats.financial > 0 || cats.onsite > 0) && (
+          <div className="grid grid-cols-3 gap-2">
+            {cats.docs > 0 && (
+              <div className="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 text-center">
+                <p className="font-display font-bold text-[13px] text-blue-700">{cats.docs}</p>
+                <p className="text-[11px] text-blue-500 font-medium mt-0.5">Documente</p>
+              </div>
+            )}
+            {cats.financial > 0 && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 text-center">
+                <p className="font-display font-bold text-[13px] text-amber-700">{cats.financial}</p>
+                <p className="text-[11px] text-amber-500 font-medium mt-0.5">Financiar</p>
+              </div>
+            )}
+            {cats.onsite > 0 && (
+              <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-center">
+                <p className="font-display font-bold text-[13px] text-emerald-700">{cats.onsite}</p>
+                <p className="text-[11px] text-emerald-500 font-medium mt-0.5">La ghișeu</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step summary */}
+        {reply.bullets && reply.bullets.length > 0 && (
+          <StepSummary bullets={reply.bullets} />
+        )}
+
+        {/* CTA */}
+        <button
+          onClick={openPlan}
+          disabled={creating}
+          className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          {creating ? (
+            <><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />Se pregătește planul...</>
+          ) : (
+            <>Deschide planul și urmărește progresul <ArrowRight size={16} /></>
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  // ── Info / office response ──
+  return (
+    <div className="flex flex-col gap-2.5">
+      {reply.info && reply.info.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
           {reply.info.map((i) => (
             <div key={i.label} className="bg-primary-light rounded-xl p-3">
@@ -628,9 +580,7 @@ function ReplyExtras({
           ))}
         </div>
       )}
-
-      {/* Docs-only (no bullets) */}
-      {!hasBullets && reply.documents && reply.documents.length > 0 && (
+      {reply.documents && reply.documents.length > 0 && (
         <div>
           <p className="font-display font-semibold text-[13px] text-text-primary mb-2">Documente necesare</p>
           <div className="space-y-2.5">
@@ -638,64 +588,57 @@ function ReplyExtras({
           </div>
         </div>
       )}
-
-      {/* Locations-only (no bullets) */}
-      {!hasBullets && reply.locations && reply.locations.length > 0 && (
+      {reply.locations && reply.locations.length > 0 && (
         <div>
           <p className="font-display font-semibold text-[13px] text-text-primary mb-2">Locații</p>
           <PageMap locations={reply.locations} />
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Category chips — shown before action buttons when event_type is known */}
-      {reply.event_type && EVENT_CATEGORY_CHIPS[reply.event_type] && (
-        <div className="flex flex-wrap gap-2">
-          {EVENT_CATEGORY_CHIPS[reply.event_type].map((chip) => (
-            <div
-              key={chip.label}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${chip.bg} ${chip.color} border-current/20`}
-            >
-              {chip.icon}
-              <span className="text-[12px] font-semibold">{chip.label}</span>
-              <span className="text-[11px] opacity-70">· {chip.detail}</span>
-            </div>
-          ))}
-        </div>
-      )}
+const PREVIEW_COUNT = 3;
 
-      {/* Action buttons */}
-      {(reply.create_life_event || reply.event_type) && (
-        <div className="flex flex-col gap-2">
-          {reply.create_life_event && reply.event_type && (
-            <button
-              onClick={createAndOpenPlan}
-              disabled={creating}
-              className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {creating ? (
-                "Se crează..."
-              ) : (
-                <>
-                  Urmărește progresul și bifează pașii
-                  <ArrowRight size={16} />
-                </>
-              )}
-            </button>
-          )}
-          <button
-            onClick={createAndOpenPlan}
-            disabled={creating || !reply.event_type}
-            className="press bg-accent text-white font-semibold text-[14px] py-3 px-4 rounded-xl disabled:opacity-60"
-          >
-            {creating ? "Se generează planul..." : "Generează plan complet"}
-          </button>
-          <button
-            onClick={handlePreviewRequest}
-            className="press border border-border bg-white text-text-primary font-semibold text-[14px] py-3 px-4 rounded-xl"
-          >
-            Previzualizează cererea
-          </button>
-        </div>
+function StepSummary({ bullets }: { bullets: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? bullets : bullets.slice(0, PREVIEW_COUNT);
+  const hidden = bullets.length - PREVIEW_COUNT;
+
+  return (
+    <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      <ul className="divide-y divide-border">
+        {visible.map((b, i) => {
+          const dotPos = b.indexOf(". ");
+          const num = dotPos > -1 ? b.slice(0, dotPos) : String(i + 1);
+          const rest = dotPos > -1 ? b.slice(dotPos + 2) : b;
+          const dashPos = rest.indexOf(" — ");
+          const title = dashPos > -1 ? rest.slice(0, dashPos) : rest;
+          const office = dashPos > -1 ? rest.slice(dashPos + 3) : null;
+
+          return (
+            <li key={i} className="flex items-start gap-3 px-3 py-2.5">
+              <span className="shrink-0 w-5 h-5 rounded-full bg-primary-light text-primary font-display font-bold text-[11px] flex items-center justify-center mt-0.5">
+                {num}
+              </span>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-text-primary leading-snug">{title}</p>
+                {office && (
+                  <p className="text-[11.5px] text-text-tertiary mt-0.5">{office}</p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {bullets.length > PREVIEW_COUNT && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full py-2 text-[12px] font-semibold text-primary border-t border-border bg-primary-light/40 hover:bg-primary-light transition-colors"
+        >
+          {expanded ? "Restrânge" : `+${hidden} pași mai mult`}
+        </button>
       )}
     </div>
   );

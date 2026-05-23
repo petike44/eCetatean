@@ -32,10 +32,10 @@ type Msg =
   | { id: number; role: "ai"; reply: Reply };
 
 const SUGGESTIONS: { label: string; icon: typeof Car; query: string }[] = [
-  { label: "Înmatriculare mașină", icon: Car, query: "Înmatriculare mașină" },
+  { label: "Mașină din Germania", icon: Car, query: "Am adus o mașină din Germania" },
+  { label: "Mașină din România", icon: Car, query: "Am cumpărat o mașină în România" },
   { label: "Reînnoire buletin", icon: IdCard, query: "Reînnoire buletin" },
   { label: "Înregistrare PFA", icon: Briefcase, query: "Înregistrare PFA" },
-  { label: "Pașaport urgent", icon: Plane, query: "Vreau să îmi fac un pașaport" },
 ];
 
 // Local catalog used to enrich the backend's tool_result with locations.

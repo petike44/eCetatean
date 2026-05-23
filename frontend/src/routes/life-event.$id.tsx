@@ -174,7 +174,8 @@ function LifeEventDashboard() {
           show("success", `Programare confirmată — ${slot} (ref. ${ref})`)
         }
       />
-      <div className="flex-1 overflow-y-auto pb-24">
+      <div className="flex-1 overflow-y-auto pb-24 lg:pb-0">
+        <div className="lg:max-w-3xl lg:mx-auto">
         {/* Top bar */}
         <div className="sticky top-0 z-30 bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 pt-4 pb-3">
           <div className="flex items-center gap-3 mb-3">
@@ -276,10 +277,11 @@ function LifeEventDashboard() {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* Sticky bottom bar */}
-      <div className="fixed bottom-16 left-0 right-0 z-30 bg-white border-t border-[#E2E8F0] px-4 py-3 flex items-center justify-between gap-3 max-w-[440px] mx-auto">
+      <div className="fixed bottom-16 left-0 right-0 z-30 bg-white border-t border-[#E2E8F0] px-4 py-3 flex items-center justify-between gap-3 max-w-[440px] mx-auto lg:sticky lg:bottom-0 lg:max-w-none lg:left-auto lg:right-auto">
         <button
           onClick={() => nav({ to: "/chat" })}
           className="press flex items-center gap-1.5 text-[13px] font-medium text-[#475569]"

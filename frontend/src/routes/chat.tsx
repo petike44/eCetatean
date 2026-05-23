@@ -229,36 +229,40 @@ function Chat() {
 
   const isEmpty = msgs.length <= 1;
 
+  const chatTopBar = (
+    <header
+      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 border-b border-border flex items-center justify-between px-6 backdrop-blur-md bg-background/85"
+      role="banner"
+    >
+      <div className="flex items-center gap-1.5">
+        <h1 className="font-display font-bold text-[19px] tracking-tight text-foreground">
+          ClaudIA
+        </h1>
+        <Sparkles size={15} className="text-primary" fill="currentColor" />
+      </div>
+      <button
+        aria-label="Despre ClaudIA"
+        className="press p-2 -mr-2 rounded-full hover:bg-surface-secondary transition-colors"
+      >
+        <Info size={19} className="text-text-secondary" />
+      </button>
+    </header>
+  );
+
   return (
     <AppShell
-      topBar={
-        <header
-          className="fixed top-0 left-0 right-0 z-40 h-14 border-b border-border flex items-center justify-between px-6 backdrop-blur-md bg-background/85"
-          role="banner"
-        >
-          <div className="flex items-center gap-1.5">
-            <h1 className="font-display font-bold text-[19px] tracking-tight text-foreground">
-              ClaudIA
-            </h1>
-            <Sparkles size={15} className="text-primary" fill="currentColor" />
-          </div>
-          <button
-            aria-label="Despre ClaudIA"
-            className="press p-2 -mr-2 rounded-full hover:bg-surface-secondary transition-colors"
-          >
-            <Info size={19} className="text-text-secondary" />
-          </button>
-        </header>
-      }
-      className="flex flex-col"
+      topBar={chatTopBar}
+      desktopScrollable={false}
+      className="flex flex-col lg:flex-row lg:flex-1 lg:overflow-hidden"
     >
+      {/* ── Chat column ── */}
       <div
-        className="flex flex-col min-h-[calc(100dvh-56px-64px)] bg-background text-foreground"
+        className="flex flex-col min-h-[calc(100dvh-56px-64px)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
         style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
       >
         {isEmpty ? (
           /* ───── EMPTY / HERO STATE ───── */
-          <div className="flex-1 flex flex-col px-6 pt-4 anim-fade-up">
+          <div className="flex-1 flex flex-col px-6 pt-4 lg:max-w-xl lg:mx-auto lg:w-full anim-fade-up">
             {/* Disclaimer */}
             <div className="mb-8 px-4 py-2.5 rounded-xl border border-accent-light bg-accent-light/40 text-center">
               <p className="text-[11px] font-medium leading-tight text-accent-dark">
@@ -303,7 +307,7 @@ function Chat() {
           </div>
         ) : (
           /* ───── CONVERSATION STATE ───── */
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
             {msgs.slice(1).map((m) => (
               <div
                 key={m.id}
@@ -373,9 +377,9 @@ function Chat() {
             e.preventDefault();
             send(input);
           }}
-          className="sticky bottom-16 z-30 px-4 py-3 bg-background border-t border-border"
+          className="sticky bottom-16 lg:bottom-0 z-30 px-4 py-3 bg-background border-t border-border"
         >
-          <div className="relative flex items-center">
+          <div className="relative flex items-center lg:max-w-2xl lg:mx-auto">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -397,11 +401,44 @@ function Chat() {
         </form>
       </div>
 
-
-
-
+      {/* ── Desktop result panel (right column) ── */}
       {panelReply && (
-        <ResultPanel reply={panelReply} onClose={() => setPanelReply(null)} />
+        <aside className="hidden lg:flex lg:flex-col lg:w-[400px] lg:shrink-0 lg:border-l lg:border-border lg:overflow-y-auto bg-surface">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-surface z-10">
+            <p className="font-display font-semibold text-[15px] text-text-primary">Detalii răspuns</p>
+            <button
+              onClick={() => setPanelReply(null)}
+              aria-label="Închide panoul"
+              className="press p-1.5 rounded-lg text-text-tertiary hover:bg-surface-secondary"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="px-5 py-4 space-y-5">
+            <PageAnswer reply={panelReply} />
+            {(panelReply.documents?.length ?? 0) > 0 && (
+              <div>
+                <p className="font-display font-semibold text-[14px] text-text-primary mb-3">Documente necesare</p>
+                <div className="space-y-2.5">
+                  {panelReply.documents!.map((d) => <DocCard key={d.name} doc={d} />)}
+                </div>
+              </div>
+            )}
+            {(panelReply.locations?.length ?? 0) > 0 && (
+              <div>
+                <p className="font-display font-semibold text-[14px] text-text-primary mb-3">Locații</p>
+                <PageMap locations={panelReply.locations!} />
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {/* ── Mobile result panel (bottom sheet) ── */}
+      {panelReply && (
+        <div className="lg:hidden">
+          <ResultPanel reply={panelReply} onClose={() => setPanelReply(null)} />
+        </div>
       )}
     </AppShell>
   );

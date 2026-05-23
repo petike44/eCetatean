@@ -17,7 +17,7 @@ export function TopBar({ title, subtitle, showBack, right, left, variant = "defa
   const border = variant === "funct" ? "border-[#2E6FAD]" : "border-border";
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-40 h-14 ${bg} border-b ${border} flex items-center px-5`}
+      className={`fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 ${bg} border-b ${border} flex items-center px-5`}
       role="banner"
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -50,7 +50,7 @@ export function TopBar({ title, subtitle, showBack, right, left, variant = "defa
 export function HomeTopBar({ right }: { right?: ReactNode }) {
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 h-14 bg-surface border-b border-border flex items-center justify-between px-5"
+      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 bg-surface border-b border-border flex items-center justify-between px-5"
       role="banner"
     >
       <Link to="/chat" className="font-display font-bold text-[18px] text-primary">

@@ -13,7 +13,7 @@ export function BottomNav() {
   const path = location.pathname;
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-surface border-t border-border flex items-center justify-around px-2"
+      className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-surface border-t border-border flex items-center justify-around px-2 lg:hidden"
       aria-label="Navigare principală"
     >
       {tabs.map(({ to, label, icon: Icon, dot }) => {

@@ -32,7 +32,7 @@ function Auth() {
         <h1 className="font-display font-bold text-[20px] text-text-primary mb-2">Supabase neconfigurat</h1>
         <p className="text-text-secondary text-sm max-w-sm">
           Adaugă <code className="bg-surface px-1 rounded text-xs">VITE_SUPABASE_URL</code> și{" "}
-          <code className="bg-surface px-1 rounded text-xs">VITE_SUPABASE_ANON_KEY</code> în{" "}
+          <code className="bg-surface px-1 rounded text-xs">VITE_SUPABASE_PUBLISHABLE_KEY</code> în{" "}
           <code className="bg-surface px-1 rounded text-xs">frontend/.env.local</code>, apoi repornește serverul.
         </p>
       </div>

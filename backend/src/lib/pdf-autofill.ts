@@ -150,42 +150,44 @@ export function normalizeForm(row: FormRow): PdfForm {
 
 export function normalizeFields(raw: unknown): PdfAutofillField[] {
   if (!Array.isArray(raw)) return []
-  return raw.flatMap((item, index) => {
-    if (!item || typeof item !== 'object') return []
-    const value = item as Partial<PdfAutofillField>
-    const field: PdfAutofillField = {
-      id: String(value.id || value.acroFieldName || `field_${index + 1}`),
-      label: String(value.label || value.acroFieldName || `Camp ${index + 1}`),
-      dataKey: String(value.dataKey || guessDataKey(String(value.label || value.acroFieldName || ''))),
-      page: Number(value.page ?? 0),
-      x: Number(value.x ?? 80),
-      y: Number(value.y ?? 140 + index * 28),
-      width: Number(value.width ?? 220),
-      height: Number(value.height ?? 18),
-      value: typeof value.value === 'string' ? value.value : undefined,
-      required: Boolean(value.required ?? true),
-      confidence: Number(value.confidence ?? 0.55),
-      source: value.source || 'heuristic',
-      acroFieldName: value.acroFieldName,
-    }
-    return [field]
-  })
+  return raw
+    .map((item, index) => {
+      if (!item || typeof item !== 'object') return null
+      const value = item as Partial<PdfAutofillField>
+      return {
+        id: String(value.id || value.acroFieldName || `field_${index + 1}`),
+        label: String(value.label || value.acroFieldName || `Camp ${index + 1}`),
+        dataKey: String(value.dataKey || guessDataKey(String(value.label || value.acroFieldName || ''))),
+        page: Number(value.page ?? 0),
+        x: Number(value.x ?? 80),
+        y: Number(value.y ?? 140 + index * 28),
+        width: Number(value.width ?? 220),
+        height: Number(value.height ?? 18),
+        value: typeof value.value === 'string' ? value.value : undefined,
+        required: Boolean(value.required ?? true),
+        confidence: Number(value.confidence ?? 0.55),
+        source: value.source || 'heuristic',
+        acroFieldName: value.acroFieldName,
+      } satisfies PdfAutofillField
+    })
+    .filter((item): item is PdfAutofillField => Boolean(item))
 }
 
 function normalizeInputDefinitions(raw: unknown): PdfFormInputDefinition[] {
   if (!Array.isArray(raw)) return []
-  return raw.flatMap((item) => {
-    if (!item || typeof item !== 'object') return []
-    const value = item as Partial<PdfFormInputDefinition>
-    if (!value.key || !value.label) return []
-    const input: PdfFormInputDefinition = {
-      key: String(value.key),
-      label: String(value.label),
-      placeholder: value.placeholder ? String(value.placeholder) : undefined,
-      required: Boolean(value.required ?? true),
-    }
-    return [input]
-  })
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null
+      const value = item as Partial<PdfFormInputDefinition>
+      if (!value.key || !value.label) return null
+      return {
+        key: String(value.key),
+        label: String(value.label),
+        placeholder: value.placeholder ? String(value.placeholder) : undefined,
+        required: Boolean(value.required ?? true),
+      }
+    })
+    .filter((item): item is PdfFormInputDefinition => Boolean(item))
 }
 
 export async function getPdfBytes(form: PdfForm): Promise<Uint8Array> {

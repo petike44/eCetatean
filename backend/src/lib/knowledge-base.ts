@@ -189,6 +189,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 1,
         title: 'Viză de flotant sau schimbare buletin',
+        category: 'docs',
         office: 'Direcția de Evidență a Persoanelor Cluj-Napoca',
         address: 'Str. Moților 3, Cluj-Napoca',
         hours: 'Luni–Vineri: 08:30–16:00 | Marți și Joi: până la 18:00',
@@ -212,6 +213,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 2,
         title: 'Transfer la medic de familie în Cluj',
+        category: 'onsite',
         office: 'Cabinet medicină de familie (rețea CNAS)',
         address: 'Orice cabinet din rețeaua CNAS din Cluj',
         hours: 'Luni–Vineri: 08:00–15:00',
@@ -234,6 +236,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 3,
         title: 'Abonament CTP student',
+        category: 'financial',
         office: 'CTP Cluj-Napoca',
         address: 'Piața Mihai Viteazu 16, Cluj-Napoca',
         hours: 'Luni–Vineri: 07:00–19:00 | Sâmbătă: 08:00–14:00',
@@ -251,6 +254,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 4,
         title: 'Adeverință pentru bursă de la primăria de acasă',
+        category: 'docs',
         office: 'Primăria din orașul tău natal',
         address: 'Variabil — orașul tău de domiciliu',
         hours: 'Variabil',
@@ -282,6 +286,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 1,
         title: 'Depui cererea la DGEP',
+        category: 'onsite',
         office: 'Direcția de Evidență a Persoanelor Cluj-Napoca',
         address: 'Str. Moților 3, Cluj-Napoca',
         hours: 'Luni–Vineri: 08:30–16:00',
@@ -312,6 +317,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 1,
         title: 'Rezervare denumire firmă la ONRC',
+        category: 'financial',
         office: 'Oficiul Registrului Comerțului Cluj',
         address: 'Str. Dorobanților 2, Cluj-Napoca',
         hours: 'Luni–Vineri: 09:00–14:00',
@@ -329,6 +335,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 2,
         title: 'Pregătești actele constitutive și le autentifici',
+        category: 'docs',
         office: 'Birou Notarial',
         address: 'Orice birou notarial',
         hours: 'Luni–Vineri: 09:00–17:00',
@@ -356,6 +363,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 1,
         title: 'Autentifici contractul de vânzare-cumpărare',
+        category: 'docs',
         office: 'Orice birou notarial din Cluj-Napoca',
         address: 'Orice notar — verifică harta notarilor',
         hours: 'Luni–Vineri: 09:00–17:00',
@@ -380,6 +388,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 2,
         title: 'Transcrieri mașina la DRPCIV',
+        category: 'onsite',
         office: 'DRPCIV Cluj — Înmatriculări',
         address: 'Str. Traian Vuia 1-4, Cluj-Napoca',
         hours: 'Luni–Vineri: 08:00–16:00',
@@ -408,6 +417,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 3,
         title: 'Declari mașina la Primărie pentru impozit auto',
+        category: 'financial',
         office: 'Primăria Cluj-Napoca — Taxe și Impozite',
         address: 'Calea Moților 3, Cluj-Napoca',
         hours: 'Luni–Joi: 08:00–16:00 | Vineri: 08:00–13:00',
@@ -433,6 +443,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 4,
         title: 'Cumpără asigurare RCA pe numele tău',
+        category: 'financial',
         office: 'Online — orice asigurător autorizat ASF',
         address: 'Online',
         hours: 'Disponibil 24/7',
@@ -461,6 +472,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 1,
         title: 'Traduci documentele germane la traducător autorizat',
+        category: 'docs',
         office: 'Traducător autorizat (online sau fizic)',
         address: 'Online sau orice birou traduceri autorizate',
         hours: 'Variabil',
@@ -483,6 +495,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 2,
         title: 'Programare și vizită RAR — omologare, ITP, CIV',
+        category: 'onsite',
         office: 'Registrul Auto Român Cluj',
         address: 'Str. Taietura Turcului 12A, Cluj-Napoca',
         hours: 'Luni–Vineri: 08:00–16:00 (cu programare)',
@@ -509,6 +522,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 3,
         title: 'Obții certificatul TVA de la ANAF',
+        category: 'docs',
         office: 'ANAF Cluj sau online prin SPV',
         address: 'Str. Mihail Kogălniceanu 10, Cluj-Napoca',
         hours: 'Luni–Vineri: 08:30–16:30',
@@ -534,6 +548,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 4,
         title: 'Înregistrare la Primărie — ștampilă REMTII + impozit auto',
+        category: 'onsite',
         office: 'Primăria Cluj-Napoca — Taxe și Impozite',
         address: 'Calea Moților 3, Cluj-Napoca',
         hours: 'Luni–Joi: 08:00–16:00 | Vineri: 08:00–13:00',
@@ -558,6 +573,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 5,
         title: 'Plătești taxele DRPCIV pe ghișeu.ro',
+        category: 'financial',
         office: 'Online — ghișeu.ro',
         address: 'Online',
         hours: 'Disponibil 24/7',
@@ -579,6 +595,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 6,
         title: 'Cumperi asigurare RCA pe numele tău',
+        category: 'financial',
         office: 'Online',
         address: 'Online',
         hours: '24/7',
@@ -598,6 +615,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
       {
         order: 7,
         title: 'Programare și depunere dosar final la DRPCIV',
+        category: 'onsite',
         office: 'DRPCIV Cluj — Înmatriculări',
         address: 'Str. Traian Vuia 1-4, Cluj-Napoca',
         hours: 'Luni–Vineri: 08:00–16:00',

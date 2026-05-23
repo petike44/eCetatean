@@ -82,6 +82,18 @@ export function apiPostForm<T>(path: string, formData: FormData, getToken: GetTo
   return request<T>(path, { method: "POST", body: formData }, getToken);
 }
 
+export function apiPatchJson<T>(path: string, body: unknown, getToken: GetToken): Promise<T> {
+  return request<T>(
+    path,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    getToken,
+  );
+}
+
 export async function apiStreamPost(
   path: string,
   body: unknown,

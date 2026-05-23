@@ -194,8 +194,8 @@ function Profile() {
               try {
                 await demoEidKit.mutateAsync();
                 show("success", "Verificarea demo EidKit a fost aplicată");
-              } catch {
-                show("error", "Verificarea demo EidKit a eșuat");
+              } catch (err) {
+                show("error", err instanceof Error ? err.message : "Verificarea demo EidKit a eșuat");
               }
             }}
             onUnlink={async () => {

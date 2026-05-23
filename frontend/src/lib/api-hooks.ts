@@ -7,6 +7,7 @@ import {
   apiPatchJson,
   apiPostForm,
   apiStreamPost,
+  downloadAutofilledPdf,
   downloadPdf,
   type GetToken,
 } from "./api";
@@ -103,6 +104,57 @@ export type CitizenProfile = {
   date_of_birth?: string | null;
 };
 
+export type PdfFieldSource = "saved" | "acroform" | "heuristic";
+
+export type PdfFormInputDefinition = {
+  key: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+};
+
+export type PdfAutofillField = {
+  id: string;
+  label: string;
+  dataKey: string;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  value?: string;
+  required: boolean;
+  confidence: number;
+  source: PdfFieldSource;
+  acroFieldName?: string;
+};
+
+export type PdfForm = {
+  id: string;
+  slug: string;
+  title: string;
+  institution: string;
+  description: string | null;
+  category: string;
+  tags: string[];
+  storage_bucket: string;
+  storage_path: string;
+  source_url: string | null;
+  mapping: PdfAutofillField[];
+  required_inputs: PdfFormInputDefinition[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PdfFormAnalyzeResult = {
+  form: PdfForm;
+  fields: PdfAutofillField[];
+  missing_inputs: PdfFormInputDefinition[];
+  can_autofill_count: number;
+  total_required_count: number;
+};
+
 export type NewsItem = {
   id: string;
   title: string;
@@ -149,6 +201,63 @@ export function useGeneratePdf() {
       additionalData?: Record<string, string>;
     }) => {
       await downloadPdf(formType, getToken, additionalData);
+    },
+  });
+}
+
+export function usePdfForms(query: string) {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  const params = new URLSearchParams();
+  if (query.trim()) params.set("q", query.trim());
+
+  return useQuery({
+    queryKey: ["pdf-forms", query.trim()],
+    queryFn: () => apiGet<PdfForm[]>(`/api/forms/search${params.size ? `?${params}` : ""}`, getToken),
+    enabled: !!isSignedIn,
+  });
+}
+
+export function useAnalyzePdfForm() {
+  const getToken = useGetToken();
+  return useMutation({
+    mutationFn: ({ formId, additionalData = {} }: { formId: string; additionalData?: Record<string, string> }) =>
+      apiPostJson<PdfFormAnalyzeResult>(`/api/forms/${formId}/analyze`, { additional_data: additionalData }, getToken),
+  });
+}
+
+export function useFillPdfForm() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      form,
+      additionalData = {},
+      fields = [],
+    }: {
+      form: PdfForm;
+      additionalData?: Record<string, string>;
+      fields?: PdfAutofillField[];
+    }) => {
+      await downloadAutofilledPdf(form.slug, form.slug, getToken, {
+        additional_data: additionalData,
+        fields,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useSavePdfFormMapping() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ form, fields }: { form: PdfForm; fields: PdfAutofillField[] }) =>
+      apiPostJson<PdfForm>(`/api/forms/${form.slug}/mapping`, { fields }, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pdf-forms"] });
     },
   });
 }

@@ -72,6 +72,31 @@ create table if not exists public.vehicles (
 );
 create index if not exists vehicles_user_id_idx on public.vehicles (user_id);
 
+-- ─── pdf_forms ─────────────────────────────────────────────────
+-- Searchable catalog for official PDF forms. Demo forms are seeded
+-- here, while future crawlers can insert discovered candidates into
+-- the same table after review.
+create table if not exists public.pdf_forms (
+  id              uuid primary key default gen_random_uuid(),
+  slug            text not null unique,
+  title           text not null,
+  institution     text not null,
+  description     text,
+  category        text not null default 'general',
+  tags            text[] not null default '{}',
+  storage_bucket  text not null default 'pdf-forms',
+  storage_path    text not null,
+  source_url      text,
+  mapping         jsonb not null default '[]'::jsonb,
+  required_inputs jsonb not null default '[]'::jsonb,
+  is_active       boolean not null default true,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+create index if not exists pdf_forms_active_idx on public.pdf_forms (is_active);
+create index if not exists pdf_forms_category_idx on public.pdf_forms (category);
+create index if not exists pdf_forms_tags_idx on public.pdf_forms using gin (tags);
+
 -- ─── civic_reports ──────────────────────────────────────────────
 create table if not exists public.civic_reports (
   id               uuid primary key default gen_random_uuid(),
@@ -142,6 +167,11 @@ insert into storage.buckets (id, name, public)
 values ('civic-reports', 'civic-reports', true)
 on conflict (id) do nothing;
 
+-- Private bucket for official PDF source files used by autofill.
+insert into storage.buckets (id, name, public)
+values ('pdf-forms', 'pdf-forms', false)
+on conflict (id) do nothing;
+
 -- ════════════════════════════════════════════════════════════════
 --  Seed data for local testing
 --  Matches AUTH_STUB_USER_ID in backend/.env.local so the app has
@@ -166,6 +196,97 @@ values
    'Stâlp de iluminat stins de câteva zile.',
    'Piața Unirii, Cluj-Napoca', 'CLJ-2026-1002-DEMO', 'in_lucru')
 on conflict (reference_number) do nothing;
+
+-- Demo PDF form catalog. Upload PDFs with matching storage_path values
+-- into the "pdf-forms" bucket for exact official layouts; the backend
+-- can still generate a placeholder PDF if a demo file is missing.
+insert into public.pdf_forms
+  (slug, title, institution, description, category, tags, storage_path, source_url, mapping, required_inputs)
+values
+  (
+    'cerere-viza-flotant',
+    'Cerere pentru stabilirea resedintei',
+    'Directia pentru Evidenta Persoanelor',
+    'Formular pentru solicitarea vizei de flotant / stabilirea resedintei.',
+    'evidenta-persoanelor',
+    array['viza flotant', 'resedinta', 'domiciliu', 'buletin'],
+    'cerere-viza-flotant.pdf',
+    null,
+    '[
+      {"id":"full_name","label":"Nume si prenume","dataKey":"profile.full_name","page":0,"x":145,"y":156,"width":260,"height":18,"required":true,"confidence":0.92,"source":"saved"},
+      {"id":"cnp","label":"CNP","dataKey":"profile.cnp","page":0,"x":145,"y":184,"width":210,"height":18,"required":true,"confidence":0.92,"source":"saved"},
+      {"id":"identity_card","label":"CI seria si numarul","dataKey":"profile.identity_card","page":0,"x":145,"y":212,"width":210,"height":18,"required":true,"confidence":0.86,"source":"saved"},
+      {"id":"current_address","label":"Domiciliu actual","dataKey":"profile.full_address","page":0,"x":145,"y":240,"width":320,"height":18,"required":true,"confidence":0.88,"source":"saved"},
+      {"id":"new_address","label":"Adresa resedintei solicitate","dataKey":"input.new_address","page":0,"x":145,"y":302,"width":330,"height":18,"required":true,"confidence":0.9,"source":"saved"},
+      {"id":"period","label":"Perioada solicitata","dataKey":"input.period","page":0,"x":145,"y":330,"width":210,"height":18,"required":false,"confidence":0.78,"source":"saved"},
+      {"id":"date","label":"Data","dataKey":"system.today","page":0,"x":145,"y":680,"width":120,"height":18,"required":true,"confidence":0.95,"source":"saved"}
+    ]'::jsonb,
+    '[
+      {"key":"new_address","label":"Adresa resedintei solicitate","placeholder":"Strada, numar, bloc, apartament"},
+      {"key":"period","label":"Perioada solicitata","placeholder":"12 luni"}
+    ]'::jsonb
+  ),
+  (
+    'cerere-inmatriculare-drpciv',
+    'Cerere inmatriculare vehicul',
+    'DRPCIV',
+    'Cerere pentru inmatricularea sau transcrierea unui vehicul.',
+    'auto',
+    array['drpciv', 'inmatriculare', 'vehicul', 'auto'],
+    'cerere-inmatriculare-drpciv.pdf',
+    null,
+    '[
+      {"id":"full_name","label":"Subsemnatul(a)","dataKey":"profile.full_name","page":0,"x":145,"y":150,"width":260,"height":18,"required":true,"confidence":0.9,"source":"saved"},
+      {"id":"cnp","label":"CNP / CUI","dataKey":"profile.cnp","page":0,"x":145,"y":178,"width":210,"height":18,"required":true,"confidence":0.9,"source":"saved"},
+      {"id":"address","label":"Domiciliu","dataKey":"profile.full_address","page":0,"x":145,"y":206,"width":320,"height":18,"required":true,"confidence":0.88,"source":"saved"},
+      {"id":"email","label":"E-mail","dataKey":"profile.email","page":0,"x":145,"y":234,"width":210,"height":18,"required":false,"confidence":0.88,"source":"saved"},
+      {"id":"phone","label":"Telefon","dataKey":"profile.phone","page":0,"x":145,"y":262,"width":160,"height":18,"required":false,"confidence":0.88,"source":"saved"},
+      {"id":"vehicle_make","label":"Marca vehicul","dataKey":"input.make","page":0,"x":145,"y":340,"width":160,"height":18,"required":true,"confidence":0.9,"source":"saved"},
+      {"id":"vehicle_model","label":"Model / tip","dataKey":"input.model","page":0,"x":330,"y":340,"width":150,"height":18,"required":true,"confidence":0.84,"source":"saved"},
+      {"id":"vin","label":"Numar identificare VIN","dataKey":"input.vin","page":0,"x":145,"y":368,"width":260,"height":18,"required":true,"confidence":0.9,"source":"saved"},
+      {"id":"current_plate","label":"Numar inmatriculare actual","dataKey":"input.current_plate","page":0,"x":145,"y":396,"width":160,"height":18,"required":false,"confidence":0.8,"source":"saved"},
+      {"id":"date","label":"Data","dataKey":"system.today","page":0,"x":145,"y":680,"width":120,"height":18,"required":true,"confidence":0.95,"source":"saved"}
+    ]'::jsonb,
+    '[
+      {"key":"make","label":"Marca vehiculului","placeholder":"Dacia"},
+      {"key":"model","label":"Model / tip","placeholder":"Logan"},
+      {"key":"vin","label":"Numar identificare VIN","placeholder":"VF1..."},
+      {"key":"current_plate","label":"Numar inmatriculare actual","placeholder":"CJ 01 ABC"}
+    ]'::jsonb
+  ),
+  (
+    'cerere-certificat-fiscal',
+    'Cerere certificat fiscal',
+    'Directia Taxe si Impozite Locale',
+    'Cerere pentru eliberarea certificatului fiscal local.',
+    'taxe',
+    array['certificat fiscal', 'taxe', 'impozite', 'primarie'],
+    'cerere-certificat-fiscal.pdf',
+    null,
+    '[
+      {"id":"full_name","label":"Nume si prenume contribuabil","dataKey":"profile.full_name","page":0,"x":150,"y":160,"width":260,"height":18,"required":true,"confidence":0.92,"source":"saved"},
+      {"id":"cnp","label":"CNP","dataKey":"profile.cnp","page":0,"x":150,"y":188,"width":210,"height":18,"required":true,"confidence":0.92,"source":"saved"},
+      {"id":"address","label":"Domiciliu fiscal","dataKey":"profile.full_address","page":0,"x":150,"y":216,"width":320,"height":18,"required":true,"confidence":0.88,"source":"saved"},
+      {"id":"email","label":"E-mail","dataKey":"profile.email","page":0,"x":150,"y":244,"width":210,"height":18,"required":false,"confidence":0.86,"source":"saved"},
+      {"id":"purpose","label":"Scopul solicitarii","dataKey":"input.purpose","page":0,"x":150,"y":314,"width":320,"height":18,"required":true,"confidence":0.84,"source":"saved"},
+      {"id":"date","label":"Data","dataKey":"system.today","page":0,"x":150,"y":680,"width":120,"height":18,"required":true,"confidence":0.95,"source":"saved"}
+    ]'::jsonb,
+    '[
+      {"key":"purpose","label":"Scopul solicitarii","placeholder":"Dosar vanzare-cumparare"}
+    ]'::jsonb
+  )
+on conflict (slug) do update set
+  title = excluded.title,
+  institution = excluded.institution,
+  description = excluded.description,
+  category = excluded.category,
+  tags = excluded.tags,
+  storage_path = excluded.storage_path,
+  source_url = excluded.source_url,
+  mapping = excluded.mapping,
+  required_inputs = excluded.required_inputs,
+  is_active = true,
+  updated_at = now();
 
 -- Sample civic news (optional for local demos).
 insert into public.news (id, title, summary, published_at)

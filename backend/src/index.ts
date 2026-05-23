@@ -9,6 +9,7 @@ import { civilServantRoute } from './routes/civil-servant'
 import { healthRoute } from './routes/health'
 import { lifeEventsRoute } from './routes/life-events'
 import { profileRoute } from './routes/profile'
+import { formsRoute } from './routes/forms'
 import { newsRoute } from './routes/news'
 import { vehiclesRoute } from './routes/vehicles'
 
@@ -27,6 +28,7 @@ app.route('/api/civil-servant', civilServantRoute)
 app.route('/api/health', healthRoute)
 app.route('/api/life-events', lifeEventsRoute)
 app.route('/api/profile', profileRoute)
+app.route('/api/forms', formsRoute)
 app.route('/api/news', newsRoute)
 app.route('/api/vehicles', vehiclesRoute)
 

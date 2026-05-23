@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 
-import { Bell, IdCard, Plane, Briefcase, Baby, CarFront, Car, AlertCircle, ChevronRight, FileUp, Loader2, Sparkles } from "lucide-react";
+import { Bell, IdCard, Plane, Briefcase, Baby, CarFront, Car, AlertCircle, ChevronRight, FileUp, Loader2, Sparkles, Wand2 } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 
@@ -385,6 +385,40 @@ function Documents() {
                 </div>
 
               )}
+
+            </section>
+
+
+
+            <section className="px-5 mt-6 lg:px-0">
+
+              <Card accent="green">
+
+                <div className="flex items-start gap-3">
+
+                  <div className="w-11 h-11 rounded-2xl bg-success-light text-success flex items-center justify-center shrink-0">
+
+                    <Wand2 size={20} />
+
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+
+                    <h3 className="font-display font-semibold text-[15px] text-text-primary">Autocompletare PDF</h3>
+
+                    <p className="text-[14px] text-text-secondary mt-1 mb-3">
+
+                      Caută formulare oficiale și completează-le cu datele din profil.
+
+                    </p>
+
+                    <GhostButton onClick={() => nav({ to: "/document-preview" })}>Caută formular</GhostButton>
+
+                  </div>
+
+                </div>
+
+              </Card>
 
             </section>
 

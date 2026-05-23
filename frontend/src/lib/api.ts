@@ -158,3 +158,18 @@ export async function downloadPdf(
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export async function downloadAutofilledPdf(
+  formId: string,
+  fileName: string,
+  getToken: GetToken,
+  body: unknown,
+): Promise<void> {
+  const blob = await apiPostJson<Blob>(`/api/forms/${formId}/fill`, body, getToken);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

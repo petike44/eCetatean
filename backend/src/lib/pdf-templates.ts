@@ -199,24 +199,8 @@ export async function generatePDF(
   }
 
   const fieldNames = Object.keys(inputs[0])
-
-  let basePdfData: string | Uint8Array | ArrayBuffer = BLANK_PDF
-
-  try {
-    const { data, error } = await supabaseAdmin.storage
-      .from('pdf-templates')
-      .download(`${resolvedType}.pdf`)
-
-    if (data && !error) {
-      const arrayBuffer = await data.arrayBuffer()
-      basePdfData = new Uint8Array(arrayBuffer)
-    }
-  } catch (err) {
-    console.error('Error fetching base PDF from Supabase:', err)
-  }
-
+  const basePdfData = await loadTemplatePdf(resolvedType)
   const template = buildSimpleTextTemplate(fieldNames, basePdfData)
-
   const pdf = await generate({ template, inputs })
   return Buffer.from(pdf)
 }
@@ -224,9 +208,41 @@ export async function generatePDF(
 // ────────────────────────────────────────────────────────────
 // cerere_drpciv — overlays filled text onto the official form
 // ────────────────────────────────────────────────────────────
+// Loads a template PDF for @pdfme forms from Supabase storage.
+// Checks pdf-forms bucket first (public), then pdf-templates.
+// Falls back to BLANK_PDF with a console warning if not found.
+// ────────────────────────────────────────────────────────────
+async function loadTemplatePdf(formType: string): Promise<string | Uint8Array> {
+  const fileName = `${formType}.pdf`
+  const buckets = ['pdf-forms', 'pdf-templates']
+
+  for (const bucket of buckets) {
+    // Attempt 1 — authenticated SDK download
+    try {
+      const { data, error } = await supabaseAdmin.storage.from(bucket).download(fileName)
+      if (data && !error) {
+        console.log(`Template loaded via SDK: ${bucket}/${fileName}`)
+        return new Uint8Array(await data.arrayBuffer())
+      }
+    } catch { /* try next */ }
+
+    // Attempt 2 — public URL (works when bucket is public)
+    try {
+      const { data: { publicUrl } } = supabaseAdmin.storage.from(bucket).getPublicUrl(fileName)
+      const res = await fetch(publicUrl)
+      if (res.ok) {
+        console.log(`Template loaded via public URL: ${publicUrl}`)
+        return new Uint8Array(await res.arrayBuffer())
+      }
+    } catch { /* try next */ }
+  }
+
+  console.warn(`Template ${fileName} not found in any bucket — using blank canvas`)
+  return BLANK_PDF
+}
+
+// ────────────────────────────────────────────────────────────
 // Coordinates assume A4 (595 x 842 pt), origin bottom-left.
-// Copy cerere_drpciv.pdf into backend/src/assets/ to enable.
-// Without the template the function throws a clear error.
 // ────────────────────────────────────────────────────────────
 async function generateCerereDrpciv(
   profile: ProfileData,
@@ -335,27 +351,45 @@ async function generateCerereDrpciv(
 }
 
 async function loadCerereDrpcivTemplate(): Promise<Uint8Array> {
-  // 1. Local assets folder (copy cerere_drpciv.pdf here for offline dev)
-  const localPath = path.join(process.cwd(), 'src', 'assets', 'cerere_drpciv.pdf')
+  const BUCKET = 'pdf-forms'
+  const FILE = 'cerere-inmatriculare-drpciv.pdf.pdf'
+
+  // 1. Local assets folder (fastest — copy the file here for offline dev)
+  const localPath = path.join(process.cwd(), 'src', 'assets', FILE)
   if (fs.existsSync(localPath)) {
+    console.log(`PDF template loaded from local: ${localPath}`)
     return new Uint8Array(fs.readFileSync(localPath))
   }
 
-  // 2. Supabase storage — bucket: pdf-forms (Files → Buckets → pdf-forms)
+  // 2. Authenticated SDK download (requires real service_role key)
   try {
-    const { data, error } = await supabaseAdmin.storage
-      .from('pdf-forms')
-      .download('cerere_drpciv.pdf')
+    const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(FILE)
     if (data && !error) {
+      console.log(`PDF template loaded via SDK: ${BUCKET}/${FILE}`)
       return new Uint8Array(await data.arrayBuffer())
     }
-    if (error) console.error('Supabase storage error:', error)
+    if (error) console.warn(`SDK download rejected (${error.message}) — trying public URL`)
   } catch (err) {
-    console.error('Supabase storage fetch failed:', err)
+    console.warn('SDK download threw:', err)
+  }
+
+  // 3. Public URL fallback (works when bucket is set to public)
+  try {
+    const { data: { publicUrl } } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(FILE)
+    console.log(`Trying public URL: ${publicUrl}`)
+    const res = await fetch(publicUrl)
+    if (res.ok) {
+      console.log(`PDF template loaded via public URL`)
+      return new Uint8Array(await res.arrayBuffer())
+    }
+    console.warn(`Public URL returned ${res.status}`)
+  } catch (err) {
+    console.warn('Public URL fetch failed:', err)
   }
 
   throw new Error(
-    'Template cerere_drpciv.pdf not found. ' +
-    'Upload it to Supabase → Storage → pdf-forms bucket, or copy to backend/src/assets/cerere_drpciv.pdf'
+    `Cannot load cerere_drpciv.pdf. ` +
+    `Make the "${BUCKET}" bucket public in Supabase Dashboard → Storage → ${BUCKET} → Policies, ` +
+    `or place the file at backend/src/assets/${FILE}.`
   )
 }

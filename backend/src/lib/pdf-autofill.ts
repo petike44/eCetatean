@@ -58,7 +58,7 @@ const DEMO_FORMS: PdfForm[] = [
     category: 'auto',
     tags: ['drpciv', 'inmatriculare', 'vehicul', 'auto'],
     storage_bucket: 'pdf-forms',
-    storage_path: 'cerere_drpciv.pdf',
+    storage_path: 'cerere-inmatriculare-drpciv.pdf.pdf',
     source_url: null,
     is_active: true,
     created_at: new Date(0).toISOString(),
@@ -191,19 +191,44 @@ function normalizeInputDefinitions(raw: unknown): PdfFormInputDefinition[] {
 }
 
 export async function getPdfBytes(form: PdfForm): Promise<Uint8Array> {
+  // Attempt 1 — authenticated SDK download (requires real service_role key)
   try {
     const { data, error } = await supabaseAdmin.storage
       .from(form.storage_bucket)
       .download(form.storage_path)
 
     if (data && !error) {
+      console.log(`PDF loaded via SDK: ${form.storage_bucket}/${form.storage_path}`)
       return new Uint8Array(await data.arrayBuffer())
     }
+    if (error) console.warn(`SDK download rejected (${error.message}) — trying public URL`)
   } catch (err) {
-    console.error('PDF source download failed:', err)
+    console.warn('SDK download threw:', err)
   }
 
-  return createPlaceholderPdf(form)
+  // Attempt 2 — public URL (works when bucket is set to public in Supabase dashboard)
+  try {
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from(form.storage_bucket)
+      .getPublicUrl(form.storage_path)
+
+    console.log(`Trying public URL: ${publicUrl}`)
+    const res = await fetch(publicUrl)
+    if (res.ok) {
+      console.log(`PDF loaded via public URL: ${publicUrl}`)
+      return new Uint8Array(await res.arrayBuffer())
+    }
+    console.warn(`Public URL returned ${res.status} — bucket may not be public`)
+  } catch (err) {
+    console.warn('Public URL fetch failed:', err)
+  }
+
+  // Both attempts failed — throw so the route returns a proper error instead of a fake PDF
+  throw new Error(
+    `Cannot download ${form.storage_path} from bucket "${form.storage_bucket}". ` +
+    `Either make the bucket public in Supabase Dashboard → Storage → ${form.storage_bucket} → Policies, ` +
+    `or set SUPABASE_SERVICE_ROLE_KEY to the service_role key (not the publishable key).`
+  )
 }
 
 export async function analyzePdf(

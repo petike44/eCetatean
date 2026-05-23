@@ -173,8 +173,9 @@ function DrpcivFlow() {
       });
       setDownloaded(true);
       show("success", "Cererea a fost descărcată. Tipărește-o și semnează-o.");
-    } catch {
-      show("error", "Eroare la generarea PDF-ului. Verifică că template-ul este instalat.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Eroare necunoscută";
+      show("error", `Eroare PDF: ${msg}`);
     }
   };
 

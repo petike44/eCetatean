@@ -90,7 +90,16 @@ formsRoute.post('/:id/fill', requireAuth, async (c) => {
   const body = await readJson<FillRequest>(c)
   const profile = await loadProfile(userId)
   const inputValues = body.additional_data ?? {}
-  const sourcePdf = await getPdfBytes(form)
+
+  let sourcePdf: Uint8Array
+  try {
+    sourcePdf = await getPdfBytes(form)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'PDF template unavailable'
+    console.error('getPdfBytes failed:', message)
+    return c.json({ success: false, error: message }, 503)
+  }
+
   const fields = body.fields?.length
     ? normalizeFields(body.fields)
     : await analyzePdf(form, sourcePdf, profile, inputValues)

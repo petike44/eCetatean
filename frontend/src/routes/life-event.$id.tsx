@@ -120,8 +120,9 @@ function LifeEventDashboard() {
     try {
       await generatePdf.mutateAsync({ formType });
       show("success", "PDF descărcat");
-    } catch {
-      show("error", "Eroare la descărcarea PDF-ului");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Eroare necunoscută";
+      show("error", `Eroare PDF: ${msg}`);
     }
   };
 

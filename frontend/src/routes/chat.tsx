@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import { Send, Info, FileText, MapPin, Clock, Phone, Navigation2, ChevronLeft, ChevronRight, X, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
+import { Send, Info, MapPin, Clock, Phone, Navigation2, ChevronLeft, ChevronRight, X, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { citizen, locationsCatalog, type DocItem, type LocationItem } from "@/lib/mock-data";
+import { locationsCatalog, type LocationItem } from "@/lib/office-locations";
+import type { DocItem } from "@/lib/chat-types";
+import { useUser } from "@/lib/clerk-stub";
+import { profileDisplayName } from "@/lib/profile-utils";
 import { useToast } from "@/components/Toast";
 import { Protected } from "@/lib/auth-guard";
 import {
@@ -48,7 +51,7 @@ const SUGGESTIONS: { label: string; icon: typeof Car; query: string }[] = [
 ];
 
 // Local catalog used to enrich the backend's tool_result with locations.
-// The stub maps office_type → key; we surface the matching list from mock-data.
+// Maps office_type from ClaudIA tool results to local office listings.
 const OFFICE_LOCATION_MAP: Record<string, LocationItem[] | undefined> = {
   dgep: locationsCatalog.buletin,
   spcep: locationsCatalog.buletin,
@@ -170,25 +173,27 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
 function Chat() {
   const { show } = useToast();
   const sendChat = useSendChatMessage();
-  const { data: profile } = useProfile();
-  const displayName =
-    profile?.full_name?.split(" ")[0] ?? citizen.name.split(" ")[0];
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { user } = useUser();
+  const authEmail = user?.primaryEmailAddress?.emailAddress ?? null;
+  const displayName = profileDisplayName(profile, authEmail).split(" ")[0];
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [greetingReady, setGreetingReady] = useState(false);
 
   useEffect(() => {
-    if (greetingReady) return;
-    setMsgs([
-      {
-        id: 1,
-        role: "ai",
-        reply: {
-          text: `Bună ziua, ${displayName}! Sunt ClaudIA, asistentul tău civic. Cu ce te pot ajuta azi? Poți întreba despre acte, formulare, taxe sau orice altceva legat de instituțiile statului.`,
+    if (profileLoading) return;
+    setMsgs((prev) => {
+      if (prev.length > 1) return prev;
+      return [
+        {
+          id: 1,
+          role: "ai",
+          reply: {
+            text: `Bună ziua, ${displayName}! Sunt ClaudIA, asistentul tău civic. Cu ce te pot ajuta azi? Poți întreba despre acte, formulare, taxe sau orice altceva legat de instituțiile statului.`,
+          },
         },
-      },
-    ]);
-    setGreetingReady(true);
-  }, [displayName, greetingReady]);
+      ];
+    });
+  }, [displayName, profileLoading]);
   const [input, setInput] = useState("");
   const [panelReply, setPanelReply] = useState<Reply | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -276,7 +281,7 @@ function Chat() {
                 className="font-display font-semibold text-[30px] leading-[1.15] mb-4 text-foreground"
                 style={{ letterSpacing: "-0.01em" }}
               >
-                Bună ziua, {citizen.name.split(" ")[0]}.<br />Cu ce te ajut azi?
+                Bună ziua, {displayName}.<br />Cu ce te ajut azi?
               </h2>
               <p className="text-[15px] leading-relaxed text-text-secondary">
                 Sunt asistentul tău civic pentru interacțiunea cu instituțiile statului.
@@ -569,7 +574,12 @@ function PageAnswer({ reply }: { reply: Reply }) {
     setCreating(true);
     try {
       const result = await createLifeEvent.mutateAsync({ event_type: reply.event_type });
-      nav({ to: "/life-event/$id", params: { id: result.id } });
+      // DRPCIV car-purchase flow gets its own dedicated step-by-step page
+      if (reply.event_type === "bought_car" || reply.event_type === "car_domestic") {
+        nav({ to: "/drpciv/$eventId", params: { eventId: result.id } });
+      } else {
+        nav({ to: "/life-event/$id", params: { id: result.id } });
+      }
     } catch {
       show("error", "Eroare la crearea evenimentului civic");
       setCreating(false);
@@ -741,9 +751,6 @@ function PageMap({ locations }: { locations: LocationItem[] }) {
           </div>
         </article>
       ))}
-            <p className="text-[10.5px] text-text-tertiary text-center pt-1">
-        <FileText size={10} className="inline -mt-0.5" /> Date demonstrative
-      </p>
     </div>
   );
 }

@@ -24,6 +24,7 @@ import { Route as AuditRouteImport } from './routes/audit'
 import { Route as ActionPlanRouteImport } from './routes/action-plan'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LifeEventIdRouteImport } from './routes/life-event.$id'
+import { Route as DrpcivEventIdRouteImport } from './routes/drpciv.$eventId'
 
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
@@ -100,6 +101,11 @@ const LifeEventIdRoute = LifeEventIdRouteImport.update({
   path: '/life-event/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DrpcivEventIdRoute = DrpcivEventIdRouteImport.update({
+  id: '/drpciv/$eventId',
+  path: '/drpciv/$eventId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
+  '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
 export interface FileRoutesByTo {
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
+  '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
 export interface FileRoutesById {
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
+  '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
 export interface FileRouteTypes {
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/sitemap.xml'
     | '/staff'
+    | '/drpciv/$eventId'
     | '/life-event/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/sitemap.xml'
     | '/staff'
+    | '/drpciv/$eventId'
     | '/life-event/$id'
   id:
     | '__root__'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/sitemap.xml'
     | '/staff'
+    | '/drpciv/$eventId'
     | '/life-event/$id'
   fileRoutesById: FileRoutesById
 }
@@ -222,6 +234,7 @@ export interface RootRouteChildren {
   ReportRoute: typeof ReportRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StaffRoute: typeof StaffRoute
+  DrpcivEventIdRoute: typeof DrpcivEventIdRoute
   LifeEventIdRoute: typeof LifeEventIdRoute
 }
 
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LifeEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/drpciv/$eventId': {
+      id: '/drpciv/$eventId'
+      path: '/drpciv/$eventId'
+      fullPath: '/drpciv/$eventId'
+      preLoaderRoute: typeof DrpcivEventIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -350,6 +370,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportRoute: ReportRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StaffRoute: StaffRoute,
+  DrpcivEventIdRoute: DrpcivEventIdRoute,
   LifeEventIdRoute: LifeEventIdRoute,
 }
 export const routeTree = rootRouteImport

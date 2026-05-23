@@ -100,6 +100,8 @@ export type CitizenProfile = {
   phone?: string | null;
   buletin_series?: string | null;
   buletin_number?: string | null;
+  buletin_expiry?: string | null;
+  date_of_birth?: string | null;
 };
 
 export type PdfFieldSource = "saved" | "acroform" | "heuristic";
@@ -152,6 +154,22 @@ export type PdfFormAnalyzeResult = {
   can_autofill_count: number;
   total_required_count: number;
 };
+
+export type NewsItem = {
+  id: string;
+  title: string;
+  summary: string;
+  body: string | null;
+  published_at: string | null;
+  created_at: string;
+};
+
+export function useNews() {
+  return useQuery({
+    queryKey: ["news"],
+    queryFn: () => apiGet<NewsItem[]>("/api/news", async () => null),
+  });
+}
 
 export function useProfile() {
   const getToken = useGetToken();
@@ -454,5 +472,29 @@ export function useUpdateLifeEventStep() {
       qc.invalidateQueries({ queryKey: ["life-events"] });
       qc.invalidateQueries({ queryKey: ["audit"] });
     },
+  });
+}
+
+// —— Vehicles ——————————————————————————————————————————————
+
+export type Vehicle = {
+  id: string;
+  plate_number: string;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  vin: string | null;
+  fuel_type: string | null;
+  engine_cc: number | null;
+  color: string | null;
+};
+
+export function useVehicles() {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["vehicles"],
+    queryFn: () => apiGet<Vehicle[]>("/api/vehicles", getToken),
+    enabled: !!isSignedIn,
   });
 }

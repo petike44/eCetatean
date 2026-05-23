@@ -13,7 +13,7 @@ export function BottomNav() {
   const path = location.pathname;
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-surface border-t border-border flex items-center justify-around px-2 lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-40 h-[4.25rem] bg-surface/95 backdrop-blur-md border-t border-border flex items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Navigare principală"
     >
       {tabs.map(({ to, label, icon: Icon, dot }) => {
@@ -22,19 +22,19 @@ export function BottomNav() {
           <Link
             key={to}
             to={to as "/chat"}
-            className={`press flex flex-col items-center gap-1 px-3 py-2 rounded-xl relative ${
-              active ? "text-accent" : "text-text-tertiary"
+            className={`press flex flex-col items-center justify-center gap-0.5 min-w-[4rem] min-h-11 px-2 rounded-2xl relative transition-colors ${
+              active ? "text-primary" : "text-text-tertiary"
             }`}
             aria-label={label}
             aria-current={active ? "page" : undefined}
           >
-            <div className="relative">
+            <div className={`relative p-1 rounded-xl ${active ? "bg-primary-light" : ""}`}>
               <Icon size={22} strokeWidth={active ? 2.2 : 1.8} />
-              {dot && (
-                <span className="absolute -top-0.5 -right-1 w-2 h-2 bg-accent rounded-full anim-pulse-dot" />
+              {dot && active && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-accent rounded-full" />
               )}
             </div>
-            <span className="text-[10px] font-medium leading-none">{label}</span>
+            <span className={`text-[11px] leading-none ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
           </Link>
         );
       })}

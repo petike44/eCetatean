@@ -1,13 +1,29 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/clerk-stub";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { Shield } from "lucide-react";
+import { Shield, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useProfile } from "@/lib/api-hooks";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Autentificare — eCetățean" }] }),
   component: Auth,
 });
+
+function AuthRedirect() {
+  const { data: profile, isLoading } = useProfile();
+  if (isLoading) {
+    return (
+      <div className="min-h-dvh bg-bg flex items-center justify-center">
+        <p className="text-sm text-text-secondary">Se încarcă...</p>
+      </div>
+    );
+  }
+  if (!profile?.full_name?.trim()) {
+    return <Navigate to="/profile-setup" replace />;
+  }
+  return <Navigate to="/chat" replace />;
+}
 
 function Auth() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -20,7 +36,7 @@ function Auth() {
   const [signUpDone, setSignUpDone] = useState(false);
 
   if (isLoaded && isSignedIn) {
-    return <Navigate to="/chat" replace />;
+    return <AuthRedirect />;
   }
 
   if (!isSupabaseConfigured) {
@@ -51,9 +67,8 @@ function Auth() {
           ? "Email sau parolă incorectă."
           : error.message
       );
-    } else {
-      navigate({ to: "/chat" });
     }
+    // Signed-in users are redirected by AuthRedirect on re-render.
   }
 
   async function handleSignUp(e: React.FormEvent) {
@@ -93,12 +108,11 @@ function Auth() {
             : "Înregistrare gratuită cu email și parolă."}
         </p>
 
-        {/* Tab switcher */}
-        <div className="flex rounded-xl bg-surface border border-border p-1 mb-6 gap-1">
+        <div className="flex rounded-2xl bg-surface border border-border p-1 mb-6 gap-1">
           <button
             type="button"
             onClick={() => { setTab("signin"); setError(null); setSignUpDone(false); }}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+            className={`flex-1 rounded-xl min-h-11 text-sm font-semibold transition-colors ${
               tab === "signin" ? "bg-white text-text-primary shadow-sm" : "text-text-secondary"
             }`}
           >
@@ -107,7 +121,7 @@ function Auth() {
           <button
             type="button"
             onClick={() => { setTab("signup"); setError(null); setSignUpDone(false); }}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+            className={`flex-1 rounded-xl min-h-11 text-sm font-semibold transition-colors ${
               tab === "signup" ? "bg-white text-text-primary shadow-sm" : "text-text-secondary"
             }`}
           >
@@ -116,10 +130,10 @@ function Auth() {
         </div>
 
         {signUpDone ? (
-          <div className="rounded-xl border border-border bg-surface p-5 text-center">
+          <div className="rounded-2xl border border-border bg-surface p-5 text-center">
             <p className="text-sm font-semibold text-text-primary mb-1">Verifică emailul</p>
             <p className="text-sm text-text-secondary">
-              Am trimis un link de confirmare la <strong>{email}</strong>. Deschide-l pentru a activa contul.
+              Am trimis un link de confirmare la <strong>{email}</strong>. Deschide-l pentru a activa contul, apoi completează profilul.
             </p>
           </div>
         ) : (
@@ -136,7 +150,7 @@ function Auth() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nume@exemplu.ro"
-                className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="rounded-2xl border border-border bg-surface px-4 py-3.5 text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-11"
               />
             </div>
 
@@ -153,7 +167,7 @@ function Auth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minim 6 caractere"
-                className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="rounded-2xl border border-border bg-surface px-4 py-3.5 text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-11"
               />
             </div>
 
@@ -166,8 +180,9 @@ function Auth() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+              className="mt-1 rounded-2xl bg-accent px-5 py-3.5 min-h-11 text-[15px] font-semibold text-white disabled:opacity-60 transition-opacity inline-flex items-center justify-center gap-2"
             >
+              {loading && <Loader2 size={18} className="animate-spin" />}
               {loading
                 ? "Se procesează..."
                 : tab === "signin"

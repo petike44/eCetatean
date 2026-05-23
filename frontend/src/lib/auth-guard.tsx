@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/tanstack-react-start";
+import { useAuth } from "@/lib/clerk-stub";
 import { Navigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 

@@ -1,5 +1,5 @@
 import { createHash } from 'crypto'
-import { supabaseAdmin } from './supabase'
+import { supabaseAdmin, isSupabaseConfigured } from './supabase'
 import type { AuditActionType } from '../types'
 
 function sha256(input: string): string {
@@ -19,6 +19,11 @@ export async function writeAuditEntry({
   actionType,
   data = {},
 }: WriteAuditEntryParams): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.log(`[audit skipped — Supabase not configured] ${actionType}: ${action}`)
+    return
+  }
+
   const { data: lastEntry } = await supabaseAdmin
     .from('audit_log')
     .select('record_hash')

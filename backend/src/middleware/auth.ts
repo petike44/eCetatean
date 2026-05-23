@@ -11,6 +11,26 @@ declare module 'hono' {
 }
 
 export const requireAuth = createMiddleware(async (c, next) => {
+  // —— Local auth stub ————————————————————————————————————————
+  // When AUTH_STUB=true, skip Clerk JWT verification and inject a
+  // fake signed-in user. For LOCAL TESTING ONLY — never enable in
+  // production. Set the role with AUTH_STUB_ROLE (citizen | civil_servant).
+  if (process.env.AUTH_STUB === 'true') {
+    const role =
+      (process.env.AUTH_STUB_ROLE as 'citizen' | 'civil_servant') || 'citizen'
+    const userId = process.env.AUTH_STUB_USER_ID || 'stub-user-citizen'
+    c.set('userId', userId)
+    c.set('userRole', role)
+    c.set('clerkPayload', {
+      sub: userId,
+      email: 'demo@ecetatean.ro',
+      role,
+      exp: 0,
+      iat: 0,
+    })
+    return next()
+  }
+
   const authHeader = c.req.header('Authorization')
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { SignIn, useAuth } from "@clerk/tanstack-react-start";
+import { SignIn, useAuth } from "@/lib/clerk-stub";
 import { Shield } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({

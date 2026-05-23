@@ -32,10 +32,14 @@ API: `http://localhost:3001` — health: `GET /api/health` (arată `claudia: gem
 ```bash
 cd frontend
 cp .env.example .env.local
-# VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_API_URL=http://localhost:3001
+# VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY
+# VITE_API_URL= empty → Vite proxies /api to :3001 (recommended)
+# Or VITE_API_URL=http://localhost:3001
 npm install
 npm run dev
 ```
+
+**Chat not working?** Run both servers. Set `FRONTEND_URL` in `backend/.env.local` to the port Vite shows (often `http://localhost:8080`). In DevTools Network, a chat message must show **POST** `/api/claudia` with status 200.
 
 ### 4. Gemini (ClaudIA)
 

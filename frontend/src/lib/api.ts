@@ -1,10 +1,42 @@
-const BASE_URL = import.meta.env.VITE_API_URL as string | undefined;
-
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+const ENV_API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+
+/** In dev, empty base uses Vite proxy (/api → localhost:3001). In prod, VITE_API_URL is required. */
+function getApiBaseUrl(): string {
+  if (ENV_API_URL) return ENV_API_URL.replace(/\/$/, "")
+  if (import.meta.env.DEV) return ""
+  throw new ApiError(
+    0,
+    "VITE_API_URL nu este configurat — adaugă URL-ul API-ului în frontend/.env.local",
+  )
+}
+
+function buildFetchError(err: unknown): ApiError {
+  const message = err instanceof Error ? err.message : String(err)
+
+  if (
+    message.includes("Failed to fetch") ||
+    message.includes("NetworkError") ||
+    message.includes("Load failed")
+  ) {
+    return new ApiError(
+      0,
+      "Nu mă pot conecta la server — pornește backend-ul (npm run dev în /backend) și verifică FRONTEND_URL (portul Vite, ex. :8080) în backend/.env.local",
+      "NETWORK",
+    )
+  }
+
+  return new ApiError(
+    0,
+    `Conexiune eșuată — verifică serverul (${message || "eroare necunoscută"})`,
+    "NETWORK",
+  )
 }
 
 type Envelope<T> = { success: true; data: T } | { success: false; error: string; code?: string };
@@ -16,9 +48,8 @@ async function request<T>(
   init: RequestInit,
   getToken: GetToken,
 ): Promise<T> {
-  if (!BASE_URL) {
-    throw new ApiError(0, "VITE_API_URL nu este configurat");
-  }
+  const base = getApiBaseUrl();
+  const url = `${base}${path}`;
 
   const token = await getToken();
   const headers = new Headers(init.headers);
@@ -26,9 +57,9 @@ async function request<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, { ...init, headers });
-  } catch {
-    throw new ApiError(0, "Conexiune eșuată — verifică serverul");
+    response = await fetch(url, { ...init, headers });
+  } catch (err) {
+    throw buildFetchError(err);
   }
 
   const contentType = response.headers.get("content-type") ?? "";

@@ -2,7 +2,11 @@ import { Hono } from 'hono'
 import { requireAuth } from '../middleware/auth'
 import { writeAuditEntry } from '../lib/hash-chain'
 import { handleToolCall } from '../lib/claudia-tools'
-import { isGeminiConfigured, streamGeminiClaudia } from '../lib/gemini-claudia'
+import {
+  isGeminiConfigured,
+  isGeminiQuotaError,
+  streamGeminiClaudia,
+} from '../lib/gemini-claudia'
 import { findProcedure, detectEventType } from '../lib/knowledge-base'
 import type { ClaudIARequest } from '../types'
 
@@ -196,11 +200,12 @@ claudiaRoute.post('/', requireAuth, async (c) => {
       } catch (err) {
         console.error('ClaudIA error:', err)
         const mock = getMockResponse(lastUserMessage)
+        const fallbackNote = isGeminiQuotaError(err)
+          ? '\n\n(Notă: limita gratuită Gemini este depășită — îți arăt răspunsul demo. Verifică cota pe Google AI Studio sau încearcă mai târziu.)'
+          : '\n\n(Notă: răspuns de rezervă — verifică GEMINI_API_KEY și că backend-ul rulează.)'
         enqueue({
           type: 'text',
-          content:
-            mock.text +
-            '\n\n(Notă: răspuns de rezervă — verifică GEMINI_API_KEY.)',
+          content: mock.text + fallbackNote,
         })
         if (mock.tool && mock.tool_input) {
           enqueue({

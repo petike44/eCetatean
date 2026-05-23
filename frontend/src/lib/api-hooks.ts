@@ -365,3 +365,27 @@ export function useUpdateLifeEventStep() {
     },
   });
 }
+
+// —— Vehicles ——————————————————————————————————————————————
+
+export type Vehicle = {
+  id: string;
+  plate_number: string;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  vin: string | null;
+  fuel_type: string | null;
+  engine_cc: number | null;
+  color: string | null;
+};
+
+export function useVehicles() {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["vehicles"],
+    queryFn: () => apiGet<Vehicle[]>("/api/vehicles", getToken),
+    enabled: !!isSignedIn,
+  });
+}

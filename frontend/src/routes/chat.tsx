@@ -574,7 +574,12 @@ function PageAnswer({ reply }: { reply: Reply }) {
     setCreating(true);
     try {
       const result = await createLifeEvent.mutateAsync({ event_type: reply.event_type });
-      nav({ to: "/life-event/$id", params: { id: result.id } });
+      // DRPCIV car-purchase flow gets its own dedicated step-by-step page
+      if (reply.event_type === "bought_car" || reply.event_type === "car_domestic") {
+        nav({ to: "/drpciv/$eventId", params: { eventId: result.id } });
+      } else {
+        nav({ to: "/life-event/$id", params: { id: result.id } });
+      }
     } catch {
       show("error", "Eroare la crearea evenimentului civic");
       setCreating(false);

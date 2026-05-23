@@ -66,6 +66,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
         fee: 'Gratuit',
         deadline: 'Înainte de a merge la DRPCIV',
         form_type: 'cerere_drpciv',
+        category: 'docs',
         payment_url: null,
         tip: 'Generează cererea din aplicație cu datele tale pre-completate, tipărește și semnează-o. O vei depune la ghișeu împreună cu celelalte documente.',
         online_action: {
@@ -90,6 +91,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
         fee: '150–300 RON (tarif notarial)',
         deadline: 'Înainte de pasul 3',
         form_type: 'sale_contract',
+        category: 'onsite',
         payment_url: null,
         tip: 'Generează contractul din aplicație cu datele tale completate. Tipărește, semnează cu vânzătorul, mergi la notar.',
         online_action: {
@@ -111,6 +113,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
         fee: '100 RON total (13 + 87)',
         deadline: 'Înainte de programarea la DRPCIV',
         form_type: null,
+        category: 'financial',
         payment_url: 'https://www.ghiseu.ro',
         tip: 'Plătește online pe ghiseu.ro pentru a evita deplasarea la trezorerie.',
         online_action: {
@@ -138,6 +141,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
         fee: 'Inclus în taxa plătită la pasul 3',
         deadline: 'În maximum 30 de zile de la cumpărare',
         form_type: null,
+        category: 'onsite',
         payment_url: null,
         tip: 'Programează-te online pe politiaromana.ro cu cel puțin 3 zile înainte pentru a evita coada.',
         online_action: {
@@ -164,6 +168,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
         fee: 'Calculat după cilindree și combustibil',
         deadline: 'În maximum 30 de zile de la înmatriculare',
         form_type: 'impozit_auto',
+        category: 'financial',
         payment_url: 'https://www.ghiseu.ro',
         tip: 'După declarare, poți plăti impozitul direct pe ghiseu.ro.',
         online_action: {

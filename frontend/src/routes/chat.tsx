@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
+import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText, CreditCard, Building2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { DrpcivStepsPanel } from "@/components/DrpcivStepsPanel";
 import { locationsCatalog, type LocationItem } from "@/lib/office-locations";
@@ -462,6 +462,39 @@ function Chat() {
 
 const DRPCIV_EVENT_TYPES = new Set(["bought_car", "car_domestic", "car_from_germany"]);
 
+type CategoryChip = { icon: React.ReactNode; label: string; detail: string; color: string; bg: string };
+const EVENT_CATEGORY_CHIPS: Record<string, CategoryChip[]> = {
+  bought_car:       [
+    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
+    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "~100 RON taxe",          color: "text-amber-700", bg: "bg-amber-50" },
+    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "Notar + DRPCIV",          color: "text-green-700", bg: "bg-green-50" },
+  ],
+  car_domestic:     [
+    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
+    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "~100 RON taxe",          color: "text-amber-700", bg: "bg-amber-50" },
+    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "Notar + DRPCIV",          color: "text-green-700", bg: "bg-green-50" },
+  ],
+  car_from_germany: [
+    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
+    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "~100 RON taxe",          color: "text-amber-700", bg: "bg-amber-50" },
+    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "DRPCIV + RAR",            color: "text-green-700", bg: "bg-green-50" },
+  ],
+  moving_to_cluj:   [
+    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
+    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "DGEP Cluj",               color: "text-green-700", bg: "bg-green-50" },
+  ],
+  renewal_id:       [
+    { icon: <FileText size={12} />,   label: "Documente",    detail: "1 formular · Gratuit",  color: "text-blue-700",  bg: "bg-blue-50" },
+    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "~7 RON taxă",            color: "text-amber-700", bg: "bg-amber-50" },
+    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "SPCLEP Cluj",             color: "text-green-700", bg: "bg-green-50" },
+  ],
+  pfa_registration: [
+    { icon: <FileText size={12} />,   label: "Documente",    detail: "Dosar complet",          color: "text-blue-700",  bg: "bg-blue-50" },
+    { icon: <CreditCard size={12} />, label: "Plăți",        detail: "Taxe ONRC",              color: "text-amber-700", bg: "bg-amber-50" },
+    { icon: <Building2 size={12} />,  label: "La ghișeu",    detail: "ONRC Cluj",               color: "text-green-700", bg: "bg-green-50" },
+  ],
+};
+
 function ReplyExtras({
   reply,
   onTrackProgress,
@@ -611,6 +644,22 @@ function ReplyExtras({
         <div>
           <p className="font-display font-semibold text-[13px] text-text-primary mb-2">Locații</p>
           <PageMap locations={reply.locations} />
+        </div>
+      )}
+
+      {/* Category chips — shown before action buttons when event_type is known */}
+      {reply.event_type && EVENT_CATEGORY_CHIPS[reply.event_type] && (
+        <div className="flex flex-wrap gap-2">
+          {EVENT_CATEGORY_CHIPS[reply.event_type].map((chip) => (
+            <div
+              key={chip.label}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${chip.bg} ${chip.color} border-current/20`}
+            >
+              {chip.icon}
+              <span className="text-[12px] font-semibold">{chip.label}</span>
+              <span className="text-[11px] opacity-70">· {chip.detail}</span>
+            </div>
+          ))}
         </div>
       )}
 

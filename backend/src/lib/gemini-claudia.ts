@@ -9,7 +9,33 @@ import { LIFE_EVENTS, OFFICES } from './knowledge-base'
 import { handleToolCall } from './claudia-tools'
 import type { ChatMessage, Profile } from '../types'
 
-const MODEL = 'gemini-2.0-flash'
+const MODEL_CANDIDATES = [
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-2.5-flash',
+] as const
+
+export class GeminiQuotaError extends Error {
+  constructor(message = 'Gemini API quota exceeded') {
+    super(message)
+    this.name = 'GeminiQuotaError'
+  }
+}
+
+export function isGeminiQuotaError(err: unknown): boolean {
+  if (err instanceof GeminiQuotaError) return true
+  const msg = err instanceof Error ? err.message : String(err)
+  return (
+    msg.includes('429') ||
+    msg.includes('quota') ||
+    msg.includes('Too Many Requests') ||
+    msg.includes('RESOURCE_EXHAUSTED')
+  )
+}
+
+function isRetryableGeminiError(err: unknown): boolean {
+  return isGeminiQuotaError(err)
+}
 
 function buildSystemPrompt(profile?: Partial<Profile>): string {
   const eventsSummary = Object.values(LIFE_EVENTS)
@@ -123,7 +149,8 @@ function toGeminiHistory(messages: ChatMessage[]): Content[] {
   }))
 }
 
-export async function streamGeminiClaudia(
+async function streamWithModel(
+  modelName: string,
   messages: ChatMessage[],
   profile: Partial<Profile> | undefined,
   enqueue: (line: object) => void
@@ -134,7 +161,7 @@ export async function streamGeminiClaudia(
   const lastUser = messages.filter((m) => m.role === 'user').pop()?.content ?? ''
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
-    model: MODEL,
+    model: modelName,
     systemInstruction: buildSystemPrompt(profile),
     tools: [{ functionDeclarations: toolDeclarations }],
   })
@@ -177,6 +204,33 @@ export async function streamGeminiClaudia(
       })
     }
   }
+}
+
+export async function streamGeminiClaudia(
+  messages: ChatMessage[],
+  profile: Partial<Profile> | undefined,
+  enqueue: (line: object) => void
+): Promise<void> {
+  let lastError: unknown
+
+  for (const modelName of MODEL_CANDIDATES) {
+    try {
+      await streamWithModel(modelName, messages, profile, enqueue)
+      return
+    } catch (err) {
+      lastError = err
+      if (isRetryableGeminiError(err)) {
+        console.warn(`Gemini model ${modelName} unavailable, trying next…`, err)
+        continue
+      }
+      throw err
+    }
+  }
+
+  if (isGeminiQuotaError(lastError)) {
+    throw new GeminiQuotaError()
+  }
+  throw lastError
 }
 
 export function isGeminiConfigured(): boolean {

@@ -9,11 +9,8 @@ import { civilServantRoute } from './routes/civil-servant'
 import { healthRoute } from './routes/health'
 import { lifeEventsRoute } from './routes/life-events'
 import { profileRoute } from './routes/profile'
-<<<<<<< Updated upstream
 import { newsRoute } from './routes/news'
-=======
 import { vehiclesRoute } from './routes/vehicles'
->>>>>>> Stashed changes
 
 const app = new Hono()
 
@@ -30,11 +27,8 @@ app.route('/api/civil-servant', civilServantRoute)
 app.route('/api/health', healthRoute)
 app.route('/api/life-events', lifeEventsRoute)
 app.route('/api/profile', profileRoute)
-<<<<<<< Updated upstream
 app.route('/api/news', newsRoute)
-=======
 app.route('/api/vehicles', vehiclesRoute)
->>>>>>> Stashed changes
 
 // —— Root ——————————————————————————————————————————————————————
 app.get('/', (c) =>

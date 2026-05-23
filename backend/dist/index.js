@@ -7,6 +7,11 @@ import { reportsRoute } from './routes/reports';
 import { auditRoute } from './routes/audit';
 import { civilServantRoute } from './routes/civil-servant';
 import { healthRoute } from './routes/health';
+import { lifeEventsRoute } from './routes/life-events';
+import { profileRoute } from './routes/profile';
+import { formsRoute } from './routes/forms';
+import { newsRoute } from './routes/news';
+import { vehiclesRoute } from './routes/vehicles';
 const app = new Hono();
 // —— Global Middleware ——————————————————————————————————————————
 app.use('*', logger());
@@ -18,12 +23,17 @@ app.route('/api/reports', reportsRoute);
 app.route('/api/audit', auditRoute);
 app.route('/api/civil-servant', civilServantRoute);
 app.route('/api/health', healthRoute);
+app.route('/api/life-events', lifeEventsRoute);
+app.route('/api/profile', profileRoute);
+app.route('/api/forms', formsRoute);
+app.route('/api/news', newsRoute);
+app.route('/api/vehicles', vehiclesRoute);
 // —— Root ——————————————————————————————————————————————————————
 app.get('/', (c) => c.json({
     app: 'eCetățean API',
     version: '1.0.0',
     status: 'running',
-    note: 'ClaudIA AI integration must be added manually',
+    note: 'ClaudIA uses Google Gemini when GEMINI_API_KEY is set',
 }));
 // —— 404 ———————————————————————————————————————————————————————
 app.notFound((c) => c.json({ success: false, error: 'Endpoint negăsit' }, 404));

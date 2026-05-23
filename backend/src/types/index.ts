@@ -3,7 +3,7 @@
 export interface ClerkPayload {
   sub: string
   email?: string
-  role?: 'citizen' | 'civil_servant'
+  role?: 'citizen' | 'civil_servant' | 'admin'
   exp: number
   iat: number
 }

@@ -6,6 +6,7 @@ import {
   apiPostJson,
   apiPatchJson,
   apiPostForm,
+  apiDelete,
   apiStreamPost,
   downloadAutofilledPdf,
   downloadPdf,
@@ -168,6 +169,41 @@ export function useNews() {
   return useQuery({
     queryKey: ["news"],
     queryFn: () => apiGet<NewsItem[]>("/api/news", async () => null),
+  });
+}
+
+export function useCreateNews() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { title: string; summary: string; body?: string; publish?: boolean }) =>
+      apiPostJson<NewsItem>("/api/news", body, getToken),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+  });
+}
+
+export function useGenerateNews() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { topic?: string; publish?: boolean }) => {
+      const res = await apiPostJson<NewsItem & { generated?: boolean }>(
+        "/api/news/generate",
+        body,
+        getToken,
+      );
+      return res;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+  });
+}
+
+export function useDeleteNews() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<{ success: boolean }>(`/api/news/${id}`, getToken),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
   });
 }
 

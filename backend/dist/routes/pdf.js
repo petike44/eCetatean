@@ -17,15 +17,21 @@ pdfRoute.post('/generate', requireAuth, async (c) => {
     if (!form_type) {
         return c.json({ success: false, error: 'Tipul formularului este obligatoriu' }, 400);
     }
-    let profileData = profile;
-    if (!profileData?.full_name) {
+    // Always fetch from DB so the PDF gets the most complete data.
+    // Frontend-supplied profile fields override DB values (lets the user
+    // fill in fields that aren't stored yet).
+    let profileData = profile ?? {};
+    try {
         const { data: dbProfile } = await supabaseAdmin
             .from('profiles')
             .select('*')
             .eq('user_id', userId)
             .maybeSingle();
         if (dbProfile)
-            profileData = { ...dbProfile, ...profile };
+            profileData = { ...dbProfile, ...profileData };
+    }
+    catch (err) {
+        console.error('Could not fetch profile from DB:', err);
     }
     try {
         const pdfBuffer = await generatePDF(form_type, profileData ?? {}, additional_data);

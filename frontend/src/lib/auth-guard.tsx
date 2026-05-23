@@ -1,4 +1,5 @@
-import { useAuth } from "@/lib/clerk-stub";
+import { useAuth, useUser } from "@/lib/clerk-stub";
+import { isAdminUser } from "@/lib/admin";
 import { Navigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -19,6 +20,29 @@ export function Protected({ children }: { children: ReactNode }) {
 
   if (!isSignedIn) {
     return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+export function AdminProtected({ children }: { children: ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
+
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-bg">
+        <p className="text-sm text-text-secondary">Se încarcă...</p>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!isAdminUser(user)) {
+    return <Navigate to="/chat" replace />;
   }
 
   return <>{children}</>;

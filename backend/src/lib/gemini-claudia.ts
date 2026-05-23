@@ -9,13 +9,14 @@ import { LIFE_EVENTS, OFFICES } from './knowledge-base'
 import { handleToolCall } from './claudia-tools'
 import type { ChatMessage, Profile } from '../types'
 
-// Prefer models that are available on the current API key / free tier.
-// Order matters: a 404 or 429 on an early model must not block later candidates.
+// Prefer lighter models first to preserve free-tier quota. Never use *-image models.
 const MODEL_CANDIDATES = [
-  'gemini-2.5-flash',
   'gemini-2.0-flash-lite',
   'gemini-2.0-flash',
+  'gemini-2.5-flash',
 ] as const
+
+const IMAGE_MODEL_PATTERN = /-image$/i
 
 export class GeminiQuotaError extends Error {
   constructor(message = 'Gemini API quota exceeded') {
@@ -36,13 +37,28 @@ export function isGeminiQuotaError(err: unknown): boolean {
 }
 
 function isRetryableGeminiError(err: unknown): boolean {
-  if (isGeminiQuotaError(err)) return true
+  if (isGeminiQuotaError(err)) return false
   const msg = err instanceof Error ? err.message : String(err)
   return (
     msg.includes('[404 Not Found]') ||
     msg.includes('is not found') ||
     msg.includes('not supported for generateContent')
   )
+}
+
+/** Extract text only — ignore image/binary inline parts from multimodal responses. */
+function textFromChunk(chunk: { text?: () => string; candidates?: Array<{ content?: { parts?: Part[] } }> }): string {
+  try {
+    const direct = chunk.text?.()
+    if (direct) return direct
+  } catch {
+    // chunk.text() throws when the response contains non-text parts (e.g. images)
+  }
+  const parts = chunk.candidates?.[0]?.content?.parts ?? []
+  return parts
+    .filter((p): p is Part & { text: string } => typeof p.text === 'string')
+    .map((p) => p.text)
+    .join('')
 }
 
 function buildSystemPrompt(profile?: Partial<Profile>): string {
@@ -63,6 +79,7 @@ function buildSystemPrompt(profile?: Partial<Profile>): string {
 
   return `Ești ClaudIA, asistent civic digital pentru cetățenii din Cluj-Napoca, România.
 Răspunde întotdeauna în limba română, clar și empatic.
+Răspunsurile tale sunt doar text — nu genera imagini, fotografii sau fișiere vizuale.
 Folosește instrumentele (funcțiile) când utilizatorul descrie un eveniment de viață, cere un formular PDF, informații despre un birou, clarificări, sau remindere.
 Nu inventa proceduri — bazează-te pe baza de cunoștințe de mai jos.
 Pentru mașini: diferențiază car_domestic (cumpărat în România) vs car_from_germany (import UE).
@@ -163,6 +180,10 @@ async function streamWithModel(
   profile: Partial<Profile> | undefined,
   enqueue: (line: object) => void
 ): Promise<void> {
+  if (IMAGE_MODEL_PATTERN.test(modelName)) {
+    throw new Error(`Image generation model blocked: ${modelName}`)
+  }
+
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY missing')
 
@@ -172,6 +193,9 @@ async function streamWithModel(
     model: modelName,
     systemInstruction: buildSystemPrompt(profile),
     tools: [{ functionDeclarations: toolDeclarations }],
+    generationConfig: {
+      responseMimeType: 'text/plain',
+    },
   })
 
   const history = toGeminiHistory(messages)
@@ -181,7 +205,7 @@ async function streamWithModel(
 
   let fullText = ''
   for await (const chunk of result.stream) {
-    const t = chunk.text()
+    const t = textFromChunk(chunk)
     if (t) {
       fullText += t
       enqueue({ type: 'text', content: t })
@@ -222,11 +246,15 @@ export async function streamGeminiClaudia(
   let lastError: unknown
 
   for (const modelName of MODEL_CANDIDATES) {
+    if (IMAGE_MODEL_PATTERN.test(modelName)) continue
     try {
       await streamWithModel(modelName, messages, profile, enqueue)
       return
     } catch (err) {
       lastError = err
+      if (isGeminiQuotaError(err)) {
+        throw new GeminiQuotaError()
+      }
       if (isRetryableGeminiError(err)) {
         console.warn(`Gemini model ${modelName} unavailable, trying next…`, err)
         continue

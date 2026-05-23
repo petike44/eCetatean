@@ -1,57 +1,77 @@
-// ────────────────────────────────────────────────────────────────
-// ⚠️  CLAUDIA AI AGENT — STUB ONLY
-// ────────────────────────────────────────────────────────────────
-// DO NOT install @anthropic-ai/sdk here.
-// DO NOT reference ANTHROPIC_API_KEY in this file.
-// This stub returns realistic mock responses so the frontend
-// works completely during development and demo.
-//
-// TO ADD THE REAL CLAUDIA INTEGRATION LATER:
-// 1. npm install @anthropic-ai/sdk
-// 2. Add ANTHROPIC_API_KEY to .env.local
-// 3. Replace the mock handler below with real Anthropic streaming
-// 4. The tool definitions, knowledge base, and audit logging
-//    are already wired up correctly — only the AI call changes
-// ────────────────────────────────────────────────────────────────
 import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
 import { writeAuditEntry } from '../lib/hash-chain';
-import { findProcedure, detectEventType, OFFICES, } from '../lib/knowledge-base';
+import { handleToolCall } from '../lib/claudia-tools';
+import { isGeminiConfigured, isGeminiQuotaError, streamGeminiClaudia, } from '../lib/gemini-claudia';
+import { findProcedure, detectEventType } from '../lib/knowledge-base';
 export const claudiaRoute = new Hono();
-function handleToolCall(toolName, input) {
-    switch (toolName) {
-        case 'handle_life_event': {
-            const procedure = findProcedure(input.event_type);
-            if (!procedure) {
-                return {
-                    type: 'text_only',
-                    message: 'Nu am informații despre acest eveniment încă.',
-                };
-            }
-            return { type: 'action_plan', procedure };
-        }
-        case 'find_office_info': {
-            const office = OFFICES[input.office_type];
-            if (!office)
-                return { type: 'text_only', message: 'Birou negăsit.' };
-            return { type: 'office_info', office, office_type: input.office_type };
-        }
-        case 'generate_pdf': {
-            return { type: 'pdf_ready', form_type: input.form_type };
-        }
-        case 'set_reminder': {
-            return {
-                type: 'reminder_set',
-                title: input.title,
-                deadline_days: Number(input.deadline_days),
-                category: input.category,
-            };
-        }
-        default:
-            return { type: 'text_only', message: '' };
+function detectCarSubflow(msg) {
+    const lower = msg.toLowerCase();
+    const hasGermany = lower.includes('germania') ||
+        lower.includes('germani') ||
+        lower.includes('germany') ||
+        lower.includes('ue') ||
+        lower.includes('europa') ||
+        lower.includes('strainatate') ||
+        lower.includes('străinătate') ||
+        lower.includes('import') ||
+        lower.includes('din afar');
+    const hasCar = lower.includes('mașin') ||
+        lower.includes('masin') ||
+        lower.includes('masina') ||
+        lower.includes('auto');
+    const hasDomestic = lower.includes('romania') ||
+        lower.includes('românia') ||
+        lower.includes('intern') ||
+        lower.includes('local');
+    if (hasCar && hasGermany) {
+        return { needs_clarification: false, event_type: 'car_from_germany' };
     }
+    if (hasCar && hasDomestic) {
+        return { needs_clarification: false, event_type: 'car_domestic' };
+    }
+    if (hasCar) {
+        return {
+            needs_clarification: true,
+            question: 'Mașina a fost cumpărată din România sau din Germania/altă țară UE?',
+            options: ['Din România', 'Din Germania/UE'],
+        };
+    }
+    return { needs_clarification: false };
 }
 function getMockResponse(lastMessage) {
+    const lower = lastMessage.toLowerCase();
+    const hasCar = lower.includes('mașin') ||
+        lower.includes('masin') ||
+        lower.includes('masina') ||
+        lower.includes('auto') ||
+        lower.includes('cumpărat') ||
+        lower.includes('cumparat') ||
+        lower.includes('adus') ||
+        lower.includes('aduc');
+    if (hasCar) {
+        const carFlow = detectCarSubflow(lastMessage);
+        if (carFlow.needs_clarification) {
+            return {
+                text: carFlow.question,
+                tool: 'ask_clarification',
+                tool_input: {
+                    question: carFlow.question,
+                    options: JSON.stringify(carFlow.options ?? []),
+                },
+            };
+        }
+        if (carFlow.event_type) {
+            const procedure = findProcedure(carFlow.event_type);
+            return {
+                text: procedure
+                    ? `Am înțeles! ${procedure.title}. Iată planul tău complet:`
+                    : 'Te pot ajuta cu asta. Iată ce trebuie să faci:',
+                tool: 'handle_life_event',
+                tool_input: { event_type: carFlow.event_type },
+            };
+        }
+    }
     const eventType = detectEventType(lastMessage);
     if (eventType) {
         const procedure = findProcedure(eventType);
@@ -90,7 +110,7 @@ function getMockResponse(lastMessage) {
         };
     }
     return {
-        text: 'Bună! Sunt ClaudIA, asistentul tău civic. Descrie situația ta — de exemplu "mi-am cumpărat o mașină" sau "mă mut la Cluj" — și îți ofer un plan complet cu toți pașii necesari. (Notă: aceasta este o versiune demo — integrarea AI completă va fi adăugată de echipa de backend.)',
+        text: 'Bună! Sunt ClaudIA, asistentul tău civic. Descrie situația ta — de exemplu "mi-am cumpărat o mașină" sau "mă mut la Cluj" — și îți ofer un plan complet cu toți pașii necesari.',
         tool: null,
         tool_input: null,
     };
@@ -104,7 +124,7 @@ claudiaRoute.post('/', requireAuth, async (c) => {
     catch {
         return c.json({ success: false, error: 'Request body invalid' }, 400);
     }
-    const { messages } = body;
+    const { messages, profile } = body;
     if (!messages || messages.length === 0) {
         return c.json({ success: false, error: 'Mesajele lipsesc' }, 400);
     }
@@ -116,18 +136,49 @@ claudiaRoute.post('/', requireAuth, async (c) => {
         data: { message_count: messages.length },
     });
     const encoder = new TextEncoder();
+    const useGemini = isGeminiConfigured();
     const stream = new ReadableStream({
         async start(controller) {
-            await new Promise((resolve) => setTimeout(resolve, 900));
-            const mock = getMockResponse(lastUserMessage);
-            controller.enqueue(encoder.encode(JSON.stringify({ type: 'text', content: mock.text }) + '\n'));
-            if (mock.tool && mock.tool_input) {
-                const toolResult = handleToolCall(mock.tool, mock.tool_input);
-                controller.enqueue(encoder.encode(JSON.stringify({
-                    type: 'tool_result',
-                    tool_name: mock.tool,
-                    result: toolResult,
-                }) + '\n'));
+            const enqueue = (obj) => {
+                controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
+            };
+            try {
+                if (useGemini) {
+                    await streamGeminiClaudia(messages, profile, enqueue);
+                }
+                else {
+                    await new Promise((resolve) => setTimeout(resolve, 600));
+                    const mock = getMockResponse(lastUserMessage);
+                    enqueue({ type: 'text', content: mock.text });
+                    if (mock.tool && mock.tool_input) {
+                        const toolResult = handleToolCall(mock.tool, mock.tool_input);
+                        enqueue({
+                            type: 'tool_result',
+                            tool_name: mock.tool,
+                            result: toolResult,
+                        });
+                    }
+                }
+            }
+            catch (err) {
+                console.error('ClaudIA error:', err);
+                const quotaExceeded = isGeminiQuotaError(err);
+                const mock = getMockResponse(lastUserMessage);
+                const fallbackNote = quotaExceeded
+                    ? '\n\n(Limita zilnică Gemini a fost depășită. Răspuns text de rezervă — fără generare de documente sau imagini. Verifică cota pe Google AI Studio sau încearcă mai târziu.)'
+                    : '\n\n(Notă: răspuns de rezervă — verifică GEMINI_API_KEY și că backend-ul rulează.)';
+                enqueue({
+                    type: 'text',
+                    content: mock.text + fallbackNote,
+                });
+                // On quota fallback: text only — skip tools so no PDF/map panels are triggered.
+                if (!quotaExceeded && mock.tool && mock.tool_input) {
+                    enqueue({
+                        type: 'tool_result',
+                        tool_name: mock.tool,
+                        result: handleToolCall(mock.tool, mock.tool_input),
+                    });
+                }
             }
             controller.close();
         },

@@ -1,5 +1,5 @@
 import { createMiddleware } from 'hono/factory';
-import { verifyClerkJWT } from '../lib/clerk';
+import { verifySupabaseJWT } from '../lib/supabase-jwt';
 export const requireAuth = createMiddleware(async (c, next) => {
     // —— Local auth stub ————————————————————————————————————————
     // When AUTH_STUB=true, skip Clerk JWT verification and inject a
@@ -25,7 +25,7 @@ export const requireAuth = createMiddleware(async (c, next) => {
     }
     const token = authHeader.replace('Bearer ', '');
     try {
-        const payload = await verifyClerkJWT(token);
+        const payload = await verifySupabaseJWT(token);
         c.set('userId', payload.sub);
         c.set('userRole', payload.role || 'citizen');
         c.set('clerkPayload', payload);

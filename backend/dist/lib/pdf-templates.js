@@ -1,13 +1,15 @@
 // ────────────────────────────────────────────────────────────
-// PDF TEMPLATE STUBS
+// PDF TEMPLATE GENERATION
 // ────────────────────────────────────────────────────────────
-// Each template function returns a Buffer containing the PDF.
-// These are simplified implementations using basic text layout.
-// For production: recreate the exact official Romanian form layout.
+// cerere_drpciv uses pdf-lib to overlay text on the real PDF.
+// All other forms use @pdfme/generator on a blank canvas.
 // ────────────────────────────────────────────────────────────
 import { generate } from '@pdfme/generator';
 import { BLANK_PDF } from '@pdfme/common';
 import { supabaseAdmin } from './supabase';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import * as fs from 'fs';
+import * as path from 'path';
 const FONT_SIZE = 11;
 const LINE_HEIGHT = 8;
 function buildSimpleTextTemplate(fields, basePdf = BLANK_PDF) {
@@ -27,9 +29,12 @@ function buildSimpleTextTemplate(fields, basePdf = BLANK_PDF) {
     };
 }
 export async function generatePDF(formType, profile, additionalData = {}) {
+    const resolvedType = formType === 'anaf_tva_certificate'
+        ? 'anaf_tva_certificate_request'
+        : formType;
     const today = new Date().toLocaleDateString('ro-RO');
     let inputs = [];
-    switch (formType) {
+    switch (resolvedType) {
         case 'sale_contract':
             inputs = [
                 {
@@ -152,51 +157,184 @@ export async function generatePDF(formType, profile, additionalData = {}) {
             ];
             break;
         case 'cerere_drpciv':
-            // DRPCIV request form for vehicle registration from EU
-            inputs = [
-                {
-                    'Subsemnatul(a)': profile.full_name ?? '_______________',
-                    'C.N.P. (C.U.I.)': profile.cnp ?? '_______________',
-                    Localitate: profile.city ?? 'Cluj-Napoca',
-                    Strada: profile.address ?? '_______________',
-                    Județ: additionalData.county ?? 'Cluj',
-                    'E-mail': additionalData.email ?? profile.email ?? '_______________',
-                    Telefon: additionalData.phone ?? '_______________',
-                    'Solicit: Înmatricularea': 'X',
-                    'Vehicul — Marcă': additionalData.make ?? '_______________',
-                    'Vehicul — Tip': additionalData.model ?? '_______________',
-                    'Vehicul — Număr identificare': additionalData.vin ?? '_______________',
-                    'Vehicul — Număr înmatriculare curent': additionalData.current_plate ?? '_____',
-                    // Optional: other person using vehicle
-                    'Altă persoană — Nume': additionalData.other_person_name ?? '',
-                    'Altă persoană — C.N.P.': additionalData.other_person_cnp ?? '',
-                    // Agreements
-                    'Acord cont internet': 'DA',
-                    'Acord notificări e-mail': 'DA',
-                    'Declar că am citit Nota de Informare': 'DA',
-                    Data: today,
-                    Semnătură: '_______________',
-                },
-            ];
-            break;
+            // Handled below with pdf-lib — skip the pdfme path
+            return generateCerereDrpciv(profile, additionalData);
         default:
             throw new Error(`Tip de formular necunoscut: ${formType}`);
     }
     const fieldNames = Object.keys(inputs[0]);
-    let basePdfData = BLANK_PDF;
-    try {
-        const { data, error } = await supabaseAdmin.storage
-            .from('pdf-templates')
-            .download(`${formType}.pdf`);
-        if (data && !error) {
-            const arrayBuffer = await data.arrayBuffer();
-            basePdfData = new Uint8Array(arrayBuffer);
-        }
-    }
-    catch (err) {
-        console.error('Error fetching base PDF from Supabase:', err);
-    }
+    const basePdfData = await loadTemplatePdf(resolvedType);
     const template = buildSimpleTextTemplate(fieldNames, basePdfData);
     const pdf = await generate({ template, inputs });
     return Buffer.from(pdf);
+}
+// ────────────────────────────────────────────────────────────
+// cerere_drpciv — overlays filled text onto the official form
+// ────────────────────────────────────────────────────────────
+// Loads a template PDF for @pdfme forms from Supabase storage.
+// Checks pdf-forms bucket first (public), then pdf-templates.
+// Falls back to BLANK_PDF with a console warning if not found.
+// ────────────────────────────────────────────────────────────
+async function loadTemplatePdf(formType) {
+    const fileName = `${formType}.pdf`;
+    const buckets = ['pdf-forms', 'pdf-templates'];
+    for (const bucket of buckets) {
+        // Attempt 1 — authenticated SDK download
+        try {
+            const { data, error } = await supabaseAdmin.storage.from(bucket).download(fileName);
+            if (data && !error) {
+                console.log(`Template loaded via SDK: ${bucket}/${fileName}`);
+                return new Uint8Array(await data.arrayBuffer());
+            }
+        }
+        catch { /* try next */ }
+        // Attempt 2 — public URL (works when bucket is public)
+        try {
+            const { data: { publicUrl } } = supabaseAdmin.storage.from(bucket).getPublicUrl(fileName);
+            const res = await fetch(publicUrl);
+            if (res.ok) {
+                console.log(`Template loaded via public URL: ${publicUrl}`);
+                return new Uint8Array(await res.arrayBuffer());
+            }
+        }
+        catch { /* try next */ }
+    }
+    console.warn(`Template ${fileName} not found in any bucket — using blank canvas`);
+    return BLANK_PDF;
+}
+// ────────────────────────────────────────────────────────────
+// Coordinates assume A4 (595 x 842 pt), origin bottom-left.
+// ────────────────────────────────────────────────────────────
+async function generateCerereDrpciv(profile, additionalData) {
+    const templateBytes = await loadCerereDrpcivTemplate();
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const page = pdfDoc.getPages()[0];
+    const { height } = page.getSize();
+    const today = new Date().toLocaleDateString('ro-RO');
+    const black = rgb(0, 0, 0);
+    const fontSize = 9;
+    // Try AcroForm filling first (works if the PDF has named fields)
+    const form = pdfDoc.getForm();
+    const fields = form.getFields();
+    if (fields.length > 0) {
+        // PDF has fillable AcroForm fields — fill by common Romanian gov field names
+        const trySet = (candidates, value) => {
+            for (const name of candidates) {
+                try {
+                    const f = form.getTextField(name);
+                    f.setText(value);
+                    return;
+                }
+                catch { /* try next */ }
+            }
+        };
+        const tryCheck = (candidates) => {
+            for (const name of candidates) {
+                try {
+                    form.getCheckBox(name).check();
+                    return;
+                }
+                catch { /* try next */ }
+            }
+        };
+        trySet(['Subsemnatul', 'subsemnatul', 'Nume', 'nume_prenume'], profile.full_name ?? '');
+        trySet(['CNP', 'cnp', 'C.N.P.'], profile.cnp ?? '');
+        trySet(['Localitate', 'localitate', 'Localitatea'], profile.city ?? 'Cluj-Napoca');
+        trySet(['Strada', 'strada', 'Adresa'], profile.address ?? '');
+        trySet(['Email', 'email', 'E-mail'], additionalData.email ?? profile.email ?? '');
+        trySet(['Telefon', 'telefon', 'Tel'], additionalData.phone ?? profile.phone ?? '');
+        trySet(['Marca', 'marca', 'Vehicul_Marca'], additionalData.make ?? '');
+        trySet(['Tip', 'tip', 'Vehicul_Tip'], additionalData.model ?? '');
+        trySet(['NrIdentificare', 'vin', 'Numar_Identificare'], additionalData.vin ?? '');
+        trySet(['NrInmatriculare', 'nr_inmatriculare'], additionalData.current_plate ?? '');
+        trySet(['Data', 'data'], today);
+        tryCheck(['Transcriere', 'transcrierea', 'op_transcriere']);
+        form.flatten();
+    }
+    else {
+        // No AcroForm fields — overlay text at fixed coordinates
+        const draw = (text, x, yFromTop) => {
+            page.drawText(text, {
+                x,
+                y: height - yFromTop,
+                size: fontSize,
+                font,
+                color: black,
+            });
+        };
+        // ── Personal data ───────────────────────────────────────
+        draw(profile.full_name ?? '', 178, 148);
+        draw(profile.cnp ?? '', 98, 162);
+        draw(profile.city ?? 'Cluj-Napoca', 330, 162);
+        // Address split into street and number for the form lines
+        const addr = profile.address ?? '';
+        const streetMatch = addr.match(/^(.*?)\s+nr\.?\s*(\S+)/i);
+        if (streetMatch) {
+            draw(streetMatch[1], 98, 176);
+            draw(streetMatch[2], 213, 176);
+        }
+        else {
+            draw(addr, 98, 176);
+        }
+        draw(additionalData.bloc ?? '', 241, 176);
+        draw(additionalData.scara ?? '', 263, 176);
+        draw(additionalData.etaj ?? '', 285, 176);
+        draw(additionalData.ap ?? '', 72, 190);
+        draw(additionalData.county ?? 'Cluj', 173, 190);
+        draw(additionalData.email ?? profile.email ?? '', 340, 190);
+        draw(additionalData.phone ?? profile.phone ?? '', 98, 204);
+        // ── Operation type checkbox (transcrierea = 3rd option) ─
+        // Draw an X in the checkbox for "transcrierea transmiterii dreptului de proprietate"
+        draw('X', 36, 246);
+        // ── Vehicle data ────────────────────────────────────────
+        draw(additionalData.make ?? '', 170, 363);
+        draw(additionalData.model ?? '', 315, 363);
+        draw(additionalData.vin ?? '', 98, 377);
+        draw(additionalData.current_plate ?? '', 325, 377);
+        // ── Date ────────────────────────────────────────────────
+        draw(today, 55, 516);
+    }
+    const bytes = await pdfDoc.save();
+    return Buffer.from(bytes);
+}
+async function loadCerereDrpcivTemplate() {
+    const BUCKET = 'pdf-forms';
+    const FILE = 'cerere-inmatriculare-drpciv.pdf.pdf';
+    // 1. Local assets folder (fastest — copy the file here for offline dev)
+    const localPath = path.join(process.cwd(), 'src', 'assets', FILE);
+    if (fs.existsSync(localPath)) {
+        console.log(`PDF template loaded from local: ${localPath}`);
+        return new Uint8Array(fs.readFileSync(localPath));
+    }
+    // 2. Authenticated SDK download (requires real service_role key)
+    try {
+        const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(FILE);
+        if (data && !error) {
+            console.log(`PDF template loaded via SDK: ${BUCKET}/${FILE}`);
+            return new Uint8Array(await data.arrayBuffer());
+        }
+        if (error)
+            console.warn(`SDK download rejected (${error.message}) — trying public URL`);
+    }
+    catch (err) {
+        console.warn('SDK download threw:', err);
+    }
+    // 3. Public URL fallback (works when bucket is set to public)
+    try {
+        const { data: { publicUrl } } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(FILE);
+        console.log(`Trying public URL: ${publicUrl}`);
+        const res = await fetch(publicUrl);
+        if (res.ok) {
+            console.log(`PDF template loaded via public URL`);
+            return new Uint8Array(await res.arrayBuffer());
+        }
+        console.warn(`Public URL returned ${res.status}`);
+    }
+    catch (err) {
+        console.warn('Public URL fetch failed:', err);
+    }
+    throw new Error(`Cannot load cerere_drpciv.pdf. ` +
+        `Make the "${BUCKET}" bucket public in Supabase Dashboard → Storage → ${BUCKET} → Policies, ` +
+        `or place the file at backend/src/assets/${FILE}.`);
 }

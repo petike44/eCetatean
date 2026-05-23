@@ -25,6 +25,7 @@ import { Route as ActionPlanRouteImport } from './routes/action-plan'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LifeEventIdRouteImport } from './routes/life-event.$id'
 import { Route as DrpcivEventIdRouteImport } from './routes/drpciv.$eventId'
+import { Route as AdminNewsRouteImport } from './routes/admin.news'
 
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
@@ -106,6 +107,11 @@ const DrpcivEventIdRoute = DrpcivEventIdRouteImport.update({
   path: '/drpciv/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminNewsRoute = AdminNewsRouteImport.update({
+  id: '/admin/news',
+  path: '/admin/news',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
+  '/admin/news': typeof AdminNewsRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
+  '/admin/news': typeof AdminNewsRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
+  '/admin/news': typeof AdminNewsRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/sitemap.xml'
     | '/staff'
+    | '/admin/news'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/sitemap.xml'
     | '/staff'
+    | '/admin/news'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   id:
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/sitemap.xml'
     | '/staff'
+    | '/admin/news'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   fileRoutesById: FileRoutesById
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   ReportRoute: typeof ReportRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StaffRoute: typeof StaffRoute
+  AdminNewsRoute: typeof AdminNewsRoute
   DrpcivEventIdRoute: typeof DrpcivEventIdRoute
   LifeEventIdRoute: typeof LifeEventIdRoute
 }
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DrpcivEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/news': {
+      id: '/admin/news'
+      path: '/admin/news'
+      fullPath: '/admin/news'
+      preLoaderRoute: typeof AdminNewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -370,6 +390,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportRoute: ReportRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StaffRoute: StaffRoute,
+  AdminNewsRoute: AdminNewsRoute,
   DrpcivEventIdRoute: DrpcivEventIdRoute,
   LifeEventIdRoute: LifeEventIdRoute,
 }

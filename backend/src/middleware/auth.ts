@@ -5,7 +5,7 @@ import type { ClerkPayload } from '../types'
 declare module 'hono' {
   interface ContextVariableMap {
     userId: string
-    userRole: 'citizen' | 'civil_servant'
+    userRole: 'citizen' | 'civil_servant' | 'admin'
     clerkPayload: ClerkPayload
   }
 }
@@ -45,7 +45,7 @@ export const requireAuth = createMiddleware(async (c, next) => {
   try {
     const payload = await verifySupabaseJWT(token)
     c.set('userId', payload.sub)
-    c.set('userRole', (payload.role as 'citizen' | 'civil_servant') || 'citizen')
+    c.set('userRole', (payload.role as 'citizen' | 'civil_servant' | 'admin') || 'citizen')
     c.set('clerkPayload', payload)
     await next()
   } catch (err) {

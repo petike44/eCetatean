@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { isGeminiConfigured } from '../lib/gemini-claudia';
 import { supabaseAdmin } from '../lib/supabase';
 export const healthRoute = new Hono();
 healthRoute.get('/', async (c) => {
@@ -13,7 +14,7 @@ healthRoute.get('/', async (c) => {
                 status: 'healthy',
                 app: 'eCetățean API',
                 database: error ? 'error' : 'connected',
-                claudia: 'stub — add Anthropic SDK manually',
+                claudia: isGeminiConfigured() ? 'gemini' : 'stub',
                 timestamp: new Date().toISOString(),
             },
         });

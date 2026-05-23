@@ -199,15 +199,17 @@ claudiaRoute.post('/', requireAuth, async (c) => {
         }
       } catch (err) {
         console.error('ClaudIA error:', err)
+        const quotaExceeded = isGeminiQuotaError(err)
         const mock = getMockResponse(lastUserMessage)
-        const fallbackNote = isGeminiQuotaError(err)
-          ? '\n\n(Notă: limita gratuită Gemini este depășită — îți arăt răspunsul demo. Verifică cota pe Google AI Studio sau încearcă mai târziu.)'
+        const fallbackNote = quotaExceeded
+          ? '\n\n(Limita zilnică Gemini a fost depășită. Răspuns text de rezervă — fără generare de documente sau imagini. Verifică cota pe Google AI Studio sau încearcă mai târziu.)'
           : '\n\n(Notă: răspuns de rezervă — verifică GEMINI_API_KEY și că backend-ul rulează.)'
         enqueue({
           type: 'text',
           content: mock.text + fallbackNote,
         })
-        if (mock.tool && mock.tool_input) {
+        // On quota fallback: text only — skip tools so no PDF/map panels are triggered.
+        if (!quotaExceeded && mock.tool && mock.tool_input) {
           enqueue({
             type: 'tool_result',
             tool_name: mock.tool,

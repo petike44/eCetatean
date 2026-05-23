@@ -103,6 +103,31 @@ export type CitizenProfile = {
   buletin_number?: string | null;
   buletin_expiry?: string | null;
   date_of_birth?: string | null;
+  eidkit_sub?: string | null;
+  identity_verified_at?: string | null;
+  identity_verification_method?: string | null;
+  identity_verification_level?: string | null;
+  identity_verified_claims?: Record<string, unknown> | null;
+};
+
+export type EidKitVerificationStatus = {
+  configured: boolean;
+  demo_enabled: boolean;
+  verified: boolean;
+  provider: "eidkit";
+  verified_at: string | null;
+  verification_level: string | null;
+  scopes: string[];
+  claims: Record<string, unknown> | null;
+  profile_fields: {
+    full_name?: string | null;
+    cnp?: string | null;
+    date_of_birth?: string | null;
+    address?: string | null;
+    buletin_series?: string | null;
+    buletin_number?: string | null;
+    buletin_expiry?: string | null;
+  };
 };
 
 export type PdfFieldSource = "saved" | "acroform" | "heuristic";
@@ -223,6 +248,53 @@ export function useUpsertProfile() {
   return useMutation({
     mutationFn: (body: CitizenProfile) => apiPostJson<CitizenProfile>("/api/profile", body, getToken),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+  });
+}
+
+export function useEidKitStatus() {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["eidkit-status"],
+    queryFn: () => apiGet<EidKitVerificationStatus>("/api/eidkit/status", getToken),
+    enabled: !!isSignedIn,
+  });
+}
+
+export function useStartEidKitVerification() {
+  const getToken = useGetToken();
+  return useMutation({
+    mutationFn: () =>
+      apiPostJson<{ authorization_url: string; scopes: string[] }>("/api/eidkit/start", {}, getToken),
+    onSuccess: (data) => {
+      window.location.assign(data.authorization_url);
+    },
+  });
+}
+
+export function useDemoEidKitVerification() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPostJson<EidKitVerificationStatus>("/api/eidkit/demo", {}, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["eidkit-status"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useUnlinkEidKitVerification() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPostJson<EidKitVerificationStatus>("/api/eidkit/unlink", {}, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["eidkit-status"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
   });
 }
 

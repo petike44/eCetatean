@@ -31,11 +31,66 @@ create table if not exists public.profiles (
   phone           text,
   email           text,
   language        text not null default 'ro' check (language in ('ro', 'hu')),
+  eidkit_sub      text unique,
+  identity_verified_at timestamptz,
+  identity_verification_method text,
+  identity_verification_level text,
+  identity_verified_claims jsonb not null default '{}'::jsonb,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
 create index if not exists profiles_user_id_idx on public.profiles (user_id);
 create index if not exists profiles_cnp_idx on public.profiles (cnp);
+
+alter table public.profiles add column if not exists eidkit_sub text unique;
+alter table public.profiles add column if not exists identity_verified_at timestamptz;
+alter table public.profiles add column if not exists identity_verification_method text;
+alter table public.profiles add column if not exists identity_verification_level text;
+alter table public.profiles add column if not exists identity_verified_claims jsonb not null default '{}'::jsonb;
+create index if not exists profiles_eidkit_sub_idx on public.profiles (eidkit_sub);
+
+-- ─── identity_verification_sessions ─────────────────────────────
+-- Short-lived state for OIDC redirects. The callback from EidKit does
+-- not carry the user's Supabase bearer token, so we map state → user_id.
+create table if not exists public.identity_verification_sessions (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         text not null,
+  provider        text not null default 'eidkit',
+  state           text not null unique,
+  nonce           text not null,
+  scopes          text not null,
+  redirect_uri    text not null,
+  status          text not null default 'pending'
+                    check (status in ('pending', 'completed', 'failed', 'expired')),
+  error           text,
+  created_at      timestamptz not null default now(),
+  completed_at    timestamptz
+);
+create index if not exists identity_verification_sessions_state_idx
+  on public.identity_verification_sessions (state);
+create index if not exists identity_verification_sessions_user_created_idx
+  on public.identity_verification_sessions (user_id, created_at desc);
+
+-- ─── identity_verifications ─────────────────────────────────────
+-- Historical verification records. Store normalized claims and token
+-- metadata; do not store CAN, PINs, raw NFC material, or photos by default.
+create table if not exists public.identity_verifications (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         text not null,
+  provider        text not null default 'eidkit',
+  provider_sub    text not null,
+  verification_level text not null default 'eidkit_sso',
+  scopes          text[] not null default '{}',
+  claims          jsonb not null default '{}'::jsonb,
+  id_token_iss    text,
+  id_token_aud    text,
+  id_token_exp    timestamptz,
+  verified_at     timestamptz not null default now()
+);
+create index if not exists identity_verifications_user_verified_idx
+  on public.identity_verifications (user_id, verified_at desc);
+create index if not exists identity_verifications_provider_sub_idx
+  on public.identity_verifications (provider, provider_sub);
 
 -- ─── news ───────────────────────────────────────────────────────
 create table if not exists public.news (

@@ -1,16 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-<<<<<<< Updated upstream
 import { Send, Info, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { DrpcivStepsPanel } from "@/components/DrpcivStepsPanel";
-=======
-import { AnimatePresence, motion } from "framer-motion";
-import { Send, Info, MapPin, Clock, Phone, Navigation2, ChevronLeft, ChevronRight, X, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
-import { FadeIn, StaggerItem, StaggerList } from "@/components/motion-primitives";
-import { slideInRight, slideUpSheet } from "@/lib/motion";
->>>>>>> Stashed changes
 import { locationsCatalog, type LocationItem } from "@/lib/office-locations";
 import type { DocItem } from "@/lib/chat-types";
 import { useUser } from "@/lib/clerk-stub";
@@ -290,65 +282,59 @@ function Chat() {
     <AppShell
       topBar={chatTopBar}
       desktopScrollable={false}
-<<<<<<< Updated upstream
       className="flex flex-col lg:flex-1 lg:overflow-hidden"
     >
       <div
         className="flex flex-col min-h-[calc(100dvh-56px-64px)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
         style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
       >
-=======
-      className="flex flex-col lg:flex-row lg:flex-1 lg:overflow-hidden lg:!px-0 lg:!py-0"
-    >
-      {/* ── Chat column ── */}
-      <div className="flex flex-col min-h-[calc(100dvh-56px-64px)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground">
->>>>>>> Stashed changes
         {isEmpty ? (
-          <StaggerList className="flex-1 flex flex-col px-6 pt-4 lg:max-w-xl lg:mx-auto lg:w-full">
-            <StaggerItem>
-              <div className="mb-8 px-4 py-2.5 rounded-xl border border-accent-light bg-accent-light/40 text-center">
-                <p className="text-[11px] font-medium leading-tight text-accent-dark">
-                  ClaudIA folosește date din surse oficiale verificate.
-                </p>
-              </div>
-            </StaggerItem>
+          /* ───── EMPTY / HERO STATE ───── */
+          <div className="flex-1 flex flex-col px-6 pt-4 lg:max-w-xl lg:mx-auto lg:w-full anim-fade-up">
+            {/* Disclaimer */}
+            <div className="mb-8 px-4 py-2.5 rounded-xl border border-accent-light bg-accent-light/40 text-center">
+              <p className="text-[11px] font-medium leading-tight text-accent-dark">
+                ClaudIA folosește date din surse oficiale verificate.
+              </p>
+            </div>
 
-            <StaggerItem className="mb-10">
-              <h2 className="font-display font-semibold text-[30px] leading-[1.15] mb-4 text-foreground tracking-tight">
+            {/* Greeting */}
+            <div className="mb-10">
+              <h2
+                className="font-display font-semibold text-[30px] leading-[1.15] mb-4 text-foreground"
+                style={{ letterSpacing: "-0.01em" }}
+              >
                 Bună ziua, {displayName}.<br />Cu ce te ajut azi?
               </h2>
               <p className="text-[15px] leading-relaxed text-text-secondary">
                 Sunt asistentul tău civic pentru interacțiunea cu instituțiile statului.
               </p>
-            </StaggerItem>
+            </div>
 
+            {/* Prompt cards 2x2 */}
             <div className="grid grid-cols-2 gap-3">
-              {SUGGESTIONS.map((s) => {
+              {SUGGESTIONS.map((s, i) => {
                 const Icon = s.icon;
                 return (
-                  <StaggerItem key={s.label}>
-                    <motion.button
-                      type="button"
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => send(s.query)}
-                      className="press group p-4 rounded-2xl border border-border bg-surface text-left shadow-card hover:border-primary/40 hover:shadow-elevated transition-all w-full"
-                    >
-                      <div className="mb-3 w-9 h-9 rounded-lg flex items-center justify-center bg-primary-light text-primary">
-                        <Icon size={17} strokeWidth={1.8} />
-                      </div>
-                      <span className="font-display text-[13.5px] font-semibold leading-snug text-foreground">
-                        {s.label}
-                      </span>
-                    </motion.button>
-                  </StaggerItem>
+                  <button
+                    key={s.label}
+                    onClick={() => send(s.query)}
+                    className="press group p-4 rounded-2xl border border-border bg-surface text-left shadow-card hover:border-primary/40 hover:shadow-elevated transition-all anim-fade-up"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  >
+                    <div className="mb-3 w-9 h-9 rounded-lg flex items-center justify-center bg-primary-light text-primary">
+                      <Icon size={17} strokeWidth={1.8} />
+                    </div>
+                    <span className="font-display text-[13.5px] font-semibold leading-snug text-foreground">
+                      {s.label}
+                    </span>
+                  </button>
                 );
               })}
             </div>
-          </StaggerList>
+          </div>
         ) : (
           /* ───── CONVERSATION STATE ───── */
-<<<<<<< Updated upstream
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
           <div className="px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
             {msgs.slice(1).map((m) => {
@@ -384,22 +370,6 @@ function Chat() {
               return (
                 <div key={m.id} className="flex justify-start gap-2 anim-fade-up">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground mt-0.5">
-=======
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
-            <AnimatePresence initial={false}>
-              {msgs.slice(1).map((m) => (
-                <motion.div
-                  key={m.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.2 }}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} gap-2`}
-                >
-                {m.role === "ai" && (
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground">
->>>>>>> Stashed changes
                     <Sparkles size={14} fill="currentColor" />
                   </div>
                   <div className="flex flex-col gap-3 flex-1 min-w-0 max-w-[calc(100%-2.5rem)]">
@@ -431,17 +401,11 @@ function Chat() {
                     )}
                   </div>
                 </div>
-<<<<<<< Updated upstream
               );
             })}
-=======
-              </motion.div>
-            ))}
-            </AnimatePresence>
->>>>>>> Stashed changes
 
             {typing && (
-              <FadeIn className="flex gap-2 items-end">
+              <div className="flex gap-2 items-end anim-fade-up">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground">
                   <Sparkles size={14} fill="currentColor" />
                 </div>
@@ -455,7 +419,7 @@ function Chat() {
                     <span className="w-1.5 h-1.5 rounded-full inline-block bg-text-tertiary" />
                   </div>
                 </div>
-              </FadeIn>
+              </div>
             )}
           </div>
           </div>
@@ -467,7 +431,7 @@ function Chat() {
             e.preventDefault();
             send(input);
           }}
-          className="sticky bottom-16 lg:bottom-0 z-30 px-4 py-3 bg-background/95 backdrop-blur-md border-t border-border"
+          className="sticky bottom-16 lg:bottom-0 z-30 px-4 py-3 bg-background border-t border-border"
         >
           <div className="relative flex items-center lg:max-w-2xl lg:mx-auto">
             <input
@@ -475,81 +439,27 @@ function Chat() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Scrie un mesaj..."
               aria-label="Mesaj pentru ClaudIA"
-              className="w-full h-14 pl-5 pr-14 rounded-2xl outline-none text-[15px] bg-surface-secondary border border-border text-foreground shadow-sm focus:border-primary transition-colors duration-200"
+              className="w-full h-14 pl-5 pr-14 rounded-2xl outline-none text-[15px] bg-surface-secondary border border-border text-foreground shadow-sm focus:border-primary"
+              style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
             />
-            <motion.button
+            <button
               type="submit"
               aria-label="Trimite"
               disabled={!input.trim()}
-              whileTap={{ scale: 0.92 }}
-              className="press absolute right-2 w-10 h-10 rounded-xl flex items-center justify-center shadow-md transition-opacity bg-primary text-primary-foreground disabled:opacity-35"
+              className="press absolute right-2 w-10 h-10 rounded-xl flex items-center justify-center shadow-md transition-opacity bg-primary text-primary-foreground"
+              style={{ opacity: input.trim() ? 1 : 0.35 }}
             >
               <Send size={17} strokeWidth={2.2} />
-            </motion.button>
+            </button>
           </div>
         </form>
       </div>
-<<<<<<< Updated upstream
-=======
-
-      {/* ── Desktop result panel (right column) ── */}
-      <AnimatePresence>
-        {panelReply && (
-          <motion.aside
-            key="desktop-panel"
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={slideInRight}
-            className="hidden lg:flex lg:flex-col lg:w-[400px] lg:shrink-0 lg:border-l lg:border-border lg:overflow-y-auto bg-surface"
-          >
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-surface z-10">
-            <p className="font-display font-semibold text-[15px] text-text-primary">Detalii răspuns</p>
-            <button
-              onClick={() => setPanelReply(null)}
-              aria-label="Închide panoul"
-              className="press p-1.5 rounded-lg text-text-tertiary hover:bg-surface-secondary"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div className="px-5 py-4 space-y-5">
-            <PageAnswer reply={panelReply} />
-            {(panelReply.documents?.length ?? 0) > 0 && (
-              <div>
-                <p className="font-display font-semibold text-[14px] text-text-primary mb-3">Documente necesare</p>
-                <div className="space-y-2.5">
-                  {panelReply.documents!.map((d) => <DocCard key={d.name} doc={d} />)}
-                </div>
-              </div>
-            )}
-            {(panelReply.locations?.length ?? 0) > 0 && (
-              <div>
-                <p className="font-display font-semibold text-[14px] text-text-primary mb-3">Locații</p>
-                <PageMap locations={panelReply.locations!} />
-              </div>
-            )}
-          </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      {/* ── Mobile result panel (bottom sheet) ── */}
-      <AnimatePresence>
-        {panelReply && (
-          <div className="lg:hidden">
-            <ResultPanel reply={panelReply} onClose={() => setPanelReply(null)} />
-          </div>
-        )}
-      </AnimatePresence>
->>>>>>> Stashed changes
     </AppShell>
   );
 }
 
 /* ───────────── Inline reply extras ───────────── */
 
-<<<<<<< Updated upstream
 const DRPCIV_EVENT_TYPES = new Set(["bought_car", "car_domestic", "car_from_germany"]);
 
 function ReplyExtras({
@@ -561,107 +471,6 @@ function ReplyExtras({
   onTrackProgress: (id: string, type: string) => void;
   onSend: (text: string) => void;
 }) {
-=======
-function ResultPanel({ reply, onClose }: { reply: Reply; onClose: () => void }) {
-  const hasLocations = !!reply.locations?.length;
-  const pages: ("answer" | "docs" | "map")[] = ["answer", "docs"];
-  if (hasLocations) pages.push("map");
-  const [page, setPage] = useState(0);
-  const startX = useRef<number | null>(null);
-  const onTrackStart = (x: number) => { startX.current = x; };
-  const onTrackEnd = (x: number) => {
-    if (startX.current == null) return;
-    const dx = x - startX.current;
-    if (dx < -50 && page < pages.length - 1) setPage(page + 1);
-    if (dx > 50 && page > 0) setPage(page - 1);
-    startX.current = null;
-  };
-
-  return (
-    <motion.div
-      drag="y"
-      dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={0.15}
-      onDragEnd={(_, info) => {
-        if (info.offset.y > 120) onClose();
-      }}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={slideUpSheet}
-      className="fixed left-0 right-0 z-40 mx-auto max-w-[440px] md:max-w-[640px] bg-surface rounded-t-3xl shadow-sheet border-t border-border"
-      style={{
-        bottom: "calc(72px + 64px)",
-        height: "55vh",
-      }}
-      role="dialog"
-      aria-label="Detalii răspuns ClaudIA"
-    >
-      <div className="flex flex-col items-center pt-2 pb-1 cursor-grab touch-none select-none">
-        <div className="w-10 h-1 bg-border rounded-full" />
-      </div>
-      <button
-        onClick={onClose}
-        aria-label="Închide panoul"
-        className="press absolute top-2 right-3 p-1.5 rounded-lg text-text-tertiary"
-      >
-        <X size={18} />
-      </button>
-
-      {/* Dots indicator */}
-      <div className="flex justify-center gap-1.5 py-1.5">
-        {pages.map((p, i) => (
-          <button
-            key={p}
-            onClick={() => setPage(i)}
-            aria-label={`Pagina ${i + 1}`}
-            className={`h-1.5 rounded-full transition-all ${i === page ? "w-6 bg-accent" : "w-1.5 bg-border"}`}
-          />
-        ))}
-      </div>
-
-      {/* Pages track */}
-      <div
-        className="relative overflow-hidden"
-        style={{ height: "calc(55vh - 56px)" }}
-        onTouchStart={(e) => onTrackStart(e.touches[0].clientX)}
-        onTouchEnd={(e) => onTrackEnd(e.changedTouches[0].clientX)}
-      >
-        <div
-          className="flex h-full transition-transform duration-300 ease-out"
-          style={{ width: `${pages.length * 100}%`, transform: `translateX(-${page * (100 / pages.length)}%)` }}
-        >
-          <div className="h-full overflow-y-auto px-5 pb-6" style={{ width: `${100 / pages.length}%` }}>
-            <PageAnswer reply={reply} />
-            {pages.length > 1 && (
-              <p className="text-[11px] text-text-tertiary text-right mt-3">
-                Documente <ChevronRight size={11} className="inline -mt-0.5" />
-              </p>
-            )}
-          </div>
-          <div className="h-full overflow-y-auto px-5 pb-6" style={{ width: `${100 / pages.length}%` }}>
-            <PageDocs documents={reply.documents ?? []} />
-            <div className="flex justify-between text-[11px] text-text-tertiary mt-3">
-              <span><ChevronLeft size={11} className="inline -mt-0.5" /> Răspuns</span>
-              {hasLocations && <span>Hartă <ChevronRight size={11} className="inline -mt-0.5" /></span>}
-            </div>
-          </div>
-          {hasLocations && (
-            <div className="h-full overflow-y-auto px-5 pb-6" style={{ width: `${100 / pages.length}%` }}>
-              <PageMap locations={reply.locations!} />
-              <p className="text-[11px] text-text-tertiary mt-3">
-                <ChevronLeft size={11} className="inline -mt-0.5" /> Documente
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function PageAnswer({ reply }: { reply: Reply }) {
->>>>>>> Stashed changes
   const nav = useNavigate();
   const createLifeEvent = useCreateLifeEvent();
   const { show } = useToast();

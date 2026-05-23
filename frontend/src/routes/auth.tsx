@@ -1,19 +1,10 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-<<<<<<< Updated upstream
 import { useAuth, useUser } from "@/lib/clerk-stub";
-=======
-import { AnimatePresence, motion } from "framer-motion";
-import { useAuth } from "@/lib/clerk-stub";
->>>>>>> Stashed changes
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { resolveLoginCredentials, isAdminUser, ADMIN_EMAIL } from "@/lib/admin";
 import { Shield, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useProfile } from "@/lib/api-hooks";
-import { FadeIn } from "@/components/motion-primitives";
-import { ErrorBanner, Field, PrimaryButton } from "@/components/ui-bits";
-import { navIndicator } from "@/lib/motion";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Autentificare — eCetățean" }] }),
@@ -133,7 +124,6 @@ function Auth() {
   }
 
   return (
-<<<<<<< Updated upstream
     <div className="min-h-dvh bg-bg flex flex-col px-5 pt-12 pb-8">
       <div className="flex items-center gap-2 mb-8">
         <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
@@ -196,72 +186,12 @@ function Auth() {
                 Email sau utilizator
               </label>
               <input
-=======
-    <div className="min-h-dvh bg-bg shell-desktop-bg flex flex-col items-center px-5 pt-12 pb-8 lg:pt-16">
-      <div className="w-full max-w-md">
-        <FadeIn className="flex items-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-            <Shield size={18} className="text-white" />
-          </div>
-          <span className="font-display font-bold text-primary">eCetățean</span>
-        </FadeIn>
-
-        <FadeIn delay={0.05} className="bg-surface border border-border rounded-2xl shadow-card p-6 lg:p-8">
-          <h1 className="font-display font-bold text-[24px] text-text-primary mb-2">
-            {tab === "signin" ? "Intră în cont" : "Creează cont"}
-          </h1>
-          <p className="text-text-secondary text-[15px] mb-6">
-            {tab === "signin"
-              ? "Accesează serviciile civice digitale."
-              : "Înregistrare gratuită cu email și parolă."}
-          </p>
-
-          <div className="relative flex rounded-2xl bg-surface-secondary border border-border p-1 mb-6 gap-1">
-            {(["signin", "signup"] as const).map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setTab(key);
-                  setError(null);
-                  setSignUpDone(false);
-                }}
-                className={cn(
-                  "relative flex-1 rounded-xl min-h-11 text-sm font-semibold transition-colors z-[1]",
-                  tab === key ? "text-text-primary" : "text-text-secondary",
-                )}
-              >
-                {tab === key && (
-                  <motion.span
-                    layoutId="auth-tab"
-                    className="absolute inset-0 rounded-xl bg-surface shadow-sm"
-                    transition={navIndicator.transition}
-                  />
-                )}
-                <span className="relative">{key === "signin" ? "Intră în cont" : "Cont nou"}</span>
-              </button>
-            ))}
-          </div>
-
-          {signUpDone ? (
-            <div className="rounded-2xl border border-border bg-surface-secondary p-5 text-center">
-              <p className="text-sm font-semibold text-text-primary mb-1">Verifică emailul</p>
-              <p className="text-sm text-text-secondary">
-                Am trimis un link de confirmare la <strong>{email}</strong>. Deschide-l pentru a activa contul, apoi completează profilul.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={tab === "signin" ? handleSignIn : handleSignUp} className="flex flex-col gap-4">
-              <Field
-                label="Email"
->>>>>>> Stashed changes
                 id="email"
                 type="text"
                 autoComplete="username"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-<<<<<<< Updated upstream
                 placeholder="admin sau nume@exemplu.ro"
                 className="rounded-2xl border border-border bg-surface px-4 py-3.5 text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-11"
               />
@@ -269,13 +199,12 @@ function Auth() {
                 Administrator: <strong>admin</strong> / <strong>admin</strong>
               </p>
             </div>
-=======
-                placeholder="nume@exemplu.ro"
-              />
->>>>>>> Stashed changes
 
-              <Field
-                label="Parolă"
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-primary" htmlFor="password">
+                Parolă
+              </label>
+              <input
                 id="password"
                 type="password"
                 autoComplete={tab === "signin" ? "current-password" : "new-password"}
@@ -284,9 +213,10 @@ function Auth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minim 6 caractere"
+                className="rounded-2xl border border-border bg-surface px-4 py-3.5 text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-11"
               />
+            </div>
 
-<<<<<<< Updated upstream
             {error && (
               <p className="text-sm text-error rounded-xl bg-error-light border border-error/20 px-4 py-3">
                 {error}
@@ -303,27 +233,10 @@ function Auth() {
             </button>
           </form>
         )}
-=======
-              <AnimatePresence>
-                {error && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                    <ErrorBanner>{error}</ErrorBanner>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
-              <PrimaryButton type="submit" disabled={loading} className="mt-1 inline-flex items-center justify-center gap-2">
-                {loading && <Loader2 size={18} className="animate-spin" />}
-                {loading ? "Se procesează..." : tab === "signin" ? "Intră în cont" : "Creează cont"}
-              </PrimaryButton>
-            </form>
-          )}
->>>>>>> Stashed changes
-
-          <p className="text-xs text-text-tertiary text-center mt-6">
-            Continuând, accepți Termenii și Politica de confidențialitate.
-          </p>
-        </FadeIn>
+        <p className="text-xs text-text-tertiary text-center mt-6">
+          Continuând, accepți Termenii și Politica de confidențialitate.
+        </p>
       </div>
     </div>
   );

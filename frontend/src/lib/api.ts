@@ -129,6 +129,10 @@ export function apiDelete<T>(path: string, getToken: GetToken): Promise<T> {
   return request<T>(path, { method: "DELETE" }, getToken);
 }
 
+export function getApiUrl(path: string): string {
+  return `${getApiBaseUrl()}${path}`;
+}
+
 export async function apiStreamPost(
   path: string,
   body: unknown,

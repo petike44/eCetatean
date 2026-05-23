@@ -24,6 +24,11 @@ export interface Profile {
   phone: string | null
   email: string | null
   language: 'ro' | 'hu'
+  eidkit_sub: string | null
+  identity_verified_at: string | null
+  identity_verification_method: string | null
+  identity_verification_level: string | null
+  identity_verified_claims: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }
@@ -64,6 +69,8 @@ export type AuditActionType =
   | 'life_event_step_completed'
   | 'payment_simulated'
   | 'appointment_simulated'
+  | 'identity_verified'
+  | 'identity_unlinked'
 
 export interface AuditEntry {
   id: string
@@ -216,6 +223,62 @@ export interface PdfFormAnalyzeResult {
   missing_inputs: PdfFormInputDefinition[]
   can_autofill_count: number
   total_required_count: number
+}
+
+// —— EidKit Identity Verification ——————————————————————————————
+
+export interface EidKitClaims {
+  sub: string
+  name?: string
+  given_name?: string
+  family_name?: string
+  birthdate?: string
+  address?: {
+    formatted?: string
+  }
+  cnp?: string
+  cei_cnp?: string
+  document?: {
+    number?: string
+    series?: string
+    expiry_date?: string
+    expires_at?: string
+    issuing_authority?: string
+  }
+  cei_document?: {
+    number?: string
+    series?: string
+    expiry_date?: string
+    expires_at?: string
+    issuing_authority?: string
+  }
+  iss?: string
+  aud?: string | string[]
+  exp?: number
+  iat?: number
+  nonce?: string
+  scope?: string
+  [key: string]: unknown
+}
+
+export interface EidKitVerificationStatus {
+  configured: boolean
+  demo_enabled: boolean
+  verified: boolean
+  provider: 'eidkit'
+  verified_at: string | null
+  verification_level: string | null
+  scopes: string[]
+  claims: Record<string, unknown> | null
+  profile_fields: {
+    full_name?: string | null
+    cnp?: string | null
+    date_of_birth?: string | null
+    address?: string | null
+    buletin_series?: string | null
+    buletin_number?: string | null
+    buletin_expiry?: string | null
+  }
 }
 
 // —— ClaudIA Chat ——————————————————————————————————————————————

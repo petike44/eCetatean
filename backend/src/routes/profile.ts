@@ -15,7 +15,7 @@ profileRoute.get('/', requireAuth, async (c) => {
   const { data, error } = await supabaseAdmin
     .from('profiles')
     .select(
-      'full_name, cnp, date_of_birth, address, city, email, phone, buletin_series, buletin_number, buletin_expiry'
+      'full_name, cnp, date_of_birth, address, city, email, phone, buletin_series, buletin_number, buletin_expiry, eidkit_sub, identity_verified_at, identity_verification_method, identity_verification_level, identity_verified_claims'
     )
     .eq('user_id', userId)
     .maybeSingle()
@@ -60,7 +60,7 @@ profileRoute.post('/', requireAuth, async (c) => {
     .from('profiles')
     .upsert(row, { onConflict: 'user_id' })
     .select(
-      'full_name, cnp, date_of_birth, address, city, email, phone, buletin_series, buletin_number, buletin_expiry'
+      'full_name, cnp, date_of_birth, address, city, email, phone, buletin_series, buletin_number, buletin_expiry, eidkit_sub, identity_verified_at, identity_verification_method, identity_verification_level, identity_verified_claims'
     )
     .single()
 

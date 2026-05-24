@@ -92,7 +92,7 @@ function AdminNewsPage() {
           }
         />
       }
-      contentClassName="lg:max-w-4xl lg:mx-auto"
+      contentClassName="desktop-content-readable"
     >
       <div className="space-y-6 pb-8">
         <Card accent="navy">

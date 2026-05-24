@@ -16,14 +16,18 @@ export function DesktopSidebar() {
   const path = location.pathname;
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-[260px] lg:shrink-0 sticky top-0 h-dvh bg-surface border-r border-border">
-      <div className="px-6 py-5 border-b border-border">
-        <Link to="/chat" className="font-display font-bold text-[20px] text-primary hover:text-accent transition-colors duration-200">
+    // Same tinted band bg as TopBar; same border-b color; border-r matches
+    <aside className="hidden lg:flex lg:flex-col lg:w-[240px] lg:shrink-0 sticky top-0 h-dvh bg-bg border-r border-border">
+      <div className="h-14 flex items-center px-5 shrink-0">
+        <Link
+          to="/chat"
+          className="font-display font-bold text-[15px] tracking-tight text-primary hover:opacity-70 transition-opacity duration-150"
+        >
           eCetățean
         </Link>
       </div>
 
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1" aria-label="Navigare principală">
+      <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto" aria-label="Navigare principală">
         {tabs.map(({ to, label, icon: Icon, dot }) => {
           const active = path === to || (to === "/chat" && path === "/");
           return (
@@ -31,8 +35,10 @@ export function DesktopSidebar() {
               key={to}
               to={to as "/chat"}
               className={cn(
-                "press flex items-center gap-3 px-3 py-2.5 rounded-xl relative transition-colors duration-200 min-h-11",
-                active ? "text-accent font-medium" : "text-text-secondary hover:bg-surface-secondary hover:text-text-primary",
+                "press flex items-center gap-3 px-3 py-2.5 rounded-xl relative transition-colors duration-150 min-h-10 text-[14px]",
+                active
+                  ? "bg-primary/8 text-primary font-medium"
+                  : "text-text-secondary hover:bg-black/[0.04] hover:text-foreground",
               )}
               aria-current={active ? "page" : undefined}
             >
@@ -44,28 +50,28 @@ export function DesktopSidebar() {
                 />
               )}
               <div className="relative shrink-0 z-[1]">
-                <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+                <Icon size={18} strokeWidth={active ? 2 : 1.7} />
                 {dot && (
-                  <span className="absolute -top-0.5 -right-1 w-2 h-2 bg-accent rounded-full anim-pulse-dot" />
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full" />
                 )}
               </div>
-              <span className="text-[15px] z-[1]">{label}</span>
+              <span className="z-[1]">{label}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="px-4 py-4 border-t border-border">
+      <div className="px-2 py-3 border-t border-border">
         <Link
           to="/profile"
-          className="press flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-surface-secondary transition-colors duration-200 min-h-11"
+          className="press flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/[0.04] transition-colors duration-150 min-h-10"
         >
-          <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
-            <UserCircle size={18} className="text-accent" />
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <UserCircle size={16} className="text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-[13px] font-medium text-text-primary truncate">Contul meu</p>
-            <p className="text-[11px] text-text-tertiary truncate">Profil și setări</p>
+            <p className="text-[13px] font-medium text-foreground truncate leading-tight">Contul meu</p>
+            <p className="text-[11px] text-text-tertiary truncate leading-tight">Profil și setări</p>
           </div>
         </Link>
       </div>

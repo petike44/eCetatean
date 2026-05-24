@@ -133,8 +133,12 @@ function Profile() {
         <TopBar
           title="Profilul meu"
           right={
-            <Link to="/audit" aria-label="Istoric civic" className="press p-2 -mr-2 rounded-xl">
-              <History size={20} className="text-text-secondary" />
+            <Link
+              to="/audit"
+              aria-label="Istoric civic"
+              className="press w-9 h-9 rounded-full flex items-center justify-center bg-black/[0.04] hover:bg-black/[0.08] active:bg-black/[0.12] transition-colors duration-150"
+            >
+              <History size={17} strokeWidth={2} className="text-text-secondary" />
             </Link>
           }
         />
@@ -209,8 +213,8 @@ function Profile() {
           />
         </div>
 
-        <div className="sticky top-14 lg:top-0 z-20 bg-bg pt-4">
-          <div className="flex gap-1 overflow-x-auto scrollbar-hide px-5 lg:px-0 border-b border-border bg-bg relative">
+        <div className="sticky top-14 lg:top-0 z-20 bg-bg/90 backdrop-blur-md pt-4">
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide px-5 lg:px-0 border-b border-border relative">
             {TABS.map((t) => (
               <button
                 key={t}

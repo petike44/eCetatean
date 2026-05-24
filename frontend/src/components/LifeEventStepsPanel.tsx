@@ -45,7 +45,7 @@ const CATEGORY_ORDER: StepCategory[] = ["docs", "financial", "onsite"];
 
 // ─── Main panel ──────────────────────────────────────────────────────────────
 
-export function DrpcivStepsPanel({ eventId }: { eventId: string }) {
+export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
   const { show } = useToast();
   const { data: event, isLoading } = useLifeEvent(eventId);
   const { data: profile } = useProfile();

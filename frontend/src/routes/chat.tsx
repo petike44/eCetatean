@@ -361,7 +361,7 @@ function Chat() {
                 {msgs.slice(1).map((m) => {
                   if (m.role === "steps") {
                     return (
-                      <div key={m.id} className="anim-fade-up max-w-[520px]">
+                      <div key={m.id} className="anim-fade-up ml-10">
                         <LifeEventStepsPanel eventId={m.eventId} />
                       </div>
                     );

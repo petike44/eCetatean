@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SeedRouteImport } from './routes/seed'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as ProfileSetupRouteImport } from './routes/profile-setup'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -35,6 +36,11 @@ const StaffRoute = StaffRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SeedRoute = SeedRouteImport.update({
+  id: '/seed',
+  path: '/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportRoute = ReportRouteImport.update({
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
+  '/seed': typeof SeedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
+  '/seed': typeof SeedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
+  '/seed': typeof SeedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/profile-setup'
     | '/report'
+    | '/seed'
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/profile-setup'
     | '/report'
+    | '/seed'
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/profile-setup'
     | '/report'
+    | '/seed'
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
@@ -244,6 +256,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ProfileSetupRoute: typeof ProfileSetupRoute
   ReportRoute: typeof ReportRoute
+  SeedRoute: typeof SeedRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StaffRoute: typeof StaffRoute
   AdminNewsRoute: typeof AdminNewsRoute
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/seed': {
+      id: '/seed'
+      path: '/seed'
+      fullPath: '/seed'
+      preLoaderRoute: typeof SeedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/report': {
@@ -388,6 +408,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ProfileSetupRoute: ProfileSetupRoute,
   ReportRoute: ReportRoute,
+  SeedRoute: SeedRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StaffRoute: StaffRoute,
   AdminNewsRoute: AdminNewsRoute,

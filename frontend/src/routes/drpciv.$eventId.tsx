@@ -202,7 +202,7 @@ function DrpcivFlow() {
   return (
     <AppShell className="flex flex-col">
       <div className="flex-1 overflow-y-auto pb-24 lg:pb-0">
-        <div className="lg:max-w-2xl lg:mx-auto">
+        <div className="lg:max-w-4xl lg:mx-auto">
           {/* ── Top bar ─────────────────────────────────────────────── */}
           <div className="sticky top-0 z-30 bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 pt-4 pb-3">
             <div className="flex items-center gap-3 mb-3">

@@ -401,7 +401,7 @@ function DocPreview() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-border">
-        <div className="mx-auto max-w-[440px] md:max-w-[640px] lg:max-w-[480px] px-5 py-4">
+        <div className="mx-auto max-w-[440px] md:max-w-[760px] lg:max-w-4xl px-5 py-4">
           <p className="text-[12.5px] text-text-secondary mb-3 text-center">
             Câmpuri obligatorii completate:{" "}
             <span className="font-display font-semibold text-text-primary">

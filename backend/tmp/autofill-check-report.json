@@ -1,0 +1,117 @@
+{
+  "ok": true,
+  "allValuesFilled": true,
+  "allPlacedInsideBoxes": true,
+  "missingInputs": [],
+  "outputPdf": "C:\\Users\\marcu\\Documents\\GitHub\\eCetatean\\backend\\tmp\\autofill-check.pdf",
+  "rows": [
+    {
+      "id": "full_name",
+      "dataKey": "profile.full_name",
+      "value": "Ion Popescu",
+      "boxTopLeft": {
+        "x": 145,
+        "yFromTop": 156
+      },
+      "boxSize": {
+        "width": 260,
+        "height": 18
+      },
+      "drawnTextOrigin": {
+        "x": 145,
+        "yFromBottom": 672
+      },
+      "withinBox": true
+    },
+    {
+      "id": "cnp",
+      "dataKey": "profile.cnp",
+      "value": "1900101123456",
+      "boxTopLeft": {
+        "x": 145,
+        "yFromTop": 184
+      },
+      "boxSize": {
+        "width": 210,
+        "height": 18
+      },
+      "drawnTextOrigin": {
+        "x": 145,
+        "yFromBottom": 644
+      },
+      "withinBox": true
+    },
+    {
+      "id": "identity_card",
+      "dataKey": "profile.identity_card",
+      "value": "CJ 123456",
+      "boxTopLeft": {
+        "x": 145,
+        "yFromTop": 212
+      },
+      "boxSize": {
+        "width": 210,
+        "height": 18
+      },
+      "drawnTextOrigin": {
+        "x": 145,
+        "yFromBottom": 616
+      },
+      "withinBox": true
+    },
+    {
+      "id": "current_address",
+      "dataKey": "profile.full_address",
+      "value": "Str. Memorandumului 1, Cluj-Napoca",
+      "boxTopLeft": {
+        "x": 145,
+        "yFromTop": 240
+      },
+      "boxSize": {
+        "width": 320,
+        "height": 18
+      },
+      "drawnTextOrigin": {
+        "x": 145,
+        "yFromBottom": 588
+      },
+      "withinBox": true
+    },
+    {
+      "id": "new_address",
+      "dataKey": "input.new_address",
+      "value": "Str. Republicii 10, Cluj-Napoca",
+      "boxTopLeft": {
+        "x": 145,
+        "yFromTop": 302
+      },
+      "boxSize": {
+        "width": 330,
+        "height": 18
+      },
+      "drawnTextOrigin": {
+        "x": 145,
+        "yFromBottom": 526
+      },
+      "withinBox": true
+    },
+    {
+      "id": "date",
+      "dataKey": "system.today",
+      "value": "24.05.2026",
+      "boxTopLeft": {
+        "x": 145,
+        "yFromTop": 680
+      },
+      "boxSize": {
+        "width": 120,
+        "height": 18
+      },
+      "drawnTextOrigin": {
+        "x": 145,
+        "yFromBottom": 148
+      },
+      "withinBox": true
+    }
+  ]
+}

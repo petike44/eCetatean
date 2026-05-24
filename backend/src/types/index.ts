@@ -64,6 +64,9 @@ export type AuditActionType =
   | 'life_event_step_completed'
   | 'payment_simulated'
   | 'appointment_simulated'
+  | 'translation_quote_started'
+  | 'payment_handoff_started'
+  | 'translation_demo_completed'
 
 export interface AuditEntry {
   id: string
@@ -122,13 +125,17 @@ export interface LifeEventStep {
   tip: string | null
   online_action?: {
     label: string
-    type: 'pdf' | 'url' | 'payment' | 'appointment'
+    type: 'pdf' | 'url' | 'payment' | 'appointment' | 'translation_quote'
     url?: string
     form_type?: FormType
     amount_ron?: number
     description?: string
     office?: string
     slot_hint?: string
+    provider?: 'wetranslate' | 'ghiseul_drpciv'
+    source_language?: string
+    target_language?: string
+    package?: 'Economy' | 'Optimal' | 'Premium'
   }
 }
 
@@ -209,6 +216,10 @@ export interface PdfForm {
   is_active: boolean
   created_at: string
   updated_at: string
+  // ─── Tipizatul (Phase 1/3) ───
+  source?: 'manual' | 'tipizatul'
+  drive_file_id?: string | null
+  acroform_origin?: 'original' | 'generated' | null
 }
 
 export interface PdfFormAnalyzeResult {

@@ -5,6 +5,7 @@ import {
   apiGet,
   apiPostJson,
   apiPatchJson,
+  apiDelete,
   apiPostForm,
   apiStreamPost,
   apiDelete,
@@ -70,7 +71,10 @@ export type AuditActionType =
   | "life_event_started"
   | "life_event_step_completed"
   | "payment_simulated"
-  | "appointment_simulated";
+  | "appointment_simulated"
+  | "translation_quote_started"
+  | "payment_handoff_started"
+  | "translation_demo_completed";
 
 export type AuditEntry = {
   id: string;
@@ -215,7 +219,8 @@ export function useUpsertProfile() {
   const getToken = useGetToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: CitizenProfile) => apiPostJson<CitizenProfile>("/api/profile", body, getToken),
+    mutationFn: (body: CitizenProfile) =>
+      apiPostJson<CitizenProfile>("/api/profile", body, getToken),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
   });
 }
@@ -232,6 +237,17 @@ export function useGeneratePdf() {
       additionalData?: Record<string, string>;
       profile?: CitizenProfile | null;
     }) => {
+      const catalogSlug = formTypeToCatalogSlug(formType);
+      if (catalogSlug) {
+        try {
+          await downloadAutofilledPdf(catalogSlug, catalogSlug, getToken, {
+            additional_data: additionalData,
+          });
+          return;
+        } catch {
+          // Keep the legacy generator as a fallback for forms not yet present in the catalog.
+        }
+      }
       await downloadPdf(formType, getToken, additionalData, profileOverride ?? undefined);
     },
   });
@@ -245,7 +261,8 @@ export function usePdfForms(query: string) {
 
   return useQuery({
     queryKey: ["pdf-forms", query.trim()],
-    queryFn: () => apiGet<PdfForm[]>(`/api/forms/search${params.size ? `?${params}` : ""}`, getToken),
+    queryFn: () =>
+      apiGet<PdfForm[]>(`/api/forms/search${params.size ? `?${params}` : ""}`, getToken),
     enabled: !!isSignedIn,
   });
 }
@@ -253,8 +270,18 @@ export function usePdfForms(query: string) {
 export function useAnalyzePdfForm() {
   const getToken = useGetToken();
   return useMutation({
-    mutationFn: ({ formId, additionalData = {} }: { formId: string; additionalData?: Record<string, string> }) =>
-      apiPostJson<PdfFormAnalyzeResult>(`/api/forms/${formId}/analyze`, { additional_data: additionalData }, getToken),
+    mutationFn: ({
+      formId,
+      additionalData = {},
+    }: {
+      formId: string;
+      additionalData?: Record<string, string>;
+    }) =>
+      apiPostJson<PdfFormAnalyzeResult>(
+        `/api/forms/${formId}/analyze`,
+        { additional_data: additionalData },
+        getToken,
+      ),
   });
 }
 
@@ -299,10 +326,7 @@ export function useSendChatMessage() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: {
-      messages: ChatMessage[];
-      profile?: CitizenProfile | null;
-    }) => {
+    mutationFn: async (payload: { messages: ChatMessage[]; profile?: CitizenProfile | null }) => {
       const response = await apiStreamPost("/api/claudia", payload, getToken);
       const chunks: ClaudIAStreamChunk[] = [];
 
@@ -526,13 +550,17 @@ export type LifeEventStep = {
   tip: string | null;
   online_action?: {
     label: string;
-    type: "pdf" | "url" | "payment" | "appointment";
+    type: "pdf" | "url" | "payment" | "appointment" | "translation_quote";
     url?: string;
     form_type?: string;
     amount_ron?: number;
     description?: string;
     office?: string;
     slot_hint?: string;
+    provider?: "wetranslate" | "ghiseul_drpciv";
+    source_language?: string;
+    target_language?: string;
+    package?: "Economy" | "Optimal" | "Premium";
   };
 };
 
@@ -613,6 +641,166 @@ export function useUpdateLifeEventStep() {
   });
 }
 
+// —— Translation Integrations ————————————————————————————————
+
+export type TranslationPackage = "Economy" | "Optimal" | "Premium";
+
+export type WeTranslateHandoff = {
+  provider: "wetranslate";
+  mode: "partner_api" | "public_form_fallback";
+  redirect_url: string;
+  handoff_id: string;
+  missing_fields: string[];
+  payload_preview: {
+    service: string;
+    source_language: string;
+    target_language: string;
+    package: TranslationPackage;
+    delivery_method: string;
+    customer: {
+      name: string | null;
+      email: string | null;
+      phone: string | null;
+      address: string | null;
+    };
+    documents: Array<{ name: string; size: number; type: string }>;
+    vehicle?: {
+      make: string | null;
+      model: string | null;
+      vin: string | null;
+      plate_number: string | null;
+    } | null;
+  };
+};
+
+export type GhiseulDrpcivTaxType =
+  | "certificat_inmatriculare"
+  | "permis_conducere"
+  | "autorizatie_provizorie";
+
+export type GhiseulDrpcivPaymentHandoff = {
+  provider: "ghiseul_drpciv";
+  mode: "partner_api" | "public_form_fallback";
+  redirect_url: string;
+  handoff_id: string;
+  missing_fields: string[];
+  payload_preview: {
+    institution: "RAAPPS";
+    person_type: "Persoană fizică";
+    tax_type: string;
+    amount_ron: number;
+    payer_cnp: string | null;
+    beneficiary_cnp: string | null;
+    beneficiary_name: string | null;
+    email: string | null;
+    confirm_email: string | null;
+    captcha_required: true;
+  };
+};
+
+export type LibreTranslateDemoResult = {
+  provider: "libretranslate_demo";
+  mode: "libretranslate_api" | "offline_demo_fallback";
+  source: string;
+  target: string;
+  format: "text" | "html";
+  alternatives: number;
+  translated_text: string;
+  detected_language?: {
+    confidence?: number;
+    language?: string;
+  };
+  alternative_translations?: string[];
+  endpoint_used: string | null;
+};
+
+export function useCreateWeTranslateQuote() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      files,
+      sourceLanguage = "Germană",
+      targetLanguage = "Română",
+      packageName = "Optimal",
+      deliveryMethod = "E-mail",
+      vehicleId,
+      consent,
+    }: {
+      files: File[];
+      sourceLanguage?: string;
+      targetLanguage?: string;
+      packageName?: TranslationPackage;
+      deliveryMethod?: string;
+      vehicleId?: string | null;
+      consent: boolean;
+    }) => {
+      const fd = new FormData();
+      fd.set("source_language", sourceLanguage);
+      fd.set("target_language", targetLanguage);
+      fd.set("package", packageName);
+      fd.set("delivery_method", deliveryMethod);
+      fd.set("consent", consent ? "true" : "false");
+      if (vehicleId) fd.set("vehicle_id", vehicleId);
+      for (const file of files) fd.append("documents", file);
+      return apiPostForm<WeTranslateHandoff>("/api/integrations/wetranslate/quote", fd, getToken);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useLibreTranslateDemo() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      q,
+      source = "auto",
+      target = "ro",
+      format = "text",
+      alternatives = 3,
+    }: {
+      q: string;
+      source?: string;
+      target?: string;
+      format?: "text" | "html";
+      alternatives?: number;
+    }) =>
+      apiPostJson<LibreTranslateDemoResult>(
+        "/api/integrations/libretranslate/translate",
+        {
+          q,
+          source,
+          target,
+          format,
+          alternatives,
+        },
+        getToken,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function usePrepareGhiseulDrpcivPayment() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (taxType: GhiseulDrpcivTaxType = "certificat_inmatriculare") =>
+      apiPostJson<GhiseulDrpcivPaymentHandoff>(
+        "/api/integrations/ghiseul/drpciv-tax",
+        { tax_type: taxType },
+        getToken,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
 // —— Vehicles ——————————————————————————————————————————————
 
 export type Vehicle = {
@@ -625,7 +813,12 @@ export type Vehicle = {
   fuel_type: string | null;
   engine_cc: number | null;
   color: string | null;
+  itp_expiry: string | null;
+  rca_expiry: string | null;
+  created_at?: string;
 };
+
+export type VehicleInput = Omit<Vehicle, "id" | "created_at">;
 
 export function useVehicles() {
   const getToken = useGetToken();
@@ -634,6 +827,42 @@ export function useVehicles() {
     queryKey: ["vehicles"],
     queryFn: () => apiGet<Vehicle[]>("/api/vehicles", getToken),
     enabled: !!isSignedIn,
+  });
+}
+
+export function useAddVehicle() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: VehicleInput) => apiPostJson<Vehicle>("/api/vehicles", body, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useUpdateVehicle() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: Partial<VehicleInput> & { id: string }) =>
+      apiPatchJson<Vehicle>(`/api/vehicles/${id}`, body, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useDeleteVehicle() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<void>(`/api/vehicles/${id}`, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] });
+    },
   });
 }
 
@@ -699,15 +928,21 @@ export function useAutofillDrpciv() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (inputValues: Record<string, string>) => {
-      await downloadAutofilledPdf(
-        "demo-drpciv",
-        "cerere_drpciv.pdf",
-        getToken,
-        { additional_data: inputValues },
-      );
+      await downloadAutofilledPdf("cerere-inmatriculare-drpciv", "cerere_drpciv.pdf", getToken, {
+        additional_data: inputValues,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["audit"] });
     },
   });
+}
+
+function formTypeToCatalogSlug(formType: string): string | null {
+  const aliases: Record<string, string> = {
+    cerere_drpciv: "cerere-inmatriculare-drpciv",
+    viza_flotant: "cerere-viza-flotant",
+    certificat_fiscal: "cerere-certificat-fiscal",
+  };
+  return aliases[formType] ?? null;
 }

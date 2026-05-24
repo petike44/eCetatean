@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { History, Loader2, Car, HeartPulse, GraduationCap, LogOut, ShieldCheck, ShieldAlert } from "lucide-react";
+import { History, Loader2, Car, HeartPulse, GraduationCap, LogOut, ShieldCheck, ShieldAlert, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { FadeIn } from "@/components/motion-primitives";
@@ -14,12 +14,17 @@ import { useToast } from "@/components/Toast";
 import { Protected } from "@/lib/auth-guard";
 import {
   type EidKitVerificationStatus,
+  type Vehicle,
   useDemoEidKitVerification,
   useEidKitStatus,
   useProfile,
   useStartEidKitVerification,
   useUnlinkEidKitVerification,
   useUpsertProfile,
+  useVehicles,
+  useAddVehicle,
+  useUpdateVehicle,
+  useDeleteVehicle,
 } from "@/lib/api-hooks";
 import { useAuth, useUser } from "@/lib/clerk-stub";
 import { profileCompletion, profileDisplayName, profileInitials, formatRoDate } from "@/lib/profile-utils";
@@ -287,15 +292,7 @@ function Profile() {
             </div>
           )}
 
-          {tab === "Vehicule" && (
-            <TabEmpty
-              icon={Car}
-              title="Niciun vehicul"
-              description="Pentru înmatriculare, ITP sau schimbări de proprietar, ClaudIA te ghidează pas cu pas."
-              cta="Întreabă despre vehicule"
-              onCta={() => nav({ to: "/chat" })}
-            />
-          )}
+          {tab === "Vehicule" && <VehiclesTab />}
 
           {tab === "Locuință" && (
             <div className="space-y-4">
@@ -350,6 +347,332 @@ function Profile() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+const EMPTY_VEHICLE = {
+  plate_number: "",
+  make: "",
+  model: "",
+  year: "",
+  vin: "",
+  fuel_type: "",
+  engine_cc: "",
+  color: "",
+  itp_expiry: "",
+  rca_expiry: "",
+};
+
+function VehiclesTab() {
+  const { data: vehicles = [], isLoading } = useVehicles();
+  const addVehicle = useAddVehicle();
+  const updateVehicle = useUpdateVehicle();
+  const deleteVehicle = useDeleteVehicle();
+  const { show } = useToast();
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...EMPTY_VEHICLE });
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  function setField(key: string, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function startEdit(v: Vehicle) {
+    setEditingId(v.id);
+    setForm({
+      plate_number: v.plate_number ?? "",
+      make: v.make ?? "",
+      model: v.model ?? "",
+      year: v.year != null ? String(v.year) : "",
+      vin: v.vin ?? "",
+      fuel_type: v.fuel_type ?? "",
+      engine_cc: v.engine_cc != null ? String(v.engine_cc) : "",
+      color: v.color ?? "",
+      itp_expiry: v.itp_expiry?.slice(0, 10) ?? "",
+      rca_expiry: v.rca_expiry?.slice(0, 10) ?? "",
+    });
+    setShowForm(false);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({ ...EMPTY_VEHICLE });
+  }
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.plate_number.trim()) {
+      show("error", "Numărul de înmatriculare este obligatoriu");
+      return;
+    }
+    try {
+      await addVehicle.mutateAsync({
+        plate_number: form.plate_number.trim(),
+        make: form.make.trim() || null,
+        model: form.model.trim() || null,
+        year: form.year ? Number(form.year) : null,
+        vin: form.vin.trim() || null,
+        fuel_type: form.fuel_type.trim() || null,
+        engine_cc: form.engine_cc ? Number(form.engine_cc) : null,
+        color: form.color.trim() || null,
+        itp_expiry: form.itp_expiry || null,
+        rca_expiry: form.rca_expiry || null,
+      });
+      show("success", "Vehicul adăugat");
+      setShowForm(false);
+      setForm({ ...EMPTY_VEHICLE });
+    } catch {
+      show("error", "Eroare la adăugarea vehiculului");
+    }
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId || !form.plate_number.trim()) {
+      show("error", "Numărul de înmatriculare este obligatoriu");
+      return;
+    }
+    try {
+      await updateVehicle.mutateAsync({
+        id: editingId,
+        plate_number: form.plate_number.trim(),
+        make: form.make.trim() || null,
+        model: form.model.trim() || null,
+        year: form.year ? Number(form.year) : null,
+        vin: form.vin.trim() || null,
+        fuel_type: form.fuel_type.trim() || null,
+        engine_cc: form.engine_cc ? Number(form.engine_cc) : null,
+        color: form.color.trim() || null,
+        itp_expiry: form.itp_expiry || null,
+        rca_expiry: form.rca_expiry || null,
+      });
+      show("success", "Vehicul actualizat");
+      cancelEdit();
+    } catch {
+      show("error", "Eroare la actualizarea vehiculului");
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await deleteVehicle.mutateAsync(id);
+      show("success", "Vehicul șters");
+      if (editingId === id) cancelEdit();
+    } catch {
+      show("error", "Eroare la ștergerea vehiculului");
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 size={22} className="animate-spin text-text-tertiary" />
+        </div>
+      ) : vehicles.length === 0 && !showForm ? (
+        <Card>
+          <div className="flex flex-col items-center text-center py-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary-light text-primary flex items-center justify-center mb-4">
+              <Car size={26} strokeWidth={1.8} />
+            </div>
+            <p className="font-display font-semibold text-[16px] text-text-primary">Niciun vehicul</p>
+            <p className="text-[14px] text-text-secondary mt-2 max-w-xs">
+              Adaugă vehiculele înregistrate pe numele tău.
+            </p>
+          </div>
+        </Card>
+      ) : (
+        vehicles.map((v) =>
+          editingId === v.id ? (
+            <Card key={v.id}>
+              <p className="font-display font-semibold text-[14px] text-text-primary mb-4">
+                Editează vehicul
+              </p>
+              <VehicleForm
+                form={form}
+                setField={setField}
+                onSubmit={handleUpdate}
+                onCancel={cancelEdit}
+                loading={updateVehicle.isPending}
+                submitLabel="Salvează modificările"
+              />
+            </Card>
+          ) : (
+            <Card key={v.id}>
+              <button
+                type="button"
+                className="w-full flex items-center justify-between"
+                onClick={() => setExpandedId(expandedId === v.id ? null : v.id)}
+              >
+                <div className="text-left">
+                  <p className="font-display font-semibold text-[15px] text-text-primary">
+                    {v.plate_number}
+                  </p>
+                  <p className="text-[13px] text-text-secondary mt-0.5">
+                    {[v.make, v.model, v.year].filter(Boolean).join(" ")}
+                  </p>
+                </div>
+                {expandedId === v.id ? (
+                  <ChevronUp size={16} className="text-text-tertiary shrink-0" />
+                ) : (
+                  <ChevronDown size={16} className="text-text-tertiary shrink-0" />
+                )}
+              </button>
+
+              {expandedId === v.id && (
+                <div className="mt-4 space-y-2 border-t border-border pt-4">
+                  {[
+                    ["VIN", v.vin],
+                    ["Combustibil", v.fuel_type],
+                    ["Capacitate cilindrică (cc)", v.engine_cc],
+                    ["Culoare", v.color],
+                    ["Expirare ITP", v.itp_expiry?.slice(0, 10)],
+                    ["Expirare RCA", v.rca_expiry?.slice(0, 10)],
+                  ]
+                    .filter(([, val]) => val)
+                    .map(([label, val]) => (
+                      <div key={label as string} className="flex justify-between text-[13px]">
+                        <span className="text-text-secondary">{label}</span>
+                        <span className="font-medium text-text-primary">{String(val)}</span>
+                      </div>
+                    ))}
+
+                  <div className="flex gap-2 pt-2">
+                    <GhostButton className="flex-1 py-2.5 text-[13px]" onClick={() => startEdit(v)}>
+                      Editează
+                    </GhostButton>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(v.id)}
+                      disabled={deleteVehicle.isPending}
+                      className="press flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-error/30 bg-error/5 text-error text-[13px] font-semibold disabled:opacity-50"
+                    >
+                      <Trash2 size={14} />
+                      Șterge
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )
+        )
+      )}
+
+      {showForm && (
+        <Card>
+          <p className="font-display font-semibold text-[14px] text-text-primary mb-4">
+            Vehicul nou
+          </p>
+          <VehicleForm
+            form={form}
+            setField={setField}
+            onSubmit={handleAdd}
+            onCancel={() => { setShowForm(false); setForm({ ...EMPTY_VEHICLE }); }}
+            loading={addVehicle.isPending}
+            submitLabel="Adaugă vehicul"
+          />
+        </Card>
+      )}
+
+      {!showForm && editingId === null && (
+        <button
+          type="button"
+          onClick={() => { setShowForm(true); setForm({ ...EMPTY_VEHICLE }); }}
+          className="press w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-surface py-3.5 text-[14px] font-semibold text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
+        >
+          <Plus size={16} />
+          Adaugă vehicul
+        </button>
+      )}
+    </div>
+  );
+}
+
+function VehicleForm({
+  form,
+  setField,
+  onSubmit,
+  onCancel,
+  loading,
+  submitLabel,
+}: {
+  form: Record<string, string>;
+  setField: (key: string, value: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  loading: boolean;
+  submitLabel: string;
+}) {
+  return (
+    <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <VField label="Nr. înmatriculare *" value={form.plate_number} onChange={(v) => setField("plate_number", v)} placeholder="CJ-01-ABC" required />
+        <VField label="Culoare" value={form.color} onChange={(v) => setField("color", v)} placeholder="Alb" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <VField label="Marcă" value={form.make} onChange={(v) => setField("make", v)} placeholder="Dacia" />
+        <VField label="Model" value={form.model} onChange={(v) => setField("model", v)} placeholder="Logan" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <VField label="An fabricație" value={form.year} onChange={(v) => setField("year", v)} placeholder="2020" type="number" min="1900" max="2100" />
+        <VField label="Combustibil" value={form.fuel_type} onChange={(v) => setField("fuel_type", v)} placeholder="benzina / diesel" />
+      </div>
+      <VField label="VIN" value={form.vin} onChange={(v) => setField("vin", v)} placeholder="17 caractere" maxLength={17} />
+      <VField label="Capacitate cilindrică (cc)" value={form.engine_cc} onChange={(v) => setField("engine_cc", v)} placeholder="1600" type="number" />
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-[13px] font-medium text-text-secondary">Expirare ITP</span>
+          <input
+            type="date"
+            value={form.itp_expiry}
+            onChange={(e) => setField("itp_expiry", e.target.value)}
+            className="mt-1 w-full rounded-2xl border border-border bg-surface-secondary px-4 py-3 min-h-11 text-[14px] focus:bg-surface focus:border-primary outline-none"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[13px] font-medium text-text-secondary">Expirare RCA</span>
+          <input
+            type="date"
+            value={form.rca_expiry}
+            onChange={(e) => setField("rca_expiry", e.target.value)}
+            className="mt-1 w-full rounded-2xl border border-border bg-surface-secondary px-4 py-3 min-h-11 text-[14px] focus:bg-surface focus:border-primary outline-none"
+          />
+        </label>
+      </div>
+      <div className="flex gap-3 pt-1">
+        <GhostButton type="button" onClick={onCancel} className="flex-1 py-3">
+          Anulează
+        </GhostButton>
+        <PrimaryButton type="submit" disabled={loading} className="flex-1 py-3">
+          {loading ? <Loader2 size={16} className="animate-spin" /> : submitLabel}
+        </PrimaryButton>
+      </div>
+    </form>
+  );
+}
+
+function VField({
+  label,
+  value,
+  onChange,
+  ...rest
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
+  return (
+    <label className="block">
+      <span className="text-[13px] font-medium text-text-secondary">{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full rounded-2xl border border-border bg-surface-secondary px-4 py-3 min-h-11 text-[14px] text-text-primary focus:bg-surface focus:border-primary outline-none"
+        {...rest}
+      />
+    </label>
   );
 }
 

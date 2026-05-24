@@ -13,6 +13,8 @@ import { formsRoute } from './routes/forms'
 import { newsRoute } from './routes/news'
 import { vehiclesRoute } from './routes/vehicles'
 import { chatConversationsRoute } from './routes/chat-conversations'
+import { seedRoute } from './routes/seed'
+import { integrationsRoute } from './routes/integrations'
 
 const app = new Hono()
 
@@ -33,6 +35,8 @@ app.route('/api/forms', formsRoute)
 app.route('/api/news', newsRoute)
 app.route('/api/vehicles', vehiclesRoute)
 app.route('/api/chat/conversations', chatConversationsRoute)
+app.route('/api/seed', seedRoute)
+app.route('/api/integrations', integrationsRoute)
 
 // —— Root ——————————————————————————————————————————————————————
 app.get('/', (c) =>

@@ -105,7 +105,7 @@ formsRoute.post('/:id/fill', requireAuth, async (c) => {
     const fields = body.fields?.length
       ? normalizeFields(body.fields)
       : await analyzePdf(form, sourcePdf, profile, inputValues)
-    pdfBuffer = await fillPdf(sourcePdf, fields, profile, inputValues)
+    pdfBuffer = await fillPdf(sourcePdf, fields, profile, inputValues, form)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'PDF fill failed'
     console.error('fillPdf failed:', message)

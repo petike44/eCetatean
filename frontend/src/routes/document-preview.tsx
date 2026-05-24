@@ -19,6 +19,22 @@ type DocumentPreviewSearch = {
   q?: string;
 };
 
+const DATA_KEY_OPTIONS = [
+  "profile.full_name",
+  "profile.cnp",
+  "profile.date_of_birth",
+  "profile.full_address",
+  "profile.address",
+  "profile.city",
+  "profile.email",
+  "profile.phone",
+  "profile.identity_card",
+  "profile.buletin_series",
+  "profile.buletin_number",
+  "profile.buletin_expiry",
+  "system.today",
+];
+
 export const Route = createFileRoute("/document-preview")({
   validateSearch: (search: Record<string, unknown>): DocumentPreviewSearch => ({
     form: typeof search.form === "string" ? search.form : undefined,
@@ -46,7 +62,9 @@ function DocPreview() {
 
   const selectedAnalysis = analyze.data;
   const requiredCount = fields.filter((field) => field.required).length;
-  const filledRequiredCount = fields.filter((field) => field.required && field.value?.trim()).length;
+  const filledRequiredCount = fields.filter(
+    (field) => field.required && field.value?.trim(),
+  ).length;
   const missingInputs = selectedAnalysis?.missing_inputs ?? selectedForm?.required_inputs ?? [];
 
   const fillPayload = useMemo(() => {
@@ -98,6 +116,12 @@ function DocPreview() {
     );
   }
 
+  function updateFieldDataKey(fieldId: string, dataKey: string) {
+    setFields((current) =>
+      current.map((field) => (field.id === fieldId ? { ...field, dataKey } : field)),
+    );
+  }
+
   function rerunAnalysis() {
     if (!selectedForm) return;
     analyze.mutate({ formId: selectedForm.slug, additionalData: inputValues });
@@ -124,19 +148,29 @@ function DocPreview() {
     <AppShell topBar={<TopBar showBack title="Previzualizare cerere" />}>
       <div className="px-5 pt-5 pb-36 lg:max-w-5xl lg:mx-auto lg:px-8">
         <header className="mb-5">
-          <p className="text-[12px] uppercase tracking-wider text-text-tertiary">Autocompletare PDF</p>
-          <h1 className="font-display font-bold text-[24px] text-text-primary mt-1">Caută și completează formulare oficiale</h1>
+          <p className="text-[12px] uppercase tracking-wider text-text-tertiary">
+            Autocompletare PDF
+          </p>
+          <h1 className="font-display font-bold text-[24px] text-text-primary mt-1">
+            Caută și completează formulare oficiale
+          </h1>
           <p className="text-[13.5px] text-text-secondary mt-2">
-            Datele din profil sunt completate automat, iar câmpurile lipsă pot fi corectate înainte de descărcare.
+            Datele din profil sunt completate automat, iar câmpurile lipsă pot fi corectate înainte
+            de descărcare.
           </p>
         </header>
 
         <div className="lg:grid lg:grid-cols-[360px_1fr] lg:gap-5">
           <section className="space-y-4">
             <Card>
-              <label className="block text-[13px] font-medium text-text-secondary mb-2">Caută formular</label>
+              <label className="block text-[13px] font-medium text-text-secondary mb-2">
+                Caută formular
+              </label>
               <div className="relative">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+                <Search
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+                />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -147,7 +181,9 @@ function DocPreview() {
             </Card>
 
             <div className="space-y-3">
-              {forms.isLoading && <p className="text-[13px] text-text-secondary">Se încarcă formularele...</p>}
+              {forms.isLoading && (
+                <p className="text-[13px] text-text-secondary">Se încarcă formularele...</p>
+              )}
               {forms.data?.map((form) => (
                 <button
                   key={form.id}
@@ -161,11 +197,16 @@ function DocPreview() {
                       <FileText size={19} />
                     </div>
                     <div className="min-w-0">
-                      <h2 className="font-display font-semibold text-[14.5px] text-text-primary">{form.title}</h2>
+                      <h2 className="font-display font-semibold text-[14.5px] text-text-primary">
+                        {form.title}
+                      </h2>
                       <p className="text-[12.5px] text-text-tertiary mt-0.5">{form.institution}</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {form.tags.slice(0, 3).map((tag) => (
-                          <span key={tag} className="rounded-full bg-surface-secondary px-2 py-0.5 text-[11px] text-text-secondary">
+                          <span
+                            key={tag}
+                            className="rounded-full bg-surface-secondary px-2 py-0.5 text-[11px] text-text-secondary"
+                          >
                             {tag}
                           </span>
                         ))}
@@ -176,7 +217,9 @@ function DocPreview() {
               ))}
               {forms.data?.length === 0 && (
                 <Card accent="gray">
-                  <p className="text-[13px] text-text-secondary">Nu am găsit formulare pentru căutarea curentă.</p>
+                  <p className="text-[13px] text-text-secondary">
+                    Nu am găsit formulare pentru căutarea curentă.
+                  </p>
                 </Card>
               )}
             </div>
@@ -187,9 +230,12 @@ function DocPreview() {
               <Card className="min-h-[320px] flex items-center justify-center text-center">
                 <div>
                   <Wand2 size={34} className="mx-auto text-accent mb-3" />
-                  <h2 className="font-display font-semibold text-[17px] text-text-primary">Alege un formular</h2>
+                  <h2 className="font-display font-semibold text-[17px] text-text-primary">
+                    Alege un formular
+                  </h2>
                   <p className="text-[13px] text-text-secondary mt-1 max-w-sm">
-                    Selectează un PDF din catalog pentru a vedea ce câmpuri pot fi completate automat.
+                    Selectează un PDF din catalog pentru a vedea ce câmpuri pot fi completate
+                    automat.
                   </p>
                 </div>
               </Card>
@@ -198,14 +244,22 @@ function DocPreview() {
                 <Card>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[11px] uppercase tracking-wider text-text-tertiary">{selectedForm.institution}</p>
-                      <h2 className="font-display font-bold text-[19px] text-text-primary mt-1">{selectedForm.title}</h2>
+                      <p className="text-[11px] uppercase tracking-wider text-text-tertiary">
+                        {selectedForm.institution}
+                      </p>
+                      <h2 className="font-display font-bold text-[19px] text-text-primary mt-1">
+                        {selectedForm.title}
+                      </h2>
                       {selectedForm.description && (
-                        <p className="text-[13px] text-text-secondary mt-1">{selectedForm.description}</p>
+                        <p className="text-[13px] text-text-secondary mt-1">
+                          {selectedForm.description}
+                        </p>
                       )}
                     </div>
                     <Badge tone={analyze.isPending ? "amber" : "green"}>
-                      {analyze.isPending ? "Analiză" : `${filledRequiredCount}/${requiredCount || 0}`}
+                      {analyze.isPending
+                        ? "Analiză"
+                        : `${filledRequiredCount}/${requiredCount || 0}`}
                     </Badge>
                   </div>
 
@@ -232,7 +286,11 @@ function DocPreview() {
                         ))}
                       </div>
                     </Section>
-                    <GhostButton className="mt-4" onClick={rerunAnalysis} disabled={analyze.isPending}>
+                    <GhostButton
+                      className="mt-4"
+                      onClick={rerunAnalysis}
+                      disabled={analyze.isPending}
+                    >
                       Reanalizează cu datele introduse
                     </GhostButton>
                   </Card>
@@ -241,8 +299,12 @@ function DocPreview() {
                 <Card>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-display font-semibold text-[15px] text-text-primary">Previzualizare date</p>
-                      <p className="text-[12.5px] text-text-secondary">Editează valorile detectate înainte de descărcare.</p>
+                      <p className="font-display font-semibold text-[15px] text-text-primary">
+                        Previzualizare date
+                      </p>
+                      <p className="text-[12.5px] text-text-secondary">
+                        Editează valorile detectate înainte de descărcare.
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -255,7 +317,8 @@ function DocPreview() {
                   </div>
                   {saveMapping.isError && (
                     <p className="mb-3 rounded-lg bg-error-light/40 px-3 py-2 text-[12px] text-error">
-                      Corecțiile nu au putut fi salvate. Verifică dacă tabela `pdf_forms` există în Supabase.
+                      Corecțiile nu au putut fi salvate. Verifică dacă tabela `pdf_forms` există în
+                      Supabase.
                     </p>
                   )}
                   {saveMapping.isSuccess && (
@@ -264,21 +327,36 @@ function DocPreview() {
                     </p>
                   )}
                   <Section title="Câmpuri detectate">
-                    {analyze.isPending && <p className="text-[13px] text-text-secondary">Se detectează câmpurile PDF...</p>}
+                    {analyze.isPending && (
+                      <p className="text-[13px] text-text-secondary">
+                        Se detectează câmpurile PDF...
+                      </p>
+                    )}
                     {!analyze.isPending && fields.length === 0 && (
-                      <p className="text-[13px] text-text-secondary">Nu există încă o analiză pentru acest formular.</p>
+                      <p className="text-[13px] text-text-secondary">
+                        Nu există încă o analiză pentru acest formular.
+                      </p>
                     )}
                     <div className="space-y-3">
                       {fields.map((field) => (
-                        <div key={field.id} className="rounded-xl border border-border bg-surface-secondary/60 p-3">
+                        <div
+                          key={field.id}
+                          className="rounded-xl border border-border bg-surface-secondary/60 p-3"
+                        >
                           <div className="mb-2 flex items-center justify-between gap-2">
                             <div>
-                              <p className="text-[12px] font-semibold text-text-primary">{field.label}</p>
+                              <p className="text-[12px] font-semibold text-text-primary">
+                                {field.label}
+                              </p>
                               <p className="text-[11px] text-text-tertiary">
                                 {field.source} · {Math.round(field.confidence * 100)}% încredere
                               </p>
                             </div>
-                            {field.required && <Badge tone={field.value?.trim() ? "green" : "amber"}>Obligatoriu</Badge>}
+                            {field.required && (
+                              <Badge tone={field.value?.trim() ? "green" : "amber"}>
+                                Obligatoriu
+                              </Badge>
+                            )}
                           </div>
                           <input
                             value={field.value ?? ""}
@@ -286,6 +364,31 @@ function DocPreview() {
                             placeholder="Completează valoarea"
                             className="w-full rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[14px] text-text-primary outline-none focus:border-primary"
                           />
+                          <div className="mt-2 grid gap-2 md:grid-cols-[180px_1fr]">
+                            <select
+                              value={
+                                DATA_KEY_OPTIONS.includes(field.dataKey) ? field.dataKey : "custom"
+                              }
+                              onChange={(event) => {
+                                if (event.target.value !== "custom")
+                                  updateFieldDataKey(field.id, event.target.value);
+                              }}
+                              className="rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[12px] text-text-secondary outline-none focus:border-primary"
+                            >
+                              <option value="custom">Cheie personalizată</option>
+                              {DATA_KEY_OPTIONS.map((key) => (
+                                <option key={key} value={key}>
+                                  {key}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              value={field.dataKey}
+                              onChange={(event) => updateFieldDataKey(field.id, event.target.value)}
+                              placeholder="ex. profile.full_name sau input.vehicle_make"
+                              className="w-full rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[12px] text-text-secondary outline-none focus:border-primary"
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -309,7 +412,10 @@ function DocPreview() {
             <GhostButton onClick={rerunAnalysis} disabled={!selectedForm || analyze.isPending}>
               Analizează
             </GhostButton>
-            <PrimaryButton onClick={downloadPdf} disabled={!selectedForm || fields.length === 0 || fill.isPending}>
+            <PrimaryButton
+              onClick={downloadPdf}
+              disabled={!selectedForm || fields.length === 0 || fill.isPending}
+            >
               <span className="inline-flex items-center justify-center gap-2">
                 <Download size={16} /> {fill.isPending ? "Se generează..." : "Descarcă PDF"}
               </span>
@@ -324,7 +430,9 @@ function DocPreview() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="font-display font-semibold text-[12px] text-text-tertiary uppercase tracking-wider mb-2">{title}</p>
+      <p className="font-display font-semibold text-[12px] text-text-tertiary uppercase tracking-wider mb-2">
+        {title}
+      </p>
       <div className="space-y-2">{children}</div>
     </div>
   );

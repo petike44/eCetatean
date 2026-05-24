@@ -15,7 +15,7 @@ the UI.
 |---|---|---|---|
 | CATALOG (metadata) | Firestore `catalog/index` (gzipped) + `templates/{id}` | `pdf_forms` (source='tipizatul') | 1 ✅ |
 | PROCEDURES | `https://tipizatul-eu.vercel.app/procedures.json` | `procedures` table | 2 ✅ |
-| PDF BINARIES | Google Drive (driveFileId) | `pdf-forms` storage bucket, lazy on first request | 3 (pending) |
+| PDF BINARIES | Google Drive (driveFileId) | `pdf-forms` storage bucket, lazy on first request | 3 ✅ |
 
 ## Running the catalog ETL (Phase 1)
 
@@ -90,11 +90,66 @@ Each row in `pdf_forms` gets:
   by label is the exception, not the rule — phases 5/6 will assign
   profile keys via AI proposal + human review.
 
-## Drive proxy credentials (Phase 3 — placeholders only for now)
+## PDF binary cache (Phase 3)
 
-`backend/.env.example` includes a `GDRIVE_SA_EMAIL` / `GDRIVE_SA_PRIVATE_KEY`
-block. Required only once Phase 3 lands — Phase 1 (catalog sync) does
-NOT need them.
+When a tipizatul-sourced `pdf_forms` row is requested, `getPdfBytes`:
+
+1. Looks in `pdf-forms/tipizatul/<driveFileId>.pdf` in Supabase Storage.
+2. On miss: mints a JWT for the service account, exchanges it at
+   `oauth2.googleapis.com` for an `access_token` (scope
+   `drive.readonly`), calls `GET drive/v3/files/<id>?alt=media`, and
+   writes the bytes back to the same storage path.
+3. Subsequent requests serve from storage.
+
+The Drive proxy is **env-gated**. If `GDRIVE_SA_EMAIL` and
+`GDRIVE_SA_PRIVATE_KEY` are missing, fetches throw
+`DriveCredentialsMissingError` and the caller falls back to the
+existing placeholder PDF — the server does NOT crash on boot.
+
+PEM accepts either real newlines or `\n` escapes. Surrounding quotes
+are stripped.
+
+### Live verification (manual)
+
+Once SA credentials are in `backend/.env.local`:
+
+```sh
+npx tsx --env-file=backend/.env.local backend/scripts/verify-drive-proxy.ts
+# or with a custom file id:
+npx tsx --env-file=backend/.env.local backend/scripts/verify-drive-proxy.ts <driveFileId>
+```
+
+Expects to see `%PDF?  yes ✔`. The script is committed but is NOT run
+by `npm test` or any CI.
+
+## AcroForm fill core (Phase 4)
+
+When `pdf_forms.source === 'tipizatul'`, the existing `fillPdf` reroutes
+to `fillTipizatulPdf` (`pdf-fill.ts`) which:
+
+- Embeds **NotoSans-Regular.ttf** via fontkit, so Romanian diacritics
+  (ă â î ș ț) render natively — no more ASCII latinization.
+- Dispatches on field type from `fields_raw` (preferred) or live
+  introspection (`pdf-introspect.ts`): `setText` for text,
+  `check/uncheck` for checkboxes, `select(option)` for dropdowns and
+  radio groups.
+- Skips fields where `type === 'unsupported'` (signatures included) or
+  `hidden === true`. The complete field list stays in `fields_raw`.
+- **Trust gate:** `acroform_origin === 'original'` →
+  `updateFieldAppearances(font)` + `flatten()` and the PDF ships
+  read-only. `acroform_origin === 'generated'` OR `null` → appearances
+  computed, form stays editable, every filled outcome is reported as
+  `needs_review` for the preview UX.
+
+Legacy callers (`form.source === 'manual'`, or no `form` arg) keep the
+unchanged overlay + Helvetica + latinize path — verified by
+`fillPdf-routing.test.ts`.
+
+### Font asset
+
+`backend/src/assets/NotoSans-Regular.ttf` (621 KB) — sourced from the
+official notofonts GitHub repo, SIL Open Font License v1.1. License
+text + provenance: see `NotoSans-Regular.LICENSE.md` next to the font.
 
 ## Verified live-data facts (as of integration)
 

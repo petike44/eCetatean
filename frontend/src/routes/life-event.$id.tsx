@@ -526,17 +526,17 @@ function DocumentCard({
 }) {
   const formName = step.form_type?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) ?? "Document";
   return (
-    <div className="shrink-0 w-36 rounded-2xl border border-[#E2E8F0] bg-white p-3 space-y-2">
-      <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center">
+    <div className="shrink-0 w-36 rounded-2xl border border-[#E2E8F0] bg-white p-3 flex flex-col gap-2">
+      <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center shrink-0">
         <FileText size={18} className="text-[#1F4E79]" />
       </div>
-      <p className="font-display font-semibold text-[12px] text-[#0F172A] leading-tight line-clamp-2">
+      <p className="font-display font-semibold text-[12px] text-[#0F172A] leading-tight line-clamp-2 flex-1">
         {formName}
       </p>
       <button
         onClick={onDownload}
         disabled={downloading}
-        className="press w-full bg-[#F59E0B] text-white font-semibold text-[11px] py-1.5 rounded-lg disabled:opacity-50"
+        className="press w-full bg-[#F59E0B] text-white font-semibold text-[11px] py-1.5 rounded-lg disabled:opacity-50 shrink-0"
       >
         {downloading ? "..." : "Descarcă"}
       </button>

@@ -870,6 +870,56 @@ export function useAutofillDrpciv() {
   });
 }
 
+// —— Civil servant portal ————————————————————————————————————
+
+export type CivicReportStaff = {
+  id: string;
+  category: ReportCategory;
+  status: ReportStatus | "respinsa";
+  reference_number: string;
+  created_at: string;
+  address: string | null;
+  description: string | null;
+};
+
+export type CivilServantLookupResult = {
+  citizen: {
+    name: string | null;
+    city: string | null;
+    cnpMasked: string | null;
+  };
+  reports: CivicReportStaff[];
+  restricted_sections: { label: string; reason: string }[];
+};
+
+export function useCivilServantLookup(query: string) {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["civil-servant-lookup", query],
+    queryFn: () =>
+      apiGet<CivilServantLookupResult>(
+        `/api/civil-servant/lookup?q=${encodeURIComponent(query)}`,
+        getToken,
+      ),
+    enabled: !!isSignedIn && query.trim().length >= 2,
+    retry: false,
+  });
+}
+
+export function useUpdateReportStatus() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, note }: { id: string; status: string; note?: string }) =>
+      apiPatchJson<CivicReportStaff>(`/api/civil-servant/reports/${id}/status`, { status, note }, getToken),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["civil-servant-lookup"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
 function formTypeToCatalogSlug(formType: string): string | null {
   const aliases: Record<string, string> = {
     cerere_drpciv: "cerere-inmatriculare-drpciv",

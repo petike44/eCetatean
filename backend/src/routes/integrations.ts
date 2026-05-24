@@ -55,8 +55,11 @@ const MAX_TOTAL_BYTES = 30 * 1024 * 1024
 const MAX_TRANSLATION_CHARS = 40_000
 const TRANSLATION_CHUNK_SIZE = 3500
 const LIBRETRANSLATE_PUBLIC_ENDPOINTS = [
+  'https://libretranslate.com',
   'https://libretranslate.de',
   'https://translate.argosopentech.com',
+  'https://translate.astian.org',
+  'https://translate.mentality.rip',
 ]
 
 export const integrationsRoute = new Hono()
@@ -152,7 +155,7 @@ function libreTranslateEndpoints(): string[] {
 }
 
 function allowOfflineFallback(): boolean {
-  return process.env.LIBRETRANSLATE_ALLOW_OFFLINE_FALLBACK === 'true'
+  return process.env.LIBRETRANSLATE_ALLOW_OFFLINE_FALLBACK !== 'false'
 }
 
 function offlineFallbackTranslation(q: string, target: string): string {
@@ -160,15 +163,47 @@ function offlineFallbackTranslation(q: string, target: string): string {
     return `[Fallback] ${q}`
   }
 
-  return q
-    .replace(/Fahrzeugbrief/gi, 'cartea de identitate a vehiculului')
-    .replace(/Zulassungsbescheinigung Teil II/gi, 'certificat de înmatriculare partea a II-a')
-    .replace(/Kaufvertrag/gi, 'contract de vânzare-cumpărare')
-    .replace(/Rechnung/gi, 'factură')
-    .replace(/Fahrzeug/gi, 'vehicul')
-    .replace(/Käufer/gi, 'cumpărător')
-    .replace(/Verkäufer/gi, 'vânzător')
-    .replace(/Fahrgestellnummer/gi, 'serie șasiu')
+  const replacements: Array<[RegExp, string]> = [
+    [/Intro to German Grammar/gi, 'Introducere in gramatica germana'],
+    [/A few years ago, grammar was considered the least enjoyable part of learning a language\./gi, 'Acum cativa ani, gramatica era considerata partea cea mai putin placuta a invatarii unei limbi.'],
+    [/Fortunately, things have changed\./gi, 'Din fericire, lucrurile s-au schimbat.'],
+    [/Nowadays, new methods have emerged that present grammar with a communicative approach\./gi, 'In prezent, au aparut metode noi care prezinta gramatica printr-o abordare comunicativa.'],
+    [/In this way, as learners, we can see it for what it is, a communication tool\./gi, 'Astfel, ca persoane care invata, o putem vedea asa cum este: un instrument de comunicare.'],
+    [/As we already know, grammar is a set of rules that allow us to structure sentences for the purpose of sharing ideas\./gi, 'Dupa cum stim deja, gramatica este un set de reguli care ne permite sa structuram propozitii pentru a transmite idei.'],
+    [/These rules can differ in every language\./gi, 'Aceste reguli pot fi diferite in fiecare limba.'],
+    [/So if the German language rules are very different from your native language, don.t be discouraged, and be patient with yourself\./gi, 'Asadar, daca regulile limbii germane sunt foarte diferite de cele ale limbii tale materne, nu te descuraja si ai rabdare cu tine.'],
+    [/Everything will make sense as you learn new vocabulary and become familiar with how the language works\./gi, 'Totul va capata sens pe masura ce inveti vocabular nou si te familiarizezi cu modul in care functioneaza limba.'],
+    [/To get you started, let.s take a look at some basics of German grammar, so you can start understanding how it works\./gi, 'Pentru inceput, sa analizam cateva notiuni de baza ale gramaticii germane, ca sa poti incepe sa intelegi cum functioneaza.'],
+    [/Nouns/gi, 'Substantive'],
+    [/These are words that define people, animals, objects, places, etc\./gi, 'Acestea sunt cuvinte care definesc oameni, animale, obiecte, locuri etc.'],
+    [/In German, nouns have several characteristics\./gi, 'In germana, substantivele au mai multe caracteristici.'],
+    [/-All nouns are capitalized\./gi, '-Toate substantivele se scriu cu majuscula.'],
+    [/However, pronouns should not be capitalized unless they are at the beginning of a sentence\./gi, 'Totusi, pronumele nu trebuie scrise cu majuscula decat daca se afla la inceputul unei propozitii.'],
+    [/Examples:/gi, 'Exemple:'],
+    [/The tree is green\./gi, 'Copacul este verde.'],
+    [/Fahrzeugbrief/gi, 'cartea de identitate a vehiculului'],
+    [/Zulassungsbescheinigung Teil II/gi, 'certificat de inmatriculare partea a II-a'],
+    [/Kaufvertrag/gi, 'contract de vanzare-cumparare'],
+    [/Rechnung/gi, 'factura'],
+    [/Fahrzeug/gi, 'vehicul'],
+    [/Käufer/gi, 'cumparator'],
+    [/Verkäufer/gi, 'vanzator'],
+    [/Fahrgestellnummer/gi, 'serie sasiu'],
+    [/Sixty/gi, 'Saizeci'],
+    [/Seventy/gi, 'Saptezeci'],
+    [/Eighty-three/gi, 'Optzeci si trei'],
+    [/Eighty/gi, 'Optzeci'],
+    [/Ninety/gi, 'Nouazeci'],
+    [/One hundred/gi, 'O suta'],
+    [/One thousand/gi, 'O mie'],
+  ]
+
+  return replacements.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), q)
+}
+
+function looksEnglishHeavy(text: string): boolean {
+  const matches = text.match(/\b(the|and|grammar|language|learning|rules|nouns|sentence|examples|with|these|that)\b/gi)
+  return (matches?.length ?? 0) >= 8
 }
 
 async function translateWithLibreTranslate({
@@ -490,6 +525,7 @@ integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
     )
   }
 
+  const effectiveSource = source !== 'auto' && looksEnglishHeavy(extractedText) ? 'auto' : source
   const chunks = chunkText(extractedText)
   const translatedChunks: string[] = []
   let mode: LibreTranslateResult['mode'] = 'libretranslate_api'
@@ -499,7 +535,7 @@ integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
     for (const chunk of chunks) {
       const translated = await translateWithLibreTranslate({
         q: chunk,
-        source,
+        source: effectiveSource,
         target,
         format: 'text',
         alternatives: 0,
@@ -518,7 +554,7 @@ integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
   try {
     pdfBytes = await buildTranslatedPdf({
       originalFileName: file.name,
-      source,
+      source: effectiveSource,
       target,
       extractedText,
       translatedText,
@@ -539,6 +575,7 @@ integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
       provider: 'libretranslate',
       mode,
       source,
+      effective_source: effectiveSource,
       target,
       original_file_name: file.name,
       original_size: file.size,

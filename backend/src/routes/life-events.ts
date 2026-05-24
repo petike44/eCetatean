@@ -209,6 +209,33 @@ lifeEventsRoute.get('/:id', requireAuth, async (c) => {
   return c.json({ success: true, data: enrichWithDetails(data as LifeEventProgress) })
 })
 
+// DELETE /api/life-events/:id — remove a life event
+lifeEventsRoute.delete('/:id', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const id = c.req.param('id')
+
+  if (!isSupabaseConfigured || isMockLifeEventId(id)) {
+    const mock = mockLifeEventStore.get(id)
+    if (!mock || mock.user_id !== userId) {
+      return c.json({ success: false, error: 'Eveniment negăsit' }, 404)
+    }
+    mockLifeEventStore.delete(id)
+    return c.json({ success: true })
+  }
+
+  const { error } = await supabaseAdmin
+    .from('life_event_progress')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) {
+    return c.json({ success: false, error: 'Eroare la ștergerea evenimentului' }, 500)
+  }
+
+  return c.json({ success: true })
+})
+
 // PATCH /api/life-events/:id/steps/:stepNumber — update step status
 lifeEventsRoute.patch('/:id/steps/:stepNumber', requireAuth, async (c) => {
   const userId = c.get('userId')

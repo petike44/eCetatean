@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef, useEffect } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Send, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText } from "lucide-react";
+import { Send, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText, PanelLeft, Plus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { LifeEventStepsPanel } from "@/components/LifeEventStepsPanel";
+import { TopBarButton } from "@/components/TopBar";
+import { useChatSessions } from "@/components/ChatSessionsContext";
 import { locationsCatalog, type LocationItem } from "@/lib/office-locations";
 import type { DocItem } from "@/lib/chat-types";
 import { useUser } from "@/lib/clerk-stub";
@@ -15,9 +17,22 @@ import {
   useCreateLifeEvent,
   useGeneratePdf,
   useProfile,
+  useConversation,
+  useCreateConversation,
+  useAppendMessages,
+  useUpdateConversation,
   type ChatMessage,
   type ClaudIAStreamChunk,
 } from "@/lib/api-hooks";
+import {
+  type Reply,
+  type Msg,
+  buildGreeting,
+  storedMessagesToMsgs,
+  msgToAppendInput,
+  greetingToAppendInput,
+} from "@/lib/chat-message-map";
+import { autoTitleFromMessage } from "@/lib/chat-conversation-utils";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({ meta: [{ title: "ClaudIA — eCetățean" }] }),
@@ -28,24 +43,7 @@ export const Route = createFileRoute("/chat")({
   ),
 });
 
-type Reply = {
-  text: string;
-  intro?: string;
-  bullets?: string[];
-  info?: { label: string; value: string }[];
-  documents?: DocItem[];
-  locations?: LocationItem[];
-  create_life_event?: boolean;
-  event_type?: string;
-  clarification?: { question: string; options: string[] };
-  category_counts?: { docs: number; financial: number; onsite: number };
-  estimated_cost?: number;
-};
-
-type Msg =
-  | { id: number; role: "user"; text: string }
-  | { id: number; role: "ai"; reply: Reply }
-  | { id: number; role: "steps"; eventId: string; eventType: string };
+// Reply and Msg types exported from chat-message-map
 
 const SUGGESTIONS: { label: string; icon: typeof Car; query: string }[] = [
   { label: "Mașină din Germania", icon: Car, query: "Am adus o mașină din Germania" },
@@ -198,40 +196,65 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
   };
 }
 
-function Chat() {
+export function Chat({ conversationId }: { conversationId?: string }) {
+  const navigate = useNavigate();
   const { show } = useToast();
   const sendChat = useSendChatMessage();
+  const createConversation = useCreateConversation();
+  const appendMessages = useAppendMessages();
+  const updateConversation = useUpdateConversation();
   const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: convData, isLoading: convLoading } = useConversation(conversationId);
   const { user } = useUser();
   const authEmail = user?.primaryEmailAddress?.emailAddress ?? null;
   const displayName = profileDisplayName(profile, authEmail).split(" ")[0];
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  const convIdRef = useRef(conversationId);
+  const hydratedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    convIdRef.current = conversationId;
+  }, [conversationId]);
 
   useEffect(() => {
     if (profileLoading) return;
+
+    if (conversationId) {
+      if (convLoading) return;
+      if (hydratedRef.current === conversationId) return;
+      if (convData) {
+        const mapped = storedMessagesToMsgs(convData.messages);
+        setMsgs(mapped.length > 0 ? mapped : [buildGreeting(displayName)]);
+        hydratedRef.current = conversationId;
+      }
+      return;
+    }
+
+    hydratedRef.current = null;
     setMsgs((prev) => {
       if (prev.length > 1) return prev;
-      return [
-        {
-          id: 1,
-          role: "ai",
-          reply: {
-            text: `Bună ziua, ${displayName}! Sunt ClaudIA, asistentul tău civic. Cu ce te pot ajuta azi? Poți întreba despre acte, formulare, taxe sau orice altceva legat de instituțiile statului.`,
-          },
-        },
-      ];
+      return [buildGreeting(displayName)];
     });
-  }, [displayName, profileLoading]);
+  }, [conversationId, convData, convLoading, displayName, profileLoading]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const typing = sendChat.isPending;
 
-  const handleTrackProgress = (eventId: string, eventType: string) => {
-    setMsgs((prev) => [
-      ...prev,
-      { id: Date.now(), role: "steps", eventId, eventType },
-    ]);
-  };
+  const handleTrackProgress = useCallback(async (eventId: string, eventType: string) => {
+    const stepMsg: Msg = { id: Date.now(), role: "steps", eventId, eventType };
+    setMsgs((prev) => [...prev, stepMsg]);
+    const cid = convIdRef.current;
+    if (cid) {
+      try {
+        await appendMessages.mutateAsync({
+          conversationId: cid,
+          messages: [msgToAppendInput(stepMsg)],
+        });
+      } catch {
+        show("error", "Nu am putut salva progresul în conversație");
+      }
+    }
+  }, [appendMessages, show]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -243,20 +266,58 @@ function Chat() {
     setInput("");
     setMsgs((p) => [...p, { id: Date.now(), role: "user", text: t }]);
 
-    const history: ChatMessage[] = [];
-    for (const m of msgs.slice(1)) {
-      if (m.role === "user") history.push({ role: "user", content: m.text });
-      else if (m.role === "ai") history.push({ role: "assistant", content: m.reply.text });
-    }
-    history.push({ role: "user", content: t });
+    let activeConvId = convIdRef.current;
 
     try {
+      if (!activeConvId) {
+        const conv = await createConversation.mutateAsync({});
+        activeConvId = conv.id;
+        convIdRef.current = conv.id;
+        await appendMessages.mutateAsync({
+          conversationId: conv.id,
+          messages: [greetingToAppendInput(displayName), { role: "user", content: t }],
+        });
+        await updateConversation.mutateAsync({
+          id: conv.id,
+          title: autoTitleFromMessage(t),
+        });
+      } else {
+        await appendMessages.mutateAsync({
+          conversationId: activeConvId,
+          messages: [{ role: "user", content: t }],
+        });
+      }
+
+      const history: ChatMessage[] = [];
+      for (const m of msgs.slice(1)) {
+        if (m.role === "user") history.push({ role: "user", content: m.text });
+        else if (m.role === "ai") history.push({ role: "assistant", content: m.reply.text });
+      }
+      history.push({ role: "user", content: t });
+
       const chunks = await sendChat.mutateAsync({
         messages: history,
         profile: profile ?? undefined,
       });
       const r = mapChunksToReply(chunks);
-      setMsgs((p) => [...p, { id: Date.now() + 1, role: "ai", reply: r }]);
+      const aiMsg: Msg = { id: Date.now() + 1, role: "ai", reply: r };
+      setMsgs((p) => [...p, aiMsg]);
+
+      if (activeConvId) {
+        await appendMessages.mutateAsync({
+          conversationId: activeConvId,
+          messages: [msgToAppendInput(aiMsg)],
+        });
+      }
+
+      if (!conversationId && activeConvId) {
+        hydratedRef.current = activeConvId;
+        navigate({
+          to: "/chat/$conversationId",
+          params: { conversationId: activeConvId },
+          replace: true,
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Eroare necunoscută";
       setMsgs((p) => [...p, { id: Date.now() + 1, role: "ai", reply: { text: `⚠️ ${message}` } }]);
@@ -268,7 +329,7 @@ function Chat() {
 
   const chatTopBar = (
     <header
-      className="fixed top-0 left-0 right-0 z-40 h-14 lg:sticky lg:inset-x-0 lg:top-0 flex items-center px-4 pointer-events-none"
+      className="sticky top-0 z-30 h-14 hidden lg:flex items-center px-4 pointer-events-none"
       style={{ background: "linear-gradient(to bottom, var(--bg) 55%, transparent 100%)" }}
       role="banner"
     >
@@ -283,14 +344,27 @@ function Chat() {
     </header>
   );
 
+  const mobileHistoryBtn = <ChatHistoryOpenButton />;
+
+  const mobileNewChatBtn = (
+    <Link to="/chat" aria-label="Chat nou" className="lg:hidden">
+      <TopBarButton aria-label="Chat nou">
+        <Plus size={17} strokeWidth={2} />
+      </TopBarButton>
+    </Link>
+  );
+
   return (
     <AppShell
+      headerVariant="chat"
+      headerLeftAction={mobileHistoryBtn}
+      headerRightAction={mobileNewChatBtn}
       topBar={chatTopBar}
       desktopScrollable={false}
       className="flex flex-col lg:flex-1 lg:overflow-hidden lg:!px-0 lg:!py-0"
     >
       <div
-        className="flex flex-col min-h-[calc(100dvh-56px-64px)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
+        className="flex flex-col min-h-[calc(100dvh-7rem)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
         style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
       >
         {isEmpty ? (
@@ -446,7 +520,7 @@ function Chat() {
               <div className="absolute -top-8 inset-x-0 h-8 pointer-events-none bg-gradient-to-t from-background/90 to-transparent" />
             <form
               onSubmit={(e) => { e.preventDefault(); send(input); }}
-              className="px-4 pb-4 pt-2 bg-background lg:pb-5"
+              className="px-4 pt-2 bg-background pb-[max(1rem,env(safe-area-inset-bottom))] lg:pb-5"
             >
               <div className="relative flex items-center lg:max-w-2xl lg:mx-auto">
                 <input
@@ -477,6 +551,15 @@ function Chat() {
 }
 
 /* ───────────── Suggestion dial ───────────── */
+
+function ChatHistoryOpenButton() {
+  const { openHistory } = useChatSessions();
+  return (
+    <TopBarButton aria-label="Istoric conversații" onClick={openHistory} className="lg:hidden">
+      <PanelLeft size={17} strokeWidth={2} />
+    </TopBarButton>
+  );
+}
 
 const ITEM_H = 52;
 const VISIBLE = 3; // center + 1 above + 1 below visible; ±1 more faded outside
@@ -585,6 +668,7 @@ function ReplyExtras({
 }) {
   const createLifeEvent = useCreateLifeEvent();
   const { show } = useToast();
+  const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
 
   const openPlan = async () => {
@@ -594,8 +678,8 @@ function ReplyExtras({
     }
     setCreating(true);
     try {
-      const result = await createLifeEvent.mutateAsync({ event_type: reply.event_type });
-      onTrackProgress(result.id, reply.event_type);
+      await createLifeEvent.mutateAsync({ event_type: reply.event_type });
+      navigate({ to: "/plans" });
     } catch {
       show("error", "Eroare la crearea planului");
       setCreating(false);

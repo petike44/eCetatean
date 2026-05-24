@@ -15,6 +15,7 @@ import { Route as SeedRouteImport } from './routes/seed'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as ProfileSetupRouteImport } from './routes/profile-setup'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as DocumentsRouteImport } from './routes/documents'
@@ -26,6 +27,7 @@ import { Route as ActionPlanRouteImport } from './routes/action-plan'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LifeEventIdRouteImport } from './routes/life-event.$id'
 import { Route as DrpcivEventIdRouteImport } from './routes/drpciv.$eventId'
+import { Route as ChatConversationIdRouteImport } from './routes/chat.$conversationId'
 import { Route as AdminNewsRouteImport } from './routes/admin.news'
 
 const StaffRoute = StaffRouteImport.update({
@@ -56,6 +58,11 @@ const ProfileSetupRoute = ProfileSetupRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -113,6 +120,11 @@ const DrpcivEventIdRoute = DrpcivEventIdRouteImport.update({
   path: '/drpciv/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatConversationIdRoute = ChatConversationIdRouteImport.update({
+  id: '/$conversationId',
+  path: '/$conversationId',
+  getParentRoute: () => ChatRoute,
+} as any)
 const AdminNewsRoute = AdminNewsRouteImport.update({
   id: '/admin/news',
   path: '/admin/news',
@@ -124,11 +136,12 @@ export interface FileRoutesByFullPath {
   '/action-plan': typeof ActionPlanRoute
   '/audit': typeof AuditRoute
   '/auth': typeof AuthRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
+  '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
@@ -136,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -144,11 +158,12 @@ export interface FileRoutesByTo {
   '/action-plan': typeof ActionPlanRoute
   '/audit': typeof AuditRoute
   '/auth': typeof AuthRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
+  '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
@@ -156,6 +171,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -165,11 +181,12 @@ export interface FileRoutesById {
   '/action-plan': typeof ActionPlanRoute
   '/audit': typeof AuditRoute
   '/auth': typeof AuthRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
+  '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
@@ -177,6 +194,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -192,6 +210,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/news'
     | '/onboarding'
+    | '/plans'
     | '/profile'
     | '/profile-setup'
     | '/report'
@@ -199,6 +218,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
+    | '/chat/$conversationId'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -212,6 +232,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/news'
     | '/onboarding'
+    | '/plans'
     | '/profile'
     | '/profile-setup'
     | '/report'
@@ -219,6 +240,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
+    | '/chat/$conversationId'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   id:
@@ -232,6 +254,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/news'
     | '/onboarding'
+    | '/plans'
     | '/profile'
     | '/profile-setup'
     | '/report'
@@ -239,6 +262,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
+    | '/chat/$conversationId'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   fileRoutesById: FileRoutesById
@@ -248,11 +272,12 @@ export interface RootRouteChildren {
   ActionPlanRoute: typeof ActionPlanRoute
   AuditRoute: typeof AuditRoute
   AuthRoute: typeof AuthRoute
-  ChatRoute: typeof ChatRoute
+  ChatRoute: typeof ChatRouteWithChildren
   DocumentPreviewRoute: typeof DocumentPreviewRoute
   DocumentsRoute: typeof DocumentsRoute
   NewsRoute: typeof NewsRoute
   OnboardingRoute: typeof OnboardingRoute
+  PlansRoute: typeof PlansRoute
   ProfileRoute: typeof ProfileRoute
   ProfileSetupRoute: typeof ProfileSetupRoute
   ReportRoute: typeof ReportRoute
@@ -306,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -385,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DrpcivEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat/$conversationId': {
+      id: '/chat/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/chat/$conversationId'
+      preLoaderRoute: typeof ChatConversationIdRouteImport
+      parentRoute: typeof ChatRoute
+    }
     '/admin/news': {
       id: '/admin/news'
       path: '/admin/news'
@@ -395,16 +434,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ChatRouteChildren {
+  ChatConversationIdRoute: typeof ChatConversationIdRoute
+}
+
+const ChatRouteChildren: ChatRouteChildren = {
+  ChatConversationIdRoute: ChatConversationIdRoute,
+}
+
+const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActionPlanRoute: ActionPlanRoute,
   AuditRoute: AuditRoute,
   AuthRoute: AuthRoute,
-  ChatRoute: ChatRoute,
+  ChatRoute: ChatRouteWithChildren,
   DocumentPreviewRoute: DocumentPreviewRoute,
   DocumentsRoute: DocumentsRoute,
   NewsRoute: NewsRoute,
   OnboardingRoute: OnboardingRoute,
+  PlansRoute: PlansRoute,
   ProfileRoute: ProfileRoute,
   ProfileSetupRoute: ProfileSetupRoute,
   ReportRoute: ReportRoute,

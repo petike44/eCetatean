@@ -243,6 +243,29 @@ export interface ClaudIARequest {
   vehicles?: Vehicle[]
 }
 
+// —— Chat persistence —————————————————————————————————————————
+
+export interface ChatConversation {
+  id: string
+  user_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ChatMessageRow {
+  id: string
+  conversation_id: string
+  role: 'user' | 'assistant' | 'system' | 'steps'
+  content: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface ChatConversationWithMessages extends ChatConversation {
+  messages: ChatMessageRow[]
+}
+
 // —— Life Event Progress ———————————————————————————————————————
 
 export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'

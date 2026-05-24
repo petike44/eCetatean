@@ -1,12 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Sparkles, FolderOpen, UserCircle, Newspaper } from "lucide-react";
+import { Sparkles, FolderOpen, UserCircle, Newspaper, Landmark } from "lucide-react";
 import { navIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const tabs: { to: string; label: string; icon: typeof Sparkles; dot?: boolean }[] = [
   { to: "/chat", label: "Asistent", icon: Sparkles, dot: true },
   { to: "/documents", label: "Documente", icon: FolderOpen },
+  { to: "/our-goal", label: "Scop", icon: Landmark },
   { to: "/news", label: "Noutăți", icon: Newspaper },
   { to: "/profile", label: "Profil", icon: UserCircle },
 ];
@@ -27,7 +28,7 @@ export function BottomNav() {
             key={to}
             to={to as "/chat"}
             className={cn(
-              "press flex flex-col items-center justify-center gap-0.5 min-w-[4.25rem] min-h-11 px-2 rounded-2xl relative transition-colors duration-200",
+              "press flex flex-1 flex-col items-center justify-center gap-0.5 min-w-[3.75rem] min-h-11 px-1 rounded-2xl relative transition-colors duration-200",
               active ? "text-accent" : "text-text-tertiary",
             )}
             aria-label={label}

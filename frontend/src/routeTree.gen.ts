@@ -19,6 +19,7 @@ import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OurGoalRouteImport } from './routes/our-goal'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as DocumentPreviewRouteImport } from './routes/document-preview'
 import { Route as ChatRouteImport } from './routes/chat'
@@ -79,6 +80,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const NewsRoute = NewsRouteImport.update({
   id: '/news',
   path: '/news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocumentsRoute = DocumentsRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
+  '/home': typeof HomeRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/our-goal': typeof OurGoalRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByTo {
   '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
+  '/home': typeof HomeRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/our-goal': typeof OurGoalRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
+  '/home': typeof HomeRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/our-goal': typeof OurGoalRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/document-preview'
     | '/documents'
+    | '/home'
     | '/news'
     | '/onboarding'
     | '/our-goal'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/document-preview'
     | '/documents'
+    | '/home'
     | '/news'
     | '/onboarding'
     | '/our-goal'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/document-preview'
     | '/documents'
+    | '/home'
     | '/news'
     | '/onboarding'
     | '/our-goal'
@@ -287,6 +299,7 @@ export interface RootRouteChildren {
   ChatRoute: typeof ChatRouteWithChildren
   DocumentPreviewRoute: typeof DocumentPreviewRoute
   DocumentsRoute: typeof DocumentsRoute
+  HomeRoute: typeof HomeRoute
   NewsRoute: typeof NewsRoute
   OnboardingRoute: typeof OnboardingRoute
   OurGoalRoute: typeof OurGoalRoute
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       path: '/news'
       fullPath: '/news'
       preLoaderRoute: typeof NewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/documents': {
@@ -472,6 +492,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatRoute: ChatRouteWithChildren,
   DocumentPreviewRoute: DocumentPreviewRoute,
   DocumentsRoute: DocumentsRoute,
+  HomeRoute: HomeRoute,
   NewsRoute: NewsRoute,
   OnboardingRoute: OnboardingRoute,
   OurGoalRoute: OurGoalRoute,

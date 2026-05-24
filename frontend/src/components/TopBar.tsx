@@ -77,7 +77,7 @@ export function HomeTopBar({ right }: { right?: ReactNode }) {
       role="banner"
     >
       <Link
-        to="/chat"
+        to="/home"
         className="lg:hidden font-display font-bold text-[15px] tracking-tight text-primary flex-1 min-w-0 truncate pointer-events-auto"
       >
         eCetățean

@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Sparkles, FolderOpen, UserCircle, Newspaper, Landmark } from "lucide-react";
+import { Home, Sparkles, FolderOpen, UserCircle, Newspaper, Landmark } from "lucide-react";
 import { navIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const tabs: { to: string; label: string; icon: typeof Sparkles; dot?: boolean }[] = [
+  { to: "/home", label: "Acasă", icon: Home },
   { to: "/chat", label: "Asistent", icon: Sparkles, dot: true },
   { to: "/documents", label: "Documente", icon: FolderOpen },
   { to: "/our-goal", label: "Scop", icon: Landmark },
@@ -22,7 +23,7 @@ export function BottomNav() {
       aria-label="Navigare principală"
     >
       {tabs.map(({ to, label, icon: Icon, dot }) => {
-        const active = path === to || (to === "/chat" && path === "/");
+        const active = path === to || (to === "/home" && path === "/");
         return (
           <Link
             key={to}

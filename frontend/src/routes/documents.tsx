@@ -79,7 +79,7 @@ function Documents() {
         </div>
       }
     >
-      <div className="lg:max-w-4xl lg:mx-auto">
+      <div className="desktop-content-readable">
 
         {/* Page title */}
         <FadeIn className="px-5 pt-4 lg:px-0 lg:pt-6">

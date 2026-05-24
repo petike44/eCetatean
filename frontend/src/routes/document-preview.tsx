@@ -184,7 +184,7 @@ function DocPreview() {
 
   return (
     <AppShell topBar={<TopBar showBack title="Previzualizare cerere" />}>
-      <div className="px-5 pt-5 pb-36 lg:max-w-5xl lg:mx-auto lg:px-8">
+      <div className="desktop-content-readable px-5 pt-5 pb-36 lg:px-6 xl:px-8">
         <header className="mb-5">
           <p className="text-[12px] uppercase tracking-wider text-text-tertiary">
             Autocompletare PDF
@@ -476,7 +476,7 @@ function DocPreview() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-border">
-        <div className="mx-auto max-w-[440px] md:max-w-[760px] lg:max-w-4xl px-5 py-4">
+        <div className="mx-auto max-w-[440px] md:max-w-[760px] desktop-content-readable px-5 py-4">
           <p className="text-[12.5px] text-text-secondary mb-3 text-center">
             Câmpuri obligatorii completate:{" "}
             <span className="font-display font-semibold text-text-primary">

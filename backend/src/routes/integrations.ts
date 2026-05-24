@@ -447,29 +447,40 @@ integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
   let mode: LibreTranslateResult['mode'] = 'libretranslate_api'
   let endpointUsed: string | null = null
 
-  for (const chunk of chunks) {
-    const translated = await translateWithLibreTranslate({
-      q: chunk,
-      source,
-      target,
-      format: 'text',
-      alternatives: 0,
-    })
-    translatedChunks.push(translated.translated_text)
-    if (translated.mode === 'offline_demo_fallback') mode = 'offline_demo_fallback'
-    endpointUsed = endpointUsed ?? translated.endpoint_used
+  try {
+    for (const chunk of chunks) {
+      const translated = await translateWithLibreTranslate({
+        q: chunk,
+        source,
+        target,
+        format: 'text',
+        alternatives: 0,
+      })
+      translatedChunks.push(translated.translated_text)
+      if (translated.mode === 'offline_demo_fallback') mode = 'offline_demo_fallback'
+      endpointUsed = endpointUsed ?? translated.endpoint_used
+    }
+  } catch (err) {
+    console.error('document translation error:', err)
+    return c.json({ success: false, error: 'Nu am putut traduce textul extras din PDF' }, 502)
   }
 
   const translatedText = translatedChunks.join('\n\n')
-  const pdfBytes = await buildTranslatedPdf({
-    originalFileName: file.name,
-    source,
-    target,
-    extractedText,
-    translatedText,
-  })
+  let pdfBytes: Uint8Array
+  try {
+    pdfBytes = await buildTranslatedPdf({
+      originalFileName: file.name,
+      source,
+      target,
+      extractedText,
+      translatedText,
+    })
+  } catch (err) {
+    console.error('translated pdf generation error:', err)
+    return c.json({ success: false, error: 'Am tradus textul, dar nu am putut genera PDF-ul final' }, 500)
+  }
 
-  writeAuditEntry({
+  void writeAuditEntry({
     userId,
     action:
       mode === 'libretranslate_api'
@@ -488,6 +499,8 @@ integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
       chunks: chunks.length,
       endpoint_used: endpointUsed,
     },
+  }).catch((err) => {
+    console.error('translation audit write error:', err)
   })
 
   const outputName = `translated-${file.name.replace(/\.pdf$/i, '')}.pdf`

@@ -279,6 +279,18 @@ export function useFillPdfForm() {
   });
 }
 
+export function useSuggestPdfFormMapping() {
+  const getToken = useGetToken();
+  return useMutation({
+    mutationFn: ({ form }: { form: PdfForm }) =>
+      apiPostJson<{ mapping: PdfAutofillField[]; fallback: boolean }>(
+        `/api/forms/${form.slug}/suggest-mapping`,
+        {},
+        getToken,
+      ),
+  });
+}
+
 export function useSavePdfFormMapping() {
   const getToken = useGetToken();
   const qc = useQueryClient();

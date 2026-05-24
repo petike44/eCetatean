@@ -12,6 +12,7 @@ import {
   useFillPdfForm,
   usePdfForms,
   useSavePdfFormMapping,
+  useSuggestPdfFormMapping,
 } from "@/lib/api-hooks";
 
 type DocumentPreviewSearch = {
@@ -59,6 +60,7 @@ function DocPreview() {
   const analyze = useAnalyzePdfForm();
   const fill = useFillPdfForm();
   const saveMapping = useSavePdfFormMapping();
+  const suggestMapping = useSuggestPdfFormMapping();
 
   const selectedAnalysis = analyze.data;
   const requiredCount = fields.filter((field) => field.required).length;
@@ -143,6 +145,41 @@ function DocPreview() {
       fields: fields.map(({ value: _value, ...field }) => field),
     });
   }
+
+  function requestSuggestions() {
+    if (!selectedForm) return;
+    suggestMapping.mutate(
+      { form: selectedForm },
+      {
+        onSuccess: (data) => {
+          // Merge proposals into the current field list. We DO NOT auto-save;
+          // the user reviews the dropdown values then clicks "Salvează corecții".
+          // Preserve any value the user already typed.
+          const byName = new Map(
+            data.mapping.map((m) => [m.acroFieldName ?? m.id, m] as const),
+          );
+          setFields((current) =>
+            current.map((f) => {
+              const key = f.acroFieldName ?? f.id;
+              const proposal = byName.get(key);
+              if (!proposal) return f;
+              return {
+                ...f,
+                dataKey: proposal.dataKey,
+                confidence: proposal.confidence,
+                source: proposal.source,
+              };
+            }),
+          );
+        },
+      },
+    );
+  }
+
+  const isTipizatul = selectedForm?.source === "tipizatul";
+  const hasUserMapping = fields.some((f) => f.source === "saved" || f.source === "ai");
+  const showSuggestButton = isTipizatul && fields.length > 0;
+  const suggestData = suggestMapping.data;
 
   return (
     <AppShell topBar={<TopBar showBack title="Previzualizare cerere" />}>

@@ -175,7 +175,7 @@ export interface PDFGenerationRequest {
   additional_data?: Record<string, string>
 }
 
-export type PdfFieldSource = 'saved' | 'acroform' | 'heuristic'
+export type PdfFieldSource = 'saved' | 'acroform' | 'heuristic' | 'ai'
 
 export interface PdfFormInputDefinition {
   key: string

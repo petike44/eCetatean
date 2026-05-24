@@ -142,10 +142,17 @@ async function createGhiseulPartnerPayment(
 
 function libreTranslateEndpoints(): string[] {
   const configured = process.env.LIBRETRANSLATE_API_URL?.trim()
+  const apiKey = process.env.LIBRETRANSLATE_API_KEY?.trim()
   const endpoints = configured
     ? [configured, ...LIBRETRANSLATE_PUBLIC_ENDPOINTS]
+    : apiKey
+      ? ['https://libretranslate.com', ...LIBRETRANSLATE_PUBLIC_ENDPOINTS]
     : LIBRETRANSLATE_PUBLIC_ENDPOINTS
   return [...new Set(endpoints.map((endpoint) => endpoint.replace(/\/$/, '')))]
+}
+
+function allowOfflineFallback(): boolean {
+  return process.env.LIBRETRANSLATE_ALLOW_OFFLINE_FALLBACK === 'true'
 }
 
 function offlineFallbackTranslation(q: string, target: string): string {
@@ -232,6 +239,9 @@ async function translateWithLibreTranslate({
   }
 
   console.error('libretranslate fallback used:', lastError)
+  if (!allowOfflineFallback()) {
+    throw new Error('LibreTranslate API is unavailable')
+  }
   return {
     mode: 'offline_demo_fallback',
     source,
@@ -241,6 +251,48 @@ async function translateWithLibreTranslate({
     translated_text: offlineFallbackTranslation(q, target),
     endpoint_used: null,
   }
+}
+
+function isPageMarker(line: string): boolean {
+  return /^[-–—]{1,2}\s*\d+\s+of\s+\d+\s*[-–—]{1,2}$/i.test(line)
+}
+
+function isTableLikeLine(line: string): boolean {
+  return /^\d+[\s\t]+/.test(line) || line.includes('\t')
+}
+
+function isHeadingLikeLine(line: string): boolean {
+  return line.length <= 48 && !/[.!?,;:]$/.test(line) && /^[A-Z0-9][\w\s/&-]+$/.test(line)
+}
+
+function normalizeExtractedPdfText(text: string): string {
+  const lines = text
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter((line) => line && !isPageMarker(line))
+
+  const blocks: string[] = []
+  let paragraph = ''
+
+  const flush = () => {
+    if (paragraph.trim()) blocks.push(paragraph.trim())
+    paragraph = ''
+  }
+
+  for (const line of lines) {
+    if (isTableLikeLine(line) || line.startsWith('-') || isHeadingLikeLine(line)) {
+      flush()
+      blocks.push(line)
+      continue
+    }
+
+    paragraph = paragraph ? `${paragraph} ${line}` : line
+    if (/[.!?]$/.test(line)) flush()
+  }
+
+  flush()
+  return blocks.join('\n\n')
 }
 
 function chunkText(text: string): string[] {
@@ -417,7 +469,7 @@ integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
     const buffer = Buffer.from(await file.arrayBuffer())
     parser = new PDFParse({ data: buffer })
     const parsed = await parser.getText()
-    extractedText = parsed.text.trim()
+    extractedText = normalizeExtractedPdfText(parsed.text)
   } catch (err) {
     console.error('pdf extraction error:', err)
     return c.json({ success: false, error: 'Nu am putut extrage textul din PDF' }, 400)

@@ -213,11 +213,11 @@ export function useDeleteNews() {
 
 export function useProfile() {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["profile"],
+    queryKey: ["profile", userId],
     queryFn: () => apiGet<CitizenProfile | null>("/api/profile", getToken),
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && !!userId,
   });
 }
 
@@ -423,22 +423,22 @@ export type AppendChatMessageInput = {
 
 export function useConversations() {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["conversations"],
+    queryKey: ["conversations", userId],
     queryFn: () => apiGet<ChatConversation[]>("/api/chat/conversations", getToken),
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && !!userId,
     staleTime: 30_000,
   });
 }
 
 export function useConversation(id: string | undefined) {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["conversation", id],
+    queryKey: ["conversation", userId, id],
     queryFn: () => apiGet<ChatConversationWithMessages>(`/api/chat/conversations/${id}`, getToken),
-    enabled: !!isSignedIn && !!id,
+    enabled: !!isSignedIn && !!userId && !!id,
   });
 }
 
@@ -458,9 +458,9 @@ export function useUpdateConversation() {
   return useMutation({
     mutationFn: ({ id, title }: { id: string; title: string }) =>
       apiPatchJson<ChatConversation>(`/api/chat/conversations/${id}`, { title }, getToken),
-    onSuccess: (_data, vars) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
-      qc.invalidateQueries({ queryKey: ["conversation", vars.id] });
+      qc.invalidateQueries({ queryKey: ["conversation"] });
     },
   });
 }
@@ -490,9 +490,9 @@ export function useAppendMessages() {
         { messages },
         getToken,
       ),
-    onSuccess: (_data, vars) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
-      qc.invalidateQueries({ queryKey: ["conversation", vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ["conversation"] });
     },
   });
 }
@@ -530,21 +530,21 @@ export function useSubmitReport() {
 
 export function useReports() {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["reports"],
+    queryKey: ["reports", userId],
     queryFn: () => apiGet<CivicReport[]>("/api/reports", getToken),
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && !!userId,
   });
 }
 
 export function useAuditLog(limit = 50) {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["audit", limit],
+    queryKey: ["audit", userId, limit],
     queryFn: () => apiGet<AuditLogResult>(`/api/audit?limit=${limit}`, getToken),
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && !!userId,
   });
 }
 
@@ -605,21 +605,21 @@ export type LifeEventProgressWithDetails = {
 
 export function useLifeEvents() {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["life-events"],
+    queryKey: ["life-events", userId],
     queryFn: () => apiGet<LifeEventProgressWithDetails[]>("/api/life-events", getToken),
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && !!userId,
   });
 }
 
 export function useLifeEvent(id: string | undefined) {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["life-events", id],
+    queryKey: ["life-events", userId, id],
     queryFn: () => apiGet<LifeEventProgressWithDetails>(`/api/life-events/${id}`, getToken),
-    enabled: !!isSignedIn && !!id,
+    enabled: !!isSignedIn && !!userId && !!id,
   });
 }
 
@@ -754,11 +754,11 @@ export type VehicleInput = Omit<Vehicle, "id" | "created_at">;
 
 export function useVehicles() {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["vehicles"],
+    queryKey: ["vehicles", userId],
     queryFn: () => apiGet<Vehicle[]>("/api/vehicles", getToken),
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && !!userId,
   });
 }
 
@@ -812,11 +812,11 @@ export type EidKitVerificationStatus = {
 
 export function useEidKitStatus() {
   const getToken = useGetToken();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   return useQuery({
-    queryKey: ["eidkit-status"],
+    queryKey: ["eidkit-status", userId],
     queryFn: () => apiGet<EidKitVerificationStatus>("/api/eidkit/status", getToken),
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && !!userId,
   });
 }
 

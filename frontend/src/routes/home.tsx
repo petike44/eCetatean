@@ -33,6 +33,7 @@ import { Protected } from "@/lib/auth-guard";
 import { useProfile, useNews, useLifeEvents } from "@/lib/api-hooks";
 import type { CitizenProfile, NewsItem, LifeEventProgressWithDetails } from "@/lib/api-hooks";
 import { profileCompletion, profileDisplayName } from "@/lib/profile-utils";
+import { useUser } from "@/lib/clerk-stub";
 import { slideUpSheet } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -739,10 +740,12 @@ function Home() {
   const [activeCard, setActiveCard] = useState<string | null>(null);
 
   const { data: profile } = useProfile();
+  const { user } = useUser();
   const { data: news = [] } = useNews();
   const { data: lifeEvents = [] } = useLifeEvents();
 
-  const firstName = profileDisplayName(profile).split(" ")[0];
+  const authEmail = user?.primaryEmailAddress?.emailAddress ?? null;
+  const firstName = profileDisplayName(profile, authEmail).split(" ")[0];
 
   const handleSearchFocus = () => nav({ to: "/chat" });
 

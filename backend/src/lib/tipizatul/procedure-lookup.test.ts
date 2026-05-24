@@ -63,11 +63,34 @@ describe('findProcedures — Cluj filter applied at query time', () => {
     }
   })
 
-  it('applies ilike on title for trigram-friendly substring match', async () => {
+  it('applies one ilike per non-stopword token (AND-of-ILIKEs)', async () => {
     const { client, log } = makeClient([])
     await findProcedures('certificat fiscal', { client })
-    const ilike = log.filters.find((f) => f.op === 'ilike')
-    expect(ilike?.args).toEqual(['title', '%certificat fiscal%'])
+    const ilikes = log.filters.filter((f) => f.op === 'ilike')
+    expect(ilikes.map((f) => f.args)).toEqual([
+      ['title', '%certificat%'],
+      ['title', '%fiscal%'],
+    ])
+  })
+
+  it('strips Romanian stopwords from full-sentence prompts', async () => {
+    const { client, log } = makeClient([])
+    await findProcedures('vreau sa construiesc o casa', { client })
+    const ilikes = log.filters.filter((f) => f.op === 'ilike').map((f) => f.args[1])
+    // "vreau", "sa", "o" are stopwords; "construiesc" and "casa" survive.
+    expect(ilikes).toContain('%construiesc%')
+    expect(ilikes).toContain('%casa%')
+    expect(ilikes).not.toContain('%vreau%')
+    expect(ilikes).not.toContain('%sa%')
+    expect(ilikes).not.toContain('%o%')
+  })
+
+  it('falls back to raw query when every token is a stopword', async () => {
+    const { client, log } = makeClient([])
+    await findProcedures('de la', { client })
+    const ilikes = log.filters.filter((f) => f.op === 'ilike')
+    expect(ilikes).toHaveLength(1)
+    expect(ilikes[0].args).toEqual(['title', '%de la%'])
   })
 
   it('returns [] on DB error (graceful degrade)', async () => {

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { requireAuth } from '../middleware/auth'
 import { writeAuditEntry } from '../lib/hash-chain'
 import { handleToolCall } from '../lib/claudia-tools'
+import { isClaudeConfigured, streamClaudeClaudia } from '../lib/claude-claudia'
 import {
   isGeminiConfigured,
   isGeminiQuotaError,
@@ -170,7 +171,8 @@ claudiaRoute.post('/', requireAuth, async (c) => {
   })
 
   const encoder = new TextEncoder()
-  const useGemini = isGeminiConfigured()
+  const useClaude = isClaudeConfigured()
+  const useGemini = !useClaude && isGeminiConfigured()
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -179,7 +181,9 @@ claudiaRoute.post('/', requireAuth, async (c) => {
       }
 
       try {
-        if (useGemini) {
+        if (useClaude) {
+          await streamClaudeClaudia(messages, profile, enqueue)
+        } else if (useGemini) {
           await streamGeminiClaudia(messages, profile, enqueue)
         } else {
           await new Promise((resolve) => setTimeout(resolve, 600))
@@ -202,8 +206,8 @@ claudiaRoute.post('/', requireAuth, async (c) => {
         const quotaExceeded = isGeminiQuotaError(err)
         const mock = getMockResponse(lastUserMessage)
         const fallbackNote = quotaExceeded
-          ? '\n\n(Limita zilnică Gemini a fost depășită. Răspuns text de rezervă — fără generare de documente sau imagini. Verifică cota pe Google AI Studio sau încearcă mai târziu.)'
-          : '\n\n(Notă: răspuns de rezervă — verifică GEMINI_API_KEY și că backend-ul rulează.)'
+          ? '\n\n(Limita zilnică API a fost depășită. Răspuns de rezervă — încearcă mai târziu.)'
+          : '\n\n(Notă: răspuns de rezervă — verifică ANTHROPIC_API_KEY și că backend-ul rulează.)'
         enqueue({
           type: 'text',
           content: mock.text + (quotaExceeded ? '' : fallbackNote),

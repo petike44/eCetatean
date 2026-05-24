@@ -21,6 +21,8 @@ const REQUIRED_DOCS = [
   "Brief mare / Teil II / Fahrzeugbrief",
   "Factura de cumpărare sau Kaufvertrag",
 ];
+const MAX_FILE_COUNT = 30;
+const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 
 export function WeTranslateHandoffModal({
   open,
@@ -47,6 +49,7 @@ export function WeTranslateHandoffModal({
   const sourceLanguage = action.source_language ?? "Germană";
   const targetLanguage = action.target_language ?? "Română";
   const hasFiles = files.length > 0;
+  const totalFileBytes = files.reduce((sum, file) => sum + file.size, 0);
 
   const submit = async () => {
     if (!consent) {
@@ -55,6 +58,10 @@ export function WeTranslateHandoffModal({
     }
     if (!hasFiles) {
       show("error", "Atașează documentele care trebuie traduse");
+      return;
+    }
+    if (files.length > MAX_FILE_COUNT || totalFileBytes > MAX_TOTAL_BYTES) {
+      show("error", "WeTranslate acceptă maximum 30 fișiere și 30MB în total");
       return;
     }
 
@@ -140,7 +147,16 @@ export function WeTranslateHandoffModal({
               multiple
               accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf"
               className="sr-only"
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+              onChange={(e) => {
+                const selected = Array.from(e.target.files ?? []);
+                const totalBytes = selected.reduce((sum, file) => sum + file.size, 0);
+                if (selected.length > MAX_FILE_COUNT || totalBytes > MAX_TOTAL_BYTES) {
+                  show("error", "Selectează maximum 30 fișiere și 30MB în total");
+                  e.currentTarget.value = "";
+                  return;
+                }
+                setFiles(selected);
+              }}
             />
           </label>
 

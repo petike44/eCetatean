@@ -41,6 +41,8 @@ type WeTranslateHandoff = {
 }
 
 const WETRANSLATE_PUBLIC_FORM_URL = 'https://www.wetranslate.ro/oferta/?page=49_1'
+const MAX_FILE_COUNT = 30
+const MAX_TOTAL_BYTES = 30 * 1024 * 1024
 
 export const integrationsRoute = new Hono()
 
@@ -178,6 +180,14 @@ integrationsRoute.post('/wetranslate/quote', requireAuth, async (c) => {
     .getAll('documents')
     .map(fileSummary)
     .filter((doc): doc is DocumentSummary => doc !== null)
+  const totalDocumentBytes = documents.reduce((sum, doc) => sum + doc.size, 0)
+
+  if (documents.length > MAX_FILE_COUNT || totalDocumentBytes > MAX_TOTAL_BYTES) {
+    return c.json(
+      { success: false, error: 'WeTranslate acceptă maximum 30 fișiere și 30MB în total' },
+      400
+    )
+  }
 
   const missingFields = [
     !profile?.full_name ? 'Nume complet' : null,

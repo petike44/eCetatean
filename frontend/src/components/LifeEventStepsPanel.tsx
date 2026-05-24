@@ -141,6 +141,11 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
   const handleAction = async (step: LifeEventStep) => {
     const action = step.online_action;
     if (!action) return;
+    // Phase 6: prefer Pipeline A (tipizatul preview) when resolved.
+    if (action.type === "pdf" && action.form_slug) {
+      nav({ to: "/document-preview", search: { form: action.form_slug } });
+      return;
+    }
     if (action.type === "translation_document") {
       setTranslationAction(action);
       return;

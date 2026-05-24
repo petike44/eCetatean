@@ -156,7 +156,7 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
 
         return (
           <CategorySection key={cat} meta={meta} stepsDone={doneInCat} stepsTotal={steps.length}>
-            <div className="space-y-2">
+            <div className="divide-y divide-border">
               {steps.map((step) => {
                 const status: StepStatus = event.steps_status[`step_${step.order}`] ?? "pending";
                 const unlocked = isStepUnlocked(step);
@@ -165,7 +165,7 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
                 // Special expanded card for the cerere DRPCIV step
                 if (step.form_type === "cerere_drpciv" && status !== "completed") {
                   return (
-                    <div key={step.order} className="rounded-xl border border-border bg-white overflow-hidden">
+                    <div key={step.order} className="bg-white">
                       <div className="flex items-center gap-3 px-3 py-3 bg-surface-secondary border-b border-border">
                         <StepCircle order={step.order} done={false} unlocked />
                         <div className="flex-1 min-w-0">
@@ -269,7 +269,7 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
                 // Standard step card
                 return (
                   <div key={step.order}
-                    className={`rounded-xl border overflow-hidden transition-all ${status === "completed" ? "border-green-300 bg-green-50" : unlocked ? "border-border bg-white" : "border-border bg-surface-secondary opacity-55"}`}>
+                    className={`transition-all ${status === "completed" ? "bg-green-50/60" : !unlocked ? "bg-surface-secondary/60 opacity-60" : "bg-white"}`}>
                     <div className="flex items-center gap-3 px-3 py-3">
                       <StepCircle order={step.order} done={status === "completed"} unlocked={unlocked} />
                       <div className="flex-1 min-w-0">
@@ -329,7 +329,7 @@ function CategorySection({ meta, stepsDone, stepsTotal, children }: { meta: Step
           {allDone ? "✓ Gata" : `${stepsDone}/${stepsTotal}`}
         </span>
       </div>
-      <div className="p-3 bg-white">{children}</div>
+      <div className="bg-white">{children}</div>
     </div>
   );
 }

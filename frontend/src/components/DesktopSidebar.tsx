@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Sparkles, FolderOpen, UserCircle, Newspaper } from "lucide-react";
+import { Sparkles, FolderOpen, UserCircle, Newspaper, FlaskConical } from "lucide-react";
 import { navIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const tabs: { to: string; label: string; icon: typeof Sparkles; dot?: boolean }[
   { to: "/documents", label: "Documente", icon: FolderOpen },
   { to: "/news", label: "Noutăți", icon: Newspaper },
   { to: "/profile", label: "Profil", icon: UserCircle },
+  { to: "/seed", label: "Seed", icon: FlaskConical },
 ];
 
 export function DesktopSidebar() {

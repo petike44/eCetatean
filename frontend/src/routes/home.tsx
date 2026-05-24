@@ -580,6 +580,158 @@ function PopularGuidesSection() {
   );
 }
 
+// ——— How it works ———————————————————————————————————————————
+
+const HOW_IT_WORKS_STEPS = [
+  {
+    number: "01",
+    icon: UserPlus,
+    title: "Creează-ți contul",
+    desc: "Înregistrează-te în câteva secunde și completează-ți profilul cu datele de bază.",
+    color: "#0E7C66",
+  },
+  {
+    number: "02",
+    icon: MessageSquare,
+    title: "Pune o întrebare",
+    desc: "Scrie ce ai nevoie în limbaj natural — ClaudIA înțelege și ghidează.",
+    color: "#1F4E79",
+  },
+  {
+    number: "03",
+    icon: ClipboardCheck,
+    title: "Urmează pașii",
+    desc: "Primești un plan clar cu documente necesare, termene și instituții responsabile.",
+    color: "#0B2540",
+  },
+  {
+    number: "04",
+    icon: BadgeCheck,
+    title: "Rezolvă rapid",
+    desc: "Economisești ore de cercetare și evitați drumurile inutile la ghișeu.",
+    color: "#6D3AB5",
+  },
+];
+
+function HowItWorksSection() {
+  return (
+    <section>
+      <div className="mb-5">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mb-1">
+          Cum funcționează
+        </p>
+        <h2 className="font-display text-[22px] font-semibold text-text-primary leading-snug">
+          De la întrebare la rezolvare, <br className="hidden sm:block" />
+          în câteva minute.
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {HOW_IT_WORKS_STEPS.map((step) => {
+          const Icon = step.icon;
+          return (
+            <div
+              key={step.number}
+              className="flex gap-4 p-4 rounded-2xl border border-border bg-surface shadow-card"
+            >
+              <div
+                className="w-10 h-10 rounded-[11px] flex items-center justify-center shrink-0 mt-0.5"
+                style={{ backgroundColor: `${step.color}12`, color: step.color }}
+              >
+                <Icon size={18} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span
+                    className="text-[10px] font-bold tabular-nums"
+                    style={{ color: step.color }}
+                  >
+                    {step.number}
+                  </span>
+                  <p className="font-display font-semibold text-[14px] text-text-primary leading-tight">
+                    {step.title}
+                  </p>
+                </div>
+                <p className="text-[12.5px] text-text-secondary leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ——— What we do ——————————————————————————————————————————————
+
+const WHAT_WE_DO_ITEMS = [
+  {
+    icon: ShieldCheck,
+    title: "Informații verificate",
+    desc: "Toate ghidurile sunt bazate pe legislația română în vigoare și actualizate constant.",
+    color: "#0E7C66",
+  },
+  {
+    icon: Scale,
+    title: "Drepturi cetățenești",
+    desc: "Te ajutăm să îți cunoști drepturile și să știi când și cum să le revendici.",
+    color: "#1F4E79",
+  },
+  {
+    icon: HeartHandshake,
+    title: "Sprijin real",
+    desc: "Nu doar informații — te ghidăm pas cu pas, de la dosar la rezoluție.",
+    color: "#0B2540",
+  },
+  {
+    icon: Lightbulb,
+    title: "Birocrație simplificată",
+    desc: "Transformăm proceduri complexe în pași simpli, pe care oricine îi poate urma.",
+    color: "#6D3AB5",
+  },
+];
+
+function WhatWeDoSection() {
+  return (
+    <section>
+      <div className="mb-5">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mb-1">
+          Ce facem
+        </p>
+        <h2 className="font-display text-[22px] font-semibold text-text-primary leading-snug">
+          Cetățeni mai bine informați, <br className="hidden sm:block" />
+          instituții mai accesibile.
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {WHAT_WE_DO_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.title}
+              className="p-5 rounded-2xl border border-border bg-surface shadow-card"
+            >
+              <div
+                className="w-10 h-10 rounded-[11px] flex items-center justify-center mb-3"
+                style={{ backgroundColor: `${item.color}12`, color: item.color }}
+              >
+                <Icon size={18} />
+              </div>
+              <p className="font-display font-semibold text-[14.5px] text-text-primary mb-1.5 leading-tight">
+                {item.title}
+              </p>
+              <p className="text-[12.5px] text-text-secondary leading-relaxed">
+                {item.desc}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ——— Main page ——————————————————————————————————————————————
 
 function Home() {
@@ -640,6 +792,16 @@ function Home() {
           {/* Popular guides */}
           <div className="mt-8">
             <PopularGuidesSection />
+          </div>
+
+          {/* How it works */}
+          <div className="mt-10">
+            <HowItWorksSection />
+          </div>
+
+          {/* What we do */}
+          <div className="mt-10 pb-4">
+            <WhatWeDoSection />
           </div>
         </div>
 

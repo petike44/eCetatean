@@ -875,6 +875,8 @@ function formTypeToCatalogSlug(formType: string): string | null {
     cerere_drpciv: "cerere-inmatriculare-drpciv",
     viza_flotant: "cerere-viza-flotant",
     certificat_fiscal: "cerere-certificat-fiscal",
+    anaf_tva_certificate: "anaf_tva_certificate",
+    anaf_tva_certificate_request: "anaf_tva_certificate",
   };
   return aliases[formType] ?? null;
 }

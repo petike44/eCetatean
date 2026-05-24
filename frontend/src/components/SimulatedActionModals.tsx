@@ -93,6 +93,20 @@ export function AppointmentModal({
     setLoading(true);
     setTimeout(() => {
       const ref = `EC-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      // Persist to localStorage so /plans Programări tab can display it
+      try {
+        const saved = {
+          id: crypto.randomUUID(),
+          reference: ref,
+          office,
+          slot: selected,
+          savedAt: new Date().toISOString(),
+        };
+        const existing = JSON.parse(localStorage.getItem("ec_appointments") ?? "[]");
+        localStorage.setItem("ec_appointments", JSON.stringify([saved, ...existing]));
+      } catch {
+        // localStorage unavailable — silently ignore
+      }
       setLoading(false);
       onSuccess(selected, ref);
       onClose();

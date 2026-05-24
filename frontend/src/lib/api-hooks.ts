@@ -71,9 +71,8 @@ export type AuditActionType =
   | "life_event_step_completed"
   | "payment_simulated"
   | "appointment_simulated"
-  | "translation_quote_started"
   | "payment_handoff_started"
-  | "translation_demo_completed";
+  | "translation_document_completed";
 
 export type AuditEntry = {
   id: string;
@@ -131,6 +130,10 @@ export type PdfAutofillField = {
   confidence: number;
   source: PdfFieldSource;
   acroFieldName?: string;
+  // Tipizatul (Phase 6)
+  field_type?: "text" | "checkbox" | "dropdown" | "radio" | "unsupported";
+  options?: string[];
+  needs_review?: boolean;
 };
 
 export type PdfForm = {
@@ -305,6 +308,18 @@ export function useFillPdfForm() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["audit"] });
     },
+  });
+}
+
+export function useSuggestPdfFormMapping() {
+  const getToken = useGetToken();
+  return useMutation({
+    mutationFn: ({ form }: { form: PdfForm }) =>
+      apiPostJson<{ mapping: PdfAutofillField[]; fallback: boolean }>(
+        `/api/forms/${form.slug}/suggest-mapping`,
+        {},
+        getToken,
+      ),
   });
 }
 
@@ -533,6 +548,8 @@ export function useAuditLog(limit = 50) {
 
 export type StepStatus = "pending" | "in_progress" | "completed" | "skipped";
 
+export type TranslationProvider = "libretranslate" | "ghiseul_drpciv";
+
 export type LifeEventStep = {
   order: number;
   title: string;
@@ -549,17 +566,18 @@ export type LifeEventStep = {
   tip: string | null;
   online_action?: {
     label: string;
-    type: "pdf" | "url" | "payment" | "appointment" | "translation_quote";
+    type: "pdf" | "url" | "payment" | "appointment" | "translation_document";
     url?: string;
     form_type?: string;
+    /** Tipizatul-backed pdf_forms.slug. UI prefers this over form_type. */
+    form_slug?: string;
     amount_ron?: number;
     description?: string;
     office?: string;
     slot_hint?: string;
-    provider?: "wetranslate" | "ghiseul_drpciv";
+    provider?: TranslationProvider;
     source_language?: string;
     target_language?: string;
-    package?: "Economy" | "Optimal" | "Premium";
   };
 };
 
@@ -653,36 +671,6 @@ export function useUpdateLifeEventStep() {
 
 // —— Translation Integrations ————————————————————————————————
 
-export type TranslationPackage = "Economy" | "Optimal" | "Premium";
-
-export type WeTranslateHandoff = {
-  provider: "wetranslate";
-  mode: "partner_api" | "public_form_fallback";
-  redirect_url: string;
-  handoff_id: string;
-  missing_fields: string[];
-  payload_preview: {
-    service: string;
-    source_language: string;
-    target_language: string;
-    package: TranslationPackage;
-    delivery_method: string;
-    customer: {
-      name: string | null;
-      email: string | null;
-      phone: string | null;
-      address: string | null;
-    };
-    documents: Array<{ name: string; size: number; type: string }>;
-    vehicle?: {
-      make: string | null;
-      model: string | null;
-      vin: string | null;
-      plate_number: string | null;
-    } | null;
-  };
-};
-
 export type GhiseulDrpcivTaxType =
   | "certificat_inmatriculare"
   | "permis_conducere"
@@ -708,87 +696,17 @@ export type GhiseulDrpcivPaymentHandoff = {
   };
 };
 
-export type LibreTranslateDemoResult = {
-  provider: "libretranslate_demo";
-  mode: "libretranslate_api" | "offline_demo_fallback";
-  source: string;
-  target: string;
-  format: "text" | "html";
-  alternatives: number;
-  translated_text: string;
-  detected_language?: {
-    confidence?: number;
-    language?: string;
-  };
-  alternative_translations?: string[];
-  endpoint_used: string | null;
-};
-
-export function useCreateWeTranslateQuote() {
+export function useTranslateDocument() {
   const getToken = useGetToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      files,
-      sourceLanguage = "Germană",
-      targetLanguage = "Română",
-      packageName = "Optimal",
-      deliveryMethod = "E-mail",
-      vehicleId,
-      consent,
-    }: {
-      files: File[];
-      sourceLanguage?: string;
-      targetLanguage?: string;
-      packageName?: TranslationPackage;
-      deliveryMethod?: string;
-      vehicleId?: string | null;
-      consent: boolean;
-    }) => {
+    mutationFn: ({ file, source, target = "ro" }: { file: File; source: string; target?: string }) => {
       const fd = new FormData();
-      fd.set("source_language", sourceLanguage);
-      fd.set("target_language", targetLanguage);
-      fd.set("package", packageName);
-      fd.set("delivery_method", deliveryMethod);
-      fd.set("consent", consent ? "true" : "false");
-      if (vehicleId) fd.set("vehicle_id", vehicleId);
-      for (const file of files) fd.append("documents", file);
-      return apiPostForm<WeTranslateHandoff>("/api/integrations/wetranslate/quote", fd, getToken);
+      fd.set("document", file);
+      fd.set("source", source);
+      fd.set("target", target);
+      return apiPostForm<Blob>("/api/integrations/libretranslate/document", fd, getToken);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["audit"] });
-    },
-  });
-}
-
-export function useLibreTranslateDemo() {
-  const getToken = useGetToken();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      q,
-      source = "auto",
-      target = "ro",
-      format = "text",
-      alternatives = 3,
-    }: {
-      q: string;
-      source?: string;
-      target?: string;
-      format?: "text" | "html";
-      alternatives?: number;
-    }) =>
-      apiPostJson<LibreTranslateDemoResult>(
-        "/api/integrations/libretranslate/translate",
-        {
-          q,
-          source,
-          target,
-          format,
-          alternatives,
-        },
-        getToken,
-      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["audit"] });
     },

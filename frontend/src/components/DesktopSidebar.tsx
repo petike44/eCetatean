@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Home, Sparkles, FolderOpen, UserCircle, Newspaper, FlaskConical } from "lucide-react";
+import { Home, Sparkles, FolderOpen, UserCircle, Newspaper, FlaskConical, Landmark } from "lucide-react";
 import { navIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ const tabs: { to: string; label: string; icon: typeof Sparkles; dot?: boolean }[
   { to: "/home", label: "Acasă", icon: Home },
   { to: "/chat", label: "Asistent", icon: Sparkles, dot: true },
   { to: "/documents", label: "Documente", icon: FolderOpen },
+  { to: "/our-goal", label: "Our goal", icon: Landmark },
   { to: "/news", label: "Noutăți", icon: Newspaper },
   { to: "/profile", label: "Profil", icon: UserCircle },
   { to: "/seed", label: "Seed", icon: FlaskConical },

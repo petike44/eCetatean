@@ -364,7 +364,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
       className="flex flex-col lg:flex-1 lg:overflow-hidden lg:!px-0 lg:!py-0"
     >
       <div
-        className="flex flex-col min-h-[calc(100dvh-7rem)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
+        className="flex flex-col min-h-[calc(100dvh-3.5rem)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
         style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
       >
         {isEmpty ? (
@@ -431,7 +431,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
               style={{ background: "linear-gradient(to bottom, var(--bg) 0%, transparent 100%)" }}
             />
             <div ref={scrollRef} className="flex-1 overflow-y-auto">
-              <div className="px-5 py-6 space-y-4 lg:max-w-2xl lg:mx-auto lg:w-full">
+              <div className="px-5 py-6 space-y-4 lg:max-w-4xl lg:mx-auto lg:w-full">
                 {msgs.slice(1).map((m) => {
                   if (m.role === "steps") {
                     return (
@@ -522,7 +522,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
               onSubmit={(e) => { e.preventDefault(); send(input); }}
               className="px-4 pt-2 bg-background pb-[max(1rem,env(safe-area-inset-bottom))] lg:pb-5"
             >
-              <div className="relative flex items-center lg:max-w-2xl lg:mx-auto">
+              <div className="relative flex items-center lg:max-w-4xl lg:mx-auto">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}

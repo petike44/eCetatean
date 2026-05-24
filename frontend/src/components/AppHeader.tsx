@@ -1,12 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { ChevronRight, Menu, Sparkles } from "lucide-react";
 import { APP_NAV_TABS, isNavTabActive } from "@/lib/nav-config";
 import { navIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/lib/clerk-stub";
 import { useProfile } from "@/lib/api-hooks";
 import { profileDisplayName, profileInitials } from "@/lib/profile-utils";
+import { TopBarButton } from "@/components/TopBar";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 interface AppHeaderProps {
   variant?: "default" | "chat";
@@ -14,6 +17,103 @@ interface AppHeaderProps {
   rightAction?: ReactNode;
   /** Hide nav strip on chat mobile when using merged header only */
   showNavStrip?: boolean;
+}
+
+function MobileNavMenu({
+  displayName,
+  initials,
+}: {
+  displayName: string;
+  initials: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { location } = useRouterState();
+  const path = location.pathname;
+
+  return (
+    <>
+      <TopBarButton
+        type="button"
+        aria-label="Deschide meniul"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className="lg:hidden shrink-0"
+      >
+        <Menu size={18} strokeWidth={2} />
+      </TopBarButton>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="left"
+          className="w-[min(320px,90vw)] p-0 flex flex-col gap-0 border-r border-primary/10 bg-surface/95 backdrop-blur-xl"
+        >
+          <SheetTitle className="sr-only">Navigare principală</SheetTitle>
+          <div className="shrink-0 border-b border-border/80 bg-gradient-to-b from-primary-light/55 to-surface px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-card">
+                <Sparkles size={16} strokeWidth={2.2} />
+              </div>
+              <div className="min-w-0">
+                <span className="block font-display font-bold text-[15px] leading-none text-primary">eCetățean</span>
+                <span className="block mt-1 text-[11.5px] text-text-tertiary">Asistentul tău civic digital</span>
+              </div>
+            </div>
+            <Link
+              to="/profile"
+              onClick={() => setOpen(false)}
+              className="press mt-4 flex items-center gap-3 rounded-2xl border border-border/80 bg-surface/90 px-3 py-2.5 shadow-card"
+            >
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="text-[11.5px] font-semibold text-primary">{initials}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-medium text-text-secondary leading-none">Contul tău</p>
+                <p className="text-[14px] font-semibold text-foreground truncate mt-1 leading-none">{displayName}</p>
+              </div>
+              <ChevronRight size={15} className="text-text-tertiary shrink-0" />
+            </Link>
+          </div>
+          <nav className="flex flex-col gap-1 p-2.5 pb-2" aria-label="Navigare principală">
+            {APP_NAV_TABS.map(({ to, label, icon: Icon, dot }) => {
+              const active = isNavTabActive(path, to);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "press flex items-center gap-3 px-3 py-3 rounded-2xl min-h-11 transition-all",
+                    active
+                      ? "bg-primary-light text-primary font-semibold border border-primary/15 shadow-card"
+                      : "text-text-secondary hover:bg-black/[0.04] border border-transparent",
+                  )}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <div className="relative shrink-0">
+                    <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+                    {dot && active && (
+                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full" />
+                    )}
+                  </div>
+                  <span className="text-[15px] flex-1">{label}</span>
+                  <ChevronRight size={15} className={cn("shrink-0", active ? "text-primary/80" : "text-text-tertiary")} />
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <Link
+              to="/chat"
+              onClick={() => setOpen(false)}
+              className="press w-full min-h-11 rounded-2xl bg-primary text-primary-foreground font-semibold text-[14px] inline-flex items-center justify-center gap-2 shadow-elevated"
+            >
+              <Sparkles size={15} strokeWidth={2.2} />
+              Deschide asistentul
+            </Link>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
 }
 
 export function AppHeader({
@@ -35,7 +135,7 @@ export function AppHeader({
   return (
     <div
       className={cn(
-        "sticky top-0 z-40 shrink-0 bg-surface/95 backdrop-blur-md border-b border-border",
+        "sticky top-0 z-40 shrink-0 border-b border-border/80 bg-surface/90 backdrop-blur-xl supports-[backdrop-filter]:bg-surface/80",
         "pt-[env(safe-area-inset-top)]",
       )}
     >
@@ -45,8 +145,10 @@ export function AppHeader({
         role="banner"
       >
         {leftAction && (
-          <motion.div className="shrink-0 lg:hidden">{leftAction}</motion.div>
+          <div className="shrink-0 lg:hidden">{leftAction}</div>
         )}
+
+        {showNavStrip && <MobileNavMenu displayName={displayName} initials={initials} />}
 
         {isChat ? (
           <div className="flex-1 flex items-center justify-center gap-2 min-w-0 lg:hidden">
@@ -60,7 +162,7 @@ export function AppHeader({
         ) : (
           <Link
             to="/home"
-            className="font-display font-bold text-[15px] tracking-tight text-primary hover:opacity-70 transition-opacity duration-150 shrink-0"
+            className="lg:hidden font-display font-bold text-[15px] tracking-tight text-primary hover:opacity-70 transition-opacity duration-150 shrink-0"
           >
             eCetățean
           </Link>
@@ -133,44 +235,6 @@ export function AppHeader({
           </span>
         </Link>
       </motion.div>
-
-      {/* Mobile nav strip */}
-      {showNavStrip && (
-        <nav
-          className="lg:hidden flex items-center gap-1 px-3 pb-2 overflow-x-auto scrollbar-hide"
-          aria-label="Navigare principală"
-        >
-          {APP_NAV_TABS.map(({ to, label, icon: Icon }) => {
-            const active = isNavTabActive(path, to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={cn(
-                  "press flex flex-col items-center justify-center gap-0.5 min-w-[4.25rem] min-h-11 px-2.5 py-1.5 rounded-2xl relative shrink-0 transition-colors duration-200",
-                  active ? "text-accent" : "text-text-tertiary",
-                )}
-                aria-label={label}
-                aria-current={active ? "page" : undefined}
-              >
-                {active && (
-                  <motion.span
-                    layoutId={navIndicator.layoutId}
-                    className={navIndicator.className}
-                    transition={navIndicator.transition}
-                  />
-                )}
-                <motion.div className="relative p-0.5 z-[1]">
-                  <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
-                </motion.div>
-                <span className={cn("text-[10px] leading-none z-[1]", active ? "font-semibold" : "font-medium")}>
-                  {label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
     </div>
   );
 }

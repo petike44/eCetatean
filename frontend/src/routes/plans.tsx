@@ -302,7 +302,7 @@ function PlansPage() {
           <TopBar title="Planurile mele" subtitle="Proceduri civice" />
         </div>
       }
-      contentClassName="lg:max-w-2xl lg:mx-auto"
+      contentClassName="lg:max-w-4xl lg:mx-auto"
       className="lg:!px-5"
     >
       {/* Header */}

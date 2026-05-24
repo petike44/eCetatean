@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Protected } from "@/lib/auth-guard";
-import { WeTranslateHandoffModal } from "@/components/WeTranslateHandoffModal";
+import { DocumentTranslationModal } from "@/components/DocumentTranslationModal";
 import {
   useLifeEvent,
   useUpdateLifeEventStep,
@@ -133,6 +133,13 @@ function LifeEventDashboard() {
 
   const handleAction = async (step: LifeEventStep) => {
     const action = step.online_action;
+    // Phase 6: prefer Pipeline A (tipizatul preview) when the action plan
+    // resolved a form_slug, fall back to Pipeline B (direct PDF download
+    // via legacy form_type) otherwise.
+    if (action?.type === "pdf" && action.form_slug) {
+      nav({ to: "/document-preview", search: { form: action.form_slug } });
+      return;
+    }
     if (action?.type === "pdf" && action.form_type) {
       void handleDownloadForm(action.form_type);
       return;
@@ -165,7 +172,7 @@ function LifeEventDashboard() {
       });
       return;
     }
-    if (action?.type === "translation_quote") {
+    if (action?.type === "translation_document") {
       setTranslationAction(action);
       return;
     }
@@ -198,13 +205,13 @@ function LifeEventDashboard() {
           show("success", `Programare confirmată — ${slot} (ref. ${ref})`)
         }
       />
-      <WeTranslateHandoffModal
+      <DocumentTranslationModal
         open={translationAction !== null}
         action={translationAction}
         onClose={() => setTranslationAction(null)}
       />
       <div className="flex-1 overflow-y-auto pb-24 lg:pb-0">
-        <div className="lg:max-w-3xl lg:mx-auto">
+        <div className="lg:max-w-5xl lg:mx-auto">
         {/* Top bar */}
         <div className="sticky top-0 z-30 bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 pt-4 pb-3">
           <div className="flex items-center gap-3 mb-3">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
   Download,
@@ -17,7 +18,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
-import { WeTranslateHandoffModal } from "@/components/WeTranslateHandoffModal";
+import { DocumentTranslationModal } from "@/components/DocumentTranslationModal";
 import {
   useLifeEvent,
   useUpdateLifeEventStep,
@@ -48,6 +49,7 @@ const CATEGORY_ORDER: StepCategory[] = ["docs", "financial", "onsite"];
 // ─── Main panel ──────────────────────────────────────────────────────────────
 
 export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
+  const nav = useNavigate();
   const { show } = useToast();
   const { data: event, isLoading } = useLifeEvent(eventId);
   const { data: profile } = useProfile();
@@ -139,7 +141,12 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
   const handleAction = async (step: LifeEventStep) => {
     const action = step.online_action;
     if (!action) return;
-    if (action.type === "translation_quote") {
+    // Phase 6: prefer Pipeline A (tipizatul preview) when resolved.
+    if (action.type === "pdf" && action.form_slug) {
+      nav({ to: "/document-preview", search: { form: action.form_slug } });
+      return;
+    }
+    if (action.type === "translation_document") {
       setTranslationAction(action);
       return;
     }
@@ -162,10 +169,9 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-3 w-full">
-      <WeTranslateHandoffModal
+      <DocumentTranslationModal
         open={translationAction !== null}
         action={translationAction}
-        selectedVehicleId={selectedVehicleId}
         onClose={() => setTranslationAction(null)}
       />
       {/* Progress header */}

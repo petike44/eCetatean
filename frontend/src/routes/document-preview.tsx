@@ -12,7 +12,9 @@ import {
   useFillPdfForm,
   usePdfForms,
   useSavePdfFormMapping,
+  useSuggestPdfFormMapping,
 } from "@/lib/api-hooks";
+import { FieldRenderer } from "@/components/FieldRenderer";
 
 type DocumentPreviewSearch = {
   form?: string;
@@ -59,6 +61,7 @@ function DocPreview() {
   const analyze = useAnalyzePdfForm();
   const fill = useFillPdfForm();
   const saveMapping = useSavePdfFormMapping();
+  const suggestMapping = useSuggestPdfFormMapping();
 
   const selectedAnalysis = analyze.data;
   const requiredCount = fields.filter((field) => field.required).length;
@@ -143,6 +146,41 @@ function DocPreview() {
       fields: fields.map(({ value: _value, ...field }) => field),
     });
   }
+
+  function requestSuggestions() {
+    if (!selectedForm) return;
+    suggestMapping.mutate(
+      { form: selectedForm },
+      {
+        onSuccess: (data) => {
+          // Merge proposals into the current field list. We DO NOT auto-save;
+          // the user reviews the dropdown values then clicks "Salvează corecții".
+          // Preserve any value the user already typed.
+          const byName = new Map(
+            data.mapping.map((m) => [m.acroFieldName ?? m.id, m] as const),
+          );
+          setFields((current) =>
+            current.map((f) => {
+              const key = f.acroFieldName ?? f.id;
+              const proposal = byName.get(key);
+              if (!proposal) return f;
+              return {
+                ...f,
+                dataKey: proposal.dataKey,
+                confidence: proposal.confidence,
+                source: proposal.source,
+              };
+            }),
+          );
+        },
+      },
+    );
+  }
+
+  const isTipizatul = selectedForm?.source === "tipizatul";
+  const hasUserMapping = fields.some((f) => f.source === "saved" || f.source === "ai");
+  const showSuggestButton = isTipizatul && fields.length > 0;
+  const suggestData = suggestMapping.data;
 
   return (
     <AppShell topBar={<TopBar showBack title="Previzualizare cerere" />}>
@@ -338,7 +376,44 @@ function DocPreview() {
                       </p>
                     )}
                     <div className="space-y-3">
-                      {fields.map((field) => (
+                      {fields.map((field) =>
+                        isTipizatul ? (
+                          <div key={field.id} className="space-y-2">
+                            <FieldRenderer
+                              field={field}
+                              onValueChange={(value) => updateField(field.id, value)}
+                            />
+                            <div className="grid gap-2 md:grid-cols-[180px_1fr]">
+                              <select
+                                value={
+                                  DATA_KEY_OPTIONS.includes(field.dataKey)
+                                    ? field.dataKey
+                                    : "custom"
+                                }
+                                onChange={(event) => {
+                                  if (event.target.value !== "custom")
+                                    updateFieldDataKey(field.id, event.target.value);
+                                }}
+                                className="rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[12px] text-text-secondary outline-none focus:border-primary"
+                              >
+                                <option value="custom">Cheie personalizată</option>
+                                {DATA_KEY_OPTIONS.map((key) => (
+                                  <option key={key} value={key}>
+                                    {key}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                value={field.dataKey}
+                                onChange={(event) =>
+                                  updateFieldDataKey(field.id, event.target.value)
+                                }
+                                placeholder="ex. profile.full_name sau input.vehicle_make"
+                                className="w-full rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[12px] text-text-secondary outline-none focus:border-primary"
+                              />
+                            </div>
+                          </div>
+                        ) : (
                         <div
                           key={field.id}
                           className="rounded-xl border border-border bg-surface-secondary/60 p-3"
@@ -390,7 +465,7 @@ function DocPreview() {
                             />
                           </div>
                         </div>
-                      ))}
+                        ))}
                     </div>
                   </Section>
                 </Card>
@@ -401,7 +476,7 @@ function DocPreview() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-border">
-        <div className="mx-auto max-w-[440px] md:max-w-[640px] lg:max-w-[480px] px-5 py-4">
+        <div className="mx-auto max-w-[440px] md:max-w-[760px] lg:max-w-4xl px-5 py-4">
           <p className="text-[12.5px] text-text-secondary mb-3 text-center">
             Câmpuri obligatorii completate:{" "}
             <span className="font-display font-semibold text-text-primary">

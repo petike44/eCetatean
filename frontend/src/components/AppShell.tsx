@@ -37,7 +37,7 @@ export function AppShell({
 
   return (
     <ChatSessionsProvider>
-      <div className="min-h-dvh bg-bg shell-desktop-bg lg:flex">
+      <div className="min-h-dvh bg-bg shell-mobile-bg shell-desktop-bg lg:flex">
         {!hideNav && <ChatHistorySidebar />}
         <div className={cn("lg:flex-1 lg:flex lg:flex-col min-w-0", desktopScroll, "lg:h-dvh")}>
           {!hideNav && (
@@ -61,7 +61,7 @@ export function AppShell({
               exit="exit"
               variants={pageTransition}
               className={cn(
-                "mx-auto w-full max-w-[440px] md:max-w-[640px] lg:max-w-none lg:px-8 lg:py-6",
+                "mx-auto w-full max-w-[440px] md:max-w-[760px] lg:max-w-none lg:px-0 lg:py-4 desktop-content-wide",
                 hideNav ? "pb-0" : "pb-4 lg:pb-0",
                 className,
                 contentClassName,

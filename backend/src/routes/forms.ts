@@ -12,6 +12,8 @@ import {
   normalizeFields,
   normalizeForm,
 } from '../lib/pdf-autofill'
+import { suggestMapping } from '../lib/tipizatul/suggest-mapping'
+import type { TemplateField } from '../lib/tipizatul/types'
 import type { PdfAutofillField, PdfForm, Profile } from '../types'
 
 type AnalyzeRequest = {
@@ -126,6 +128,27 @@ formsRoute.post('/:id/fill', requireAuth, async (c) => {
       'Content-Disposition': `attachment; filename="${fileName}"`,
       'Content-Length': pdfBuffer.length.toString(),
     },
+  })
+})
+
+formsRoute.post('/:id/suggest-mapping', requireAuth, async (c) => {
+  const form = await findForm(c.req.param('id'))
+  if (!form) {
+    return c.json({ success: false, error: 'Formularul nu a fost gasit' }, 404)
+  }
+
+  const fieldsRaw = (form as PdfForm & { fields_raw?: TemplateField[] }).fields_raw ?? []
+  if (!fieldsRaw.length) {
+    return c.json(
+      { success: false, error: 'Formularul nu are fields_raw — sugerarea funcționează doar pe formulare tipizatul' },
+      400,
+    )
+  }
+
+  const result = await suggestMapping(fieldsRaw)
+  return c.json({
+    success: true,
+    data: { mapping: result.mapping, fallback: result.fallback },
   })
 })
 

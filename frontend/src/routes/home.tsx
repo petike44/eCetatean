@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -193,132 +193,35 @@ const FEATURE_CARDS: FeatureCard[] = [
   },
 ];
 
-// ——— Dial carousel ——————————————————————————————————————————
+// ——— Feature grid ———————————————————————————————————————————
 
-const CARD_W = 196;
-const CARD_H = 230;
-const CARD_GAP = 14;
-
-function DialStrip({ onCardClick }: { onCardClick: (id: string) => void }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scroll, setScroll] = useState(0);
-  const [cw, setCw] = useState(0);
-  const currentCardRef = useRef(0);
-  const wheelLockRef = useRef(false);
-
-  const scrollToCard = (idx: number, el: HTMLDivElement, containerWidth: number) => {
-    const padX = Math.max(16, containerWidth / 2 - CARD_W / 2);
-    const targetLeft = padX + idx * (CARD_W + CARD_GAP) - (containerWidth / 2 - CARD_W / 2);
-    el.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    setCw(el.clientWidth);
-
-    const nearestCard = (scrollLeft: number, width: number) => {
-      const padX = Math.max(16, width / 2 - CARD_W / 2);
-      const centerPos = scrollLeft + width / 2;
-      let idx = 0;
-      let best = Infinity;
-      for (let i = 0; i < FEATURE_CARDS.length; i++) {
-        const d = Math.abs(padX + i * (CARD_W + CARD_GAP) + CARD_W / 2 - centerPos);
-        if (d < best) { best = d; idx = i; }
-      }
-      return idx;
-    };
-
-    const onScroll = () => {
-      setScroll(el.scrollLeft);
-      currentCardRef.current = nearestCard(el.scrollLeft, el.clientWidth);
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-      e.preventDefault();
-      if (wheelLockRef.current) return;
-      const direction = e.deltaY > 0 ? 1 : -1;
-      const next = Math.max(0, Math.min(FEATURE_CARDS.length - 1, currentCardRef.current + direction));
-      if (next === currentCardRef.current) return;
-      currentCardRef.current = next;
-      wheelLockRef.current = true;
-      scrollToCard(next, el, el.clientWidth);
-      setTimeout(() => { wheelLockRef.current = false; }, 420);
-    };
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-    el.addEventListener("wheel", onWheel, { passive: false });
-    const ro = new ResizeObserver(() => setCw(el.clientWidth));
-    ro.observe(el);
-    return () => {
-      el.removeEventListener("scroll", onScroll);
-      el.removeEventListener("wheel", onWheel);
-      ro.disconnect();
-    };
-  }, []);
-
-  const padX = cw > 0 ? Math.max(16, cw / 2 - CARD_W / 2) : 16;
-  const centerPos = scroll + cw / 2;
-
+function FeatureGrid({ onCardClick }: { onCardClick: (id: string) => void }) {
   return (
-    <div
-      ref={containerRef}
-      className="flex overflow-x-auto scrollbar-hide"
-      style={{
-        scrollSnapType: "x mandatory",
-        WebkitOverflowScrolling: "touch",
-        paddingLeft: padX,
-        paddingRight: padX,
-        paddingTop: 12,
-        paddingBottom: 20,
-        gap: CARD_GAP,
-      }}
-    >
-      {FEATURE_CARDS.map((card, i) => {
-        const cardCenter = padX + i * (CARD_W + CARD_GAP) + CARD_W / 2;
-        const dist = Math.abs(cardCenter - centerPos);
-        const t = Math.min(dist / (CARD_W * 0.9), 1);
-        const scale = 1 - t * 0.09;
-        const opacity = 1 - t * 0.3;
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3">
+      {FEATURE_CARDS.map((card) => {
         const Illustration = card.illustration;
-
         return (
           <motion.button
             key={card.id}
             onClick={() => onCardClick(card.id)}
             className={cn(
-              "press shrink-0 rounded-[20px] bg-gradient-to-br text-left flex flex-col",
+              "press rounded-[20px] bg-gradient-to-br text-left flex flex-col",
               "border border-black/[0.07] shadow-card overflow-hidden",
               card.bgClass,
             )}
-            style={{
-              width: CARD_W,
-              height: CARD_H,
-              scrollSnapAlign: "center",
-              scale,
-              opacity,
-              willChange: "transform, opacity",
-            }}
+            style={{ aspectRatio: "196 / 230", color: card.accentColor }}
             aria-label={`Deschide ${card.title}`}
           >
-            {/* Illustration */}
-            <div
-              className="flex-1 flex items-center justify-center"
-              style={{ color: card.accentColor }}
-            >
-              <div style={{ width: 80, height: 80 }}>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-16 h-16">
                 <Illustration />
               </div>
             </div>
-
-            {/* Footer */}
-            <div className="px-4 pb-5 pt-1">
-              <p className="font-display font-semibold text-[15px] text-text-primary leading-tight">
+            <div className="px-3 pb-4 pt-1">
+              <p className="font-display font-semibold text-[13px] text-text-primary leading-tight">
                 {card.title}
               </p>
-              <p className="text-[12px] text-text-secondary mt-0.5 leading-tight">
+              <p className="text-[11px] text-text-secondary mt-0.5 leading-tight">
                 {card.subtitle}
               </p>
             </div>
@@ -551,63 +454,64 @@ function Home() {
 
   return (
     <AppShell topBar={<HomeTopBar />}>
-      <div className="px-4 pt-2 lg:max-w-2xl lg:mx-auto">
+      <div className="px-5 pt-4 pb-10 max-w-7xl mx-auto lg:grid lg:grid-cols-[1fr_340px] lg:gap-10 lg:items-start lg:pt-8 lg:px-10">
 
-        {/* ── Greeting ── */}
-        <div className="anim-fade-up mb-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mb-1.5">
-            {getRoDate()}
+        {/* ── Left column ── */}
+        <div>
+          {/* Greeting */}
+          <div className="anim-fade-up mb-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mb-1.5">
+              {getRoDate()}
+            </p>
+            <h1 className="font-display text-[30px] font-semibold text-text-primary leading-tight">
+              {getGreeting()}, {firstName}.
+            </h1>
+          </div>
+
+          {/* Search bar */}
+          <div className="relative mb-7">
+            <Search
+              size={16}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none"
+            />
+            <input
+              type="text"
+              readOnly
+              onFocus={handleSearchFocus}
+              onClick={handleSearchFocus}
+              placeholder="Pune o întrebare..."
+              className="w-full h-12 pl-10 pr-4 rounded-2xl border border-border bg-surface-secondary text-[14px] text-text-primary placeholder:text-text-tertiary focus:outline-none cursor-pointer transition-colors duration-150 hover:bg-surface hover:border-border"
+            />
+          </div>
+
+          {/* Feature grid */}
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mb-1 px-0.5">
+            Funcționalități
           </p>
-          <h1 className="font-display text-[27px] font-semibold text-text-primary leading-tight">
-            {getGreeting()}, {firstName}.
-          </h1>
+          <FeatureGrid onCardClick={setActiveCard} />
         </div>
 
-        {/* ── Search bar ── */}
-        <div className="relative mb-5">
-          <Search
-            size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none"
-          />
-          <input
-            type="text"
-            readOnly
-            onFocus={handleSearchFocus}
-            onClick={handleSearchFocus}
-            placeholder="Pune o întrebare..."
-            className="w-full h-11 pl-10 pr-4 rounded-2xl border border-border bg-surface-secondary text-[14px] text-text-primary placeholder:text-text-tertiary focus:outline-none cursor-pointer transition-colors duration-150 hover:bg-surface hover:border-border"
-          />
+        {/* ── Right column — overview widgets ── */}
+        <div className="mt-8 lg:mt-0 lg:sticky lg:top-6">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mb-3 px-0.5">
+            Rezumat
+          </p>
+          <StaggerList className="flex flex-col gap-3">
+            <StaggerItem>
+              <ProfileWidget profile={profile} />
+            </StaggerItem>
+            {news.length > 0 && (
+              <StaggerItem>
+                <NewsWidget news={news} />
+              </StaggerItem>
+            )}
+            {lifeEvents.some((e) => !e.is_completed) && (
+              <StaggerItem>
+                <LifeEventWidget events={lifeEvents} />
+              </StaggerItem>
+            )}
+          </StaggerList>
         </div>
-
-        {/* ── Strip label ── */}
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mb-0.5 px-0.5">
-          Funcționalități
-        </p>
-      </div>
-
-      {/* ── Dial strip — full-bleed so the padding trick can center cards ── */}
-      <DialStrip onCardClick={setActiveCard} />
-
-      {/* ── Overview widgets ── */}
-      <div className="px-4 pb-8 lg:max-w-2xl lg:mx-auto">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mb-3 px-0.5">
-          Rezumat
-        </p>
-        <StaggerList className="flex flex-col gap-3">
-          <StaggerItem>
-            <ProfileWidget profile={profile} />
-          </StaggerItem>
-          {news.length > 0 && (
-            <StaggerItem>
-              <NewsWidget news={news} />
-            </StaggerItem>
-          )}
-          {lifeEvents.some((e) => !e.is_completed) && (
-            <StaggerItem>
-              <LifeEventWidget events={lifeEvents} />
-            </StaggerItem>
-          )}
-        </StaggerList>
       </div>
 
       {/* ── Quick-action sheet ── */}

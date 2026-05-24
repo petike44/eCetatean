@@ -5,7 +5,7 @@ import { resolveLoginCredentials, isAdminUser, ADMIN_EMAIL } from "@/lib/admin";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useProfile } from "@/lib/api-hooks";
-import { apiPostJson } from "@/lib/api";
+import { apiGet, apiPostJson } from "@/lib/api";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Autentificare — eCetățean" }] }),
@@ -66,6 +66,7 @@ function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signUpName, setSignUpName] = useState("");
+  const [signUpCnp, setSignUpCnp] = useState("");
   const [signUpAddress, setSignUpAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -112,10 +113,32 @@ function Auth() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
     if (!signUpName.trim()) {
       setError("Numele complet este obligatoriu.");
       return;
     }
+
+    const cnp = signUpCnp.trim();
+    if (!/^\d{13}$/.test(cnp)) {
+      setError("CNP-ul trebuie să conțină exact 13 cifre.");
+      return;
+    }
+
+    // Check for duplicate CNP before creating the account
+    setLoading(true);
+    try {
+      const result = await apiGet<{ exists: boolean }>(`/api/profile/check-cnp?cnp=${cnp}`, async () => null);
+      if (result.exists) {
+        setError("Există deja un cont înregistrat cu acest CNP. Contactează suportul dacă crezi că este o eroare.");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // Non-critical — proceed; backend will catch duplicates on profile save
+    }
+    setLoading(false);
+
     setLoading(true);
     const { email: loginEmail, password: loginPassword } = resolveLoginCredentials(email, password);
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -123,6 +146,7 @@ function Auth() {
       password: loginPassword,
     });
     setLoading(false);
+
     if (signUpError) {
       setError(
         signUpError.message.includes("already registered")
@@ -134,7 +158,11 @@ function Auth() {
         const token = signUpData.session.access_token;
         await apiPostJson(
           "/api/profile",
-          { full_name: signUpName.trim(), address: signUpAddress.trim() || null },
+          {
+            full_name: signUpName.trim(),
+            cnp: cnp || null,
+            address: signUpAddress.trim() || null,
+          },
           async () => token,
         ).catch(() => {/* non-critical — profile-setup handles it as fallback */});
         navigate({ to: "/chat" });
@@ -256,20 +284,38 @@ function Auth() {
                 </div>
 
                 {tab === "signup" && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-text-primary" htmlFor="signup-address">
-                      Adresă (opțional)
-                    </label>
-                    <input
-                      id="signup-address"
-                      type="text"
-                      autoComplete="street-address"
-                      value={signUpAddress}
-                      onChange={(e) => setSignUpAddress(e.target.value)}
-                      placeholder="Str. Memorandumului 1, Cluj-Napoca"
-                      className={inputClass}
-                    />
-                  </div>
+                  <>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium text-text-primary" htmlFor="signup-cnp">
+                        CNP *
+                      </label>
+                      <input
+                        id="signup-cnp"
+                        type="text"
+                        inputMode="numeric"
+                        required
+                        value={signUpCnp}
+                        onChange={(e) => setSignUpCnp(e.target.value.replace(/\D/g, "").slice(0, 13))}
+                        placeholder="13 cifre"
+                        className={inputClass}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium text-text-primary" htmlFor="signup-address">
+                        Adresă (opțional)
+                      </label>
+                      <input
+                        id="signup-address"
+                        type="text"
+                        autoComplete="street-address"
+                        value={signUpAddress}
+                        onChange={(e) => setSignUpAddress(e.target.value)}
+                        placeholder="Str. Memorandumului 1, Cluj-Napoca"
+                        className={inputClass}
+                      />
+                    </div>
+                  </>
                 )}
 
                 {error && (
@@ -284,7 +330,7 @@ function Auth() {
                   className="mt-1 rounded-2xl bg-accent px-5 py-3.5 min-h-11 text-[15px] font-semibold text-white disabled:opacity-60 transition-opacity inline-flex items-center justify-center gap-2"
                 >
                   {loading && <Loader2 size={18} className="animate-spin" />}
-                  {loading ? "Se procesează..." : tab === "signin" ? "Intră în cont" : "Creează cont"}
+                  {loading ? "Se verifică..." : tab === "signin" ? "Intră în cont" : "Creează cont"}
                 </button>
               </form>
             )}

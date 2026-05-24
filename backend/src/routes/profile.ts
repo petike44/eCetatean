@@ -5,6 +5,29 @@ import type { Profile } from '../types'
 
 export const profileRoute = new Hono()
 
+profileRoute.get('/check-cnp', async (c) => {
+  const cnp = c.req.query('cnp')?.trim()
+  if (!cnp || !/^\d{13}$/.test(cnp)) {
+    return c.json({ exists: false, error: 'CNP invalid — trebuie să aibă 13 cifre' }, 400)
+  }
+
+  if (!isSupabaseConfigured) {
+    return c.json({ exists: false })
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .select('user_id')
+    .eq('cnp', cnp)
+    .maybeSingle()
+
+  if (error) {
+    return c.json({ exists: false, error: 'Eroare la verificare' }, 500)
+  }
+
+  return c.json({ exists: !!data })
+})
+
 profileRoute.get('/', requireAuth, async (c) => {
   const userId = c.get('userId')
 

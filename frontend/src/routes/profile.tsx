@@ -130,22 +130,25 @@ function Profile() {
   return (
     <AppShell
       topBar={
-        <TopBar
-          title="Profilul meu"
-          right={
-            <Link
-              to="/audit"
-              aria-label="Istoric civic"
-              className="press w-9 h-9 rounded-full flex items-center justify-center bg-black/[0.04] hover:bg-black/[0.08] active:bg-black/[0.12] transition-colors duration-150"
-            >
-              <History size={17} strokeWidth={2} className="text-text-secondary" />
-            </Link>
-          }
-        />
+        <div className="hidden lg:block">
+          <TopBar
+            title="Profilul meu"
+            right={
+              <Link
+                to="/audit"
+                aria-label="Istoric civic"
+                className="press w-9 h-9 rounded-full flex items-center justify-center bg-black/[0.04] hover:bg-black/[0.08] active:bg-black/[0.12] transition-colors duration-150"
+              >
+                <History size={17} strokeWidth={2} className="text-text-secondary" />
+              </Link>
+            }
+          />
+        </div>
       }
     >
       <div className="lg:max-w-3xl lg:mx-auto">
         <FadeIn className="px-5 pt-5 lg:px-0 lg:pt-2">
+          <h1 className="font-display font-bold text-[22px] text-text-primary mb-4 lg:hidden">Profilul meu</h1>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-[22px]">
               {isLoading ? <Loader2 size={22} className="animate-spin" /> : initials}

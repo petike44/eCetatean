@@ -25,6 +25,7 @@ import { Route as ActionPlanRouteImport } from './routes/action-plan'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LifeEventIdRouteImport } from './routes/life-event.$id'
 import { Route as DrpcivEventIdRouteImport } from './routes/drpciv.$eventId'
+import { Route as ChatConversationIdRouteImport } from './routes/chat.$conversationId'
 import { Route as AdminNewsRouteImport } from './routes/admin.news'
 
 const StaffRoute = StaffRouteImport.update({
@@ -107,6 +108,11 @@ const DrpcivEventIdRoute = DrpcivEventIdRouteImport.update({
   path: '/drpciv/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatConversationIdRoute = ChatConversationIdRouteImport.update({
+  id: '/$conversationId',
+  path: '/$conversationId',
+  getParentRoute: () => ChatRoute,
+} as any)
 const AdminNewsRoute = AdminNewsRouteImport.update({
   id: '/admin/news',
   path: '/admin/news',
@@ -118,7 +124,7 @@ export interface FileRoutesByFullPath {
   '/action-plan': typeof ActionPlanRoute
   '/audit': typeof AuditRoute
   '/auth': typeof AuthRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -137,7 +144,7 @@ export interface FileRoutesByTo {
   '/action-plan': typeof ActionPlanRoute
   '/audit': typeof AuditRoute
   '/auth': typeof AuthRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -157,7 +165,7 @@ export interface FileRoutesById {
   '/action-plan': typeof ActionPlanRoute
   '/audit': typeof AuditRoute
   '/auth': typeof AuthRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
   '/document-preview': typeof DocumentPreviewRoute
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRoute
   '/admin/news': typeof AdminNewsRoute
+  '/chat/$conversationId': typeof ChatConversationIdRoute
   '/drpciv/$eventId': typeof DrpcivEventIdRoute
   '/life-event/$id': typeof LifeEventIdRoute
 }
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
+    | '/chat/$conversationId'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
+    | '/chat/$conversationId'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   id:
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/staff'
     | '/admin/news'
+    | '/chat/$conversationId'
     | '/drpciv/$eventId'
     | '/life-event/$id'
   fileRoutesById: FileRoutesById
@@ -236,7 +248,7 @@ export interface RootRouteChildren {
   ActionPlanRoute: typeof ActionPlanRoute
   AuditRoute: typeof AuditRoute
   AuthRoute: typeof AuthRoute
-  ChatRoute: typeof ChatRoute
+  ChatRoute: typeof ChatRouteWithChildren
   DocumentPreviewRoute: typeof DocumentPreviewRoute
   DocumentsRoute: typeof DocumentsRoute
   NewsRoute: typeof NewsRoute
@@ -365,6 +377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DrpcivEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat/$conversationId': {
+      id: '/chat/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/chat/$conversationId'
+      preLoaderRoute: typeof ChatConversationIdRouteImport
+      parentRoute: typeof ChatRoute
+    }
     '/admin/news': {
       id: '/admin/news'
       path: '/admin/news'
@@ -375,12 +394,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ChatRouteChildren {
+  ChatConversationIdRoute: typeof ChatConversationIdRoute
+}
+
+const ChatRouteChildren: ChatRouteChildren = {
+  ChatConversationIdRoute: ChatConversationIdRoute,
+}
+
+const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActionPlanRoute: ActionPlanRoute,
   AuditRoute: AuditRoute,
   AuthRoute: AuthRoute,
-  ChatRoute: ChatRoute,
+  ChatRoute: ChatRouteWithChildren,
   DocumentPreviewRoute: DocumentPreviewRoute,
   DocumentsRoute: DocumentsRoute,
   NewsRoute: NewsRoute,

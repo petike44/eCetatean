@@ -7,6 +7,7 @@ import {
   apiPatchJson,
   apiPostForm,
   apiStreamPost,
+  apiDelete,
   downloadAutofilledPdf,
   downloadPdf,
   type GetToken,
@@ -171,6 +172,35 @@ export function useNews() {
   });
 }
 
+export function useCreateNews() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { title: string; summary: string; body?: string; publish?: boolean }) =>
+      apiPostJson<NewsItem>("/api/news", body, getToken),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+  });
+}
+
+export function useGenerateNews() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { topic?: string; publish?: boolean }) =>
+      apiPostJson<NewsItem>("/api/news/generate", body, getToken),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+  });
+}
+
+export function useDeleteNews() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<boolean>(`/api/news/${id}`, getToken),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["news"] }),
+  });
+}
+
 export function useProfile() {
   const getToken = useGetToken();
   const { isSignedIn } = useAuth();
@@ -316,6 +346,111 @@ export function useSendChatMessage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+// —— Chat conversations ————————————————————————————————————————
+
+export type ChatConversation = {
+  id: string;
+  user_id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StoredChatMessage = {
+  id: string;
+  conversation_id: string;
+  role: "user" | "assistant" | "system" | "steps";
+  content: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type ChatConversationWithMessages = ChatConversation & {
+  messages: StoredChatMessage[];
+};
+
+export type AppendChatMessageInput = {
+  role: StoredChatMessage["role"];
+  content: string;
+  metadata?: Record<string, unknown>;
+};
+
+export function useConversations() {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["conversations"],
+    queryFn: () => apiGet<ChatConversation[]>("/api/chat/conversations", getToken),
+    enabled: !!isSignedIn,
+    staleTime: 30_000,
+  });
+}
+
+export function useConversation(id: string | undefined) {
+  const getToken = useGetToken();
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    queryKey: ["conversation", id],
+    queryFn: () => apiGet<ChatConversationWithMessages>(`/api/chat/conversations/${id}`, getToken),
+    enabled: !!isSignedIn && !!id,
+  });
+}
+
+export function useCreateConversation() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body?: { title?: string }) =>
+      apiPostJson<ChatConversation>("/api/chat/conversations", body ?? {}, getToken),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["conversations"] }),
+  });
+}
+
+export function useUpdateConversation() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) =>
+      apiPatchJson<ChatConversation>(`/api/chat/conversations/${id}`, { title }, getToken),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversation", vars.id] });
+    },
+  });
+}
+
+export function useDeleteConversation() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<boolean>(`/api/chat/conversations/${id}`, getToken),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["conversations"] }),
+  });
+}
+
+export function useAppendMessages() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      conversationId,
+      messages,
+    }: {
+      conversationId: string;
+      messages: AppendChatMessageInput[];
+    }) =>
+      apiPostJson<StoredChatMessage[]>(
+        `/api/chat/conversations/${conversationId}/messages`,
+        { messages },
+        getToken,
+      ),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversation", vars.conversationId] });
     },
   });
 }

@@ -68,13 +68,15 @@ function Documents() {
     <AppShell
       className="lg:!px-0 lg:!py-0"
       topBar={
-        <HomeTopBar
-          right={
-            <TopBarButton aria-label="Notificări">
-              <Bell size={20} className="text-text-primary" />
-            </TopBarButton>
-          }
-        />
+        <div className="hidden lg:block">
+          <HomeTopBar
+            right={
+              <TopBarButton aria-label="Notificări">
+                <Bell size={20} className="text-text-primary" />
+              </TopBarButton>
+            }
+          />
+        </div>
       }
     >
       <div className="lg:max-w-2xl lg:mx-auto">

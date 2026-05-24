@@ -29,7 +29,11 @@ function NewsPage() {
 
   return (
     <AppShell
-      topBar={<TopBar title="Noutăți" subtitle="Buletin civic" />}
+      topBar={
+        <div className="hidden lg:block">
+          <TopBar title="Noutăți" subtitle="Buletin civic" />
+        </div>
+      }
       contentClassName="lg:max-w-2xl lg:mx-auto"
       className="lg:!px-5"
     >

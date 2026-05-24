@@ -64,9 +64,8 @@ export type AuditActionType =
   | 'life_event_step_completed'
   | 'payment_simulated'
   | 'appointment_simulated'
-  | 'translation_quote_started'
   | 'payment_handoff_started'
-  | 'translation_demo_completed'
+  | 'translation_document_completed'
 
 export interface AuditEntry {
   id: string
@@ -125,17 +124,19 @@ export interface LifeEventStep {
   tip: string | null
   online_action?: {
     label: string
-    type: 'pdf' | 'url' | 'payment' | 'appointment' | 'translation_quote'
+    type: 'pdf' | 'url' | 'payment' | 'appointment' | 'translation_document'
     url?: string
     form_type?: FormType
+    /** Tipizatul-backed pdf_forms.slug (Phase 6). When set, the UI prefers
+     *  this over form_type so the step opens the tipizatul preview. */
+    form_slug?: string
     amount_ron?: number
     description?: string
     office?: string
     slot_hint?: string
-    provider?: 'wetranslate' | 'ghiseul_drpciv'
+    provider?: 'libretranslate' | 'ghiseul_drpciv'
     source_language?: string
     target_language?: string
-    package?: 'Economy' | 'Optimal' | 'Premium'
   }
 }
 
@@ -198,6 +199,13 @@ export interface PdfAutofillField {
   confidence: number
   source: PdfFieldSource
   acroFieldName?: string
+  // Tipizatul (Phase 6) — surfaced from fields_raw so the frontend can
+  // render the right widget without a separate introspection call.
+  field_type?: 'text' | 'checkbox' | 'dropdown' | 'radio' | 'unsupported'
+  options?: string[]
+  /** Set when the form is acroform_origin='generated' or null — UI should
+   *  ask the user to review before filling. */
+  needs_review?: boolean
 }
 
 export interface PdfForm {

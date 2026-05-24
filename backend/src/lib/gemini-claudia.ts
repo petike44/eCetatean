@@ -109,6 +109,25 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: 'find_procedure',
+    description:
+      'Caută o procedură administrativă în catalogul tipizatul.eu (use this for any administrative procedure not in the hardcoded life-events list). Returns documents, fees, processing time, appeal routes, legal basis, and links to fillable templates when available.',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        query: {
+          type: SchemaType.STRING,
+          description: 'Câteva cuvinte cheie din titlul procedurii',
+        },
+        county: {
+          type: SchemaType.STRING,
+          description: "Județ (default 'Cluj'). Setați la '' pentru proceduri naționale doar.",
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'find_office_info',
     description: 'Informații despre un birou public din Cluj',
     parameters: {
@@ -222,7 +241,7 @@ async function streamWithModel(
       for (const [k, v] of Object.entries(args)) {
         stringArgs[k] = typeof v === 'string' ? v : JSON.stringify(v)
       }
-      const toolResult = handleToolCall(name, stringArgs)
+      const toolResult = await handleToolCall(name, stringArgs)
       enqueue({
         type: 'tool_result',
         tool_name: name,

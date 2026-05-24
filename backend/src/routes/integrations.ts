@@ -1,44 +1,10 @@
 import { Hono } from 'hono'
+import { PDFParse } from 'pdf-parse'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { requireAuth } from '../middleware/auth'
 import { writeAuditEntry } from '../lib/hash-chain'
 import { supabaseAdmin, isSupabaseConfigured } from '../lib/supabase'
-import type { Profile, Vehicle } from '../types'
-
-type TranslationPackage = 'Economy' | 'Optimal' | 'Premium'
-
-type DocumentSummary = {
-  name: string
-  size: number
-  type: string
-}
-
-type WeTranslateHandoff = {
-  provider: 'wetranslate'
-  mode: 'partner_api' | 'public_form_fallback'
-  redirect_url: string
-  handoff_id: string
-  missing_fields: string[]
-  payload_preview: {
-    service: string
-    source_language: string
-    target_language: string
-    package: TranslationPackage
-    delivery_method: string
-    customer: {
-      name: string | null
-      email: string | null
-      phone: string | null
-      address: string | null
-    }
-    documents: DocumentSummary[]
-    vehicle?: {
-      make: string | null
-      model: string | null
-      vin: string | null
-      plate_number: string | null
-    } | null
-  }
-}
+import type { Profile } from '../types'
 
 type GhiseulDrpcivTaxType = 'certificat_inmatriculare' | 'permis_conducere' | 'autorizatie_provizorie'
 
@@ -62,8 +28,8 @@ type GhiseulDrpcivPaymentHandoff = {
   }
 }
 
-type LibreTranslateDemoResult = {
-  provider: 'libretranslate_demo'
+type LibreTranslateResult = {
+  provider: 'libretranslate'
   mode: 'libretranslate_api' | 'offline_demo_fallback'
   source: string
   target: string
@@ -78,7 +44,6 @@ type LibreTranslateDemoResult = {
   endpoint_used: string | null
 }
 
-const WETRANSLATE_PUBLIC_FORM_URL = 'https://www.wetranslate.ro/oferta/?page=49_1'
 const GHISEUL_DRPCIV_TAX_URL =
   'https://www.ghiseul.ro/ghiseul/public/taxe/taxe-speciale/id/eyJpZEluc3QiOiA3MjExLCAidGlwUGVycyI6MCwgInZhbGlkYXJpIjogImZhbHNlIiwgInRpdGx1IjogIlBlcm1pc2UgYXV0by8gQ2VydGlmaWNhdGUgZGUgw65ubWF0cmljdWxhcmUvIEF1dG9yaXphyJtpZSBwcm92aXpvcmllIn0%3D'
 const GHISEUL_DRPCIV_TAXES: Record<GhiseulDrpcivTaxType, { label: string; amount: number }> = {
@@ -86,8 +51,9 @@ const GHISEUL_DRPCIV_TAXES: Record<GhiseulDrpcivTaxType, { label: string; amount
   permis_conducere: { label: 'Permis de conducere', amount: 89 },
   autorizatie_provizorie: { label: 'Autorizație provizorie', amount: 13 },
 }
-const MAX_FILE_COUNT = 30
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024
+const MAX_TRANSLATION_CHARS = 40_000
+const TRANSLATION_CHUNK_SIZE = 3500
 const LIBRETRANSLATE_PUBLIC_ENDPOINTS = [
   'https://libretranslate.de',
   'https://translate.argosopentech.com',
@@ -97,23 +63,6 @@ export const integrationsRoute = new Hono()
 
 function str(value: FormDataEntryValue | null): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
-}
-
-function isTranslationPackage(value: string | null): value is TranslationPackage {
-  return value === 'Economy' || value === 'Optimal' || value === 'Premium'
-}
-
-function isLibreFormat(value: unknown): value is 'text' | 'html' {
-  return value === 'text' || value === 'html'
-}
-
-function fileSummary(value: FormDataEntryValue): DocumentSummary | null {
-  if (typeof value === 'string') return null
-  return {
-    name: value.name,
-    size: value.size,
-    type: value.type || 'application/octet-stream',
-  }
 }
 
 async function getProfile(userId: string): Promise<Partial<Profile> | null> {
@@ -126,47 +75,11 @@ async function getProfile(userId: string): Promise<Partial<Profile> | null> {
     .maybeSingle()
 
   if (error) {
-    console.error('wetranslate profile fetch error:', error.message)
+    console.error('integration profile fetch error:', error.message)
     return null
   }
 
   return data as Partial<Profile> | null
-}
-
-async function getVehicle(userId: string, vehicleId: string | null): Promise<Partial<Vehicle> | null> {
-  if (!isSupabaseConfigured) return null
-
-  let query = supabaseAdmin
-    .from('vehicles')
-    .select('id, plate_number, make, model, vin')
-    .eq('user_id', userId)
-
-  if (vehicleId) {
-    query = query.eq('id', vehicleId)
-  } else {
-    query = query.order('created_at', { ascending: false }).limit(1)
-  }
-
-  const { data, error } = await query.maybeSingle()
-  if (error) {
-    console.error('wetranslate vehicle fetch error:', error.message)
-    return null
-  }
-
-  return data as Partial<Vehicle> | null
-}
-
-function buildFallbackUrl(payload: WeTranslateHandoff['payload_preview']): string {
-  const url = new URL(WETRANSLATE_PUBLIC_FORM_URL)
-  url.searchParams.set('source', 'ecetatean')
-  url.searchParams.set('service', 'traducere_autorizata')
-  url.searchParams.set('from', payload.source_language)
-  url.searchParams.set('to', payload.target_language)
-  url.searchParams.set('package', payload.package)
-  if (payload.customer.name) url.searchParams.set('name', payload.customer.name)
-  if (payload.customer.email) url.searchParams.set('email', payload.customer.email)
-  if (payload.customer.phone) url.searchParams.set('phone', payload.customer.phone)
-  return url.toString()
 }
 
 function isGhiseulDrpcivTaxType(value: unknown): value is GhiseulDrpcivTaxType {
@@ -196,38 +109,6 @@ function buildGhiseulFallbackUrl(payload: GhiseulDrpcivPaymentHandoff['payload_p
   }
 
   return url.toString()
-}
-
-async function createPartnerQuote(
-  formData: FormData,
-  payload: WeTranslateHandoff['payload_preview']
-): Promise<string | null> {
-  const apiUrl = process.env.WETRANSLATE_API_URL?.trim()
-  if (!apiUrl) return null
-
-  const outbound = new FormData()
-  outbound.set('payload', JSON.stringify(payload))
-  for (const file of formData.getAll('documents')) {
-    if (typeof file !== 'string') outbound.append('documents', file, file.name)
-  }
-
-  const headers: Record<string, string> = {}
-  const apiKey = process.env.WETRANSLATE_API_KEY?.trim()
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers,
-    body: outbound,
-  })
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => '')
-    throw new Error(`WeTranslate API error ${response.status}: ${message}`)
-  }
-
-  const body = (await response.json()) as { confirmation_url?: string; redirect_url?: string }
-  return body.confirmation_url ?? body.redirect_url ?? null
 }
 
 async function createGhiseulPartnerPayment(
@@ -267,9 +148,9 @@ function libreTranslateEndpoints(): string[] {
   return [...new Set(endpoints.map((endpoint) => endpoint.replace(/\/$/, '')))]
 }
 
-function offlineDemoTranslation(q: string, target: string): string {
+function offlineFallbackTranslation(q: string, target: string): string {
   if (target !== 'ro') {
-    return `[Demo fallback] ${q}`
+    return `[Fallback] ${q}`
   }
 
   return q
@@ -295,7 +176,7 @@ async function translateWithLibreTranslate({
   target: string
   format: 'text' | 'html'
   alternatives: number
-}): Promise<Omit<LibreTranslateDemoResult, 'provider' | 'mode'> & { mode: LibreTranslateDemoResult['mode'] }> {
+}): Promise<Omit<LibreTranslateResult, 'provider' | 'mode'> & { mode: LibreTranslateResult['mode'] }> {
   const apiKey = process.env.LIBRETRANSLATE_API_KEY?.trim() ?? ''
   let lastError: unknown = null
 
@@ -350,19 +231,147 @@ async function translateWithLibreTranslate({
     }
   }
 
-  console.error('libretranslate demo fallback used:', lastError)
+  console.error('libretranslate fallback used:', lastError)
   return {
     mode: 'offline_demo_fallback',
     source,
     target,
     format,
     alternatives,
-    translated_text: offlineDemoTranslation(q, target),
+    translated_text: offlineFallbackTranslation(q, target),
     endpoint_used: null,
   }
 }
 
-integrationsRoute.post('/wetranslate/quote', requireAuth, async (c) => {
+function chunkText(text: string): string[] {
+  const paragraphs = text
+    .replace(/\r/g, '')
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+  const chunks: string[] = []
+  let current = ''
+
+  for (const paragraph of paragraphs.length > 0 ? paragraphs : [text.trim()]) {
+    if (paragraph.length > TRANSLATION_CHUNK_SIZE) {
+      if (current) {
+        chunks.push(current)
+        current = ''
+      }
+      for (let i = 0; i < paragraph.length; i += TRANSLATION_CHUNK_SIZE) {
+        chunks.push(paragraph.slice(i, i + TRANSLATION_CHUNK_SIZE))
+      }
+      continue
+    }
+
+    const next = current ? `${current}\n\n${paragraph}` : paragraph
+    if (next.length > TRANSLATION_CHUNK_SIZE) {
+      chunks.push(current)
+      current = paragraph
+    } else {
+      current = next
+    }
+  }
+
+  if (current) chunks.push(current)
+  return chunks
+}
+
+function sanitizeForStandardPdfFont(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ș/g, 's')
+    .replace(/Ș/g, 'S')
+    .replace(/ț/g, 't')
+    .replace(/Ț/g, 'T')
+    .replace(/ă/g, 'a')
+    .replace(/Ă/g, 'A')
+    .replace(/î/g, 'i')
+    .replace(/Î/g, 'I')
+    .replace(/â/g, 'a')
+    .replace(/Â/g, 'A')
+    .replace(/ß/g, 'ss')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '')
+}
+
+function wrapLine(line: string, maxChars: number): string[] {
+  const words = line.split(/\s+/).filter(Boolean)
+  const lines: string[] = []
+  let current = ''
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word
+    if (next.length > maxChars && current) {
+      lines.push(current)
+      current = word
+    } else {
+      current = next
+    }
+  }
+
+  if (current) lines.push(current)
+  return lines.length > 0 ? lines : ['']
+}
+
+async function buildTranslatedPdf({
+  originalFileName,
+  source,
+  target,
+  extractedText,
+  translatedText,
+}: {
+  originalFileName: string
+  source: string
+  target: string
+  extractedText: string
+  translatedText: string
+}): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create()
+  const font = await pdf.embedFont(StandardFonts.Helvetica)
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+  const margin = 50
+  const fontSize = 11
+  const lineHeight = 16
+  const pageWidth = 595.28
+  const pageHeight = 841.89
+  const maxChars = 88
+
+  let page = pdf.addPage([pageWidth, pageHeight])
+  let y = pageHeight - margin
+
+  const drawLine = (line: string, options?: { bold?: boolean; size?: number }) => {
+    if (y < margin) {
+      page = pdf.addPage([pageWidth, pageHeight])
+      y = pageHeight - margin
+    }
+    page.drawText(sanitizeForStandardPdfFont(line), {
+      x: margin,
+      y,
+      size: options?.size ?? fontSize,
+      font: options?.bold ? bold : font,
+      color: rgb(0.08, 0.1, 0.16),
+    })
+    y -= lineHeight
+  }
+
+  drawLine('Document tradus cu LibreTranslate', { bold: true, size: 16 })
+  drawLine(`Fisier original: ${originalFileName}`, { size: 10 })
+  drawLine(`Limbi: ${source} -> ${target}`, { size: 10 })
+  drawLine(`Caractere extrase: ${extractedText.length}`, { size: 10 })
+  y -= 10
+
+  for (const rawLine of translatedText.split('\n')) {
+    for (const line of wrapLine(rawLine, maxChars)) {
+      drawLine(line)
+    }
+    y -= 4
+  }
+
+  return pdf.save()
+}
+
+integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
   const userId = c.get('userId')
 
   let formData: FormData
@@ -372,168 +381,103 @@ integrationsRoute.post('/wetranslate/quote', requireAuth, async (c) => {
     return c.json({ success: false, error: 'Request body invalid' }, 400)
   }
 
-  if (str(formData.get('consent')) !== 'true') {
-    return c.json({ success: false, error: 'Confirmă partajarea datelor cu WeTranslate' }, 400)
+  const file = formData.get('document')
+  if (!file || typeof file === 'string') {
+    return c.json({ success: false, error: 'Atașează un document PDF' }, 400)
+  }
+  if (file.size > MAX_TOTAL_BYTES) {
+    return c.json({ success: false, error: 'Documentul trebuie să aibă maximum 30MB' }, 400)
+  }
+  if (file.type && file.type !== 'application/pdf') {
+    return c.json({ success: false, error: 'Momentan traducem documente PDF text-based' }, 400)
   }
 
-  const sourceLanguage = str(formData.get('source_language')) ?? 'Germană'
-  const targetLanguage = str(formData.get('target_language')) ?? 'Română'
-  const requestedPackage = str(formData.get('package'))
-  const packageName: TranslationPackage = isTranslationPackage(requestedPackage)
-    ? requestedPackage
-    : 'Optimal'
-  const deliveryMethod = str(formData.get('delivery_method')) ?? 'E-mail'
-  const vehicleId = str(formData.get('vehicle_id'))
+  const source = str(formData.get('source')) ?? 'auto'
+  const target = str(formData.get('target')) ?? 'ro'
 
-  const [profile, vehicle] = await Promise.all([
-    getProfile(userId),
-    getVehicle(userId, vehicleId),
-  ])
+  let extractedText = ''
+  let parser: PDFParse | null = null
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    parser = new PDFParse({ data: buffer })
+    const parsed = await parser.getText()
+    extractedText = parsed.text.trim()
+  } catch (err) {
+    console.error('pdf extraction error:', err)
+    return c.json({ success: false, error: 'Nu am putut extrage textul din PDF' }, 400)
+  } finally {
+    await parser?.destroy().catch(() => undefined)
+  }
 
-  const documents = formData
-    .getAll('documents')
-    .map(fileSummary)
-    .filter((doc): doc is DocumentSummary => doc !== null)
-  const totalDocumentBytes = documents.reduce((sum, doc) => sum + doc.size, 0)
-
-  if (documents.length > MAX_FILE_COUNT || totalDocumentBytes > MAX_TOTAL_BYTES) {
+  if (!extractedText) {
     return c.json(
-      { success: false, error: 'WeTranslate acceptă maximum 30 fișiere și 30MB în total' },
+      { success: false, error: 'PDF-ul nu conține text extractibil. Pentru scanuri avem nevoie de OCR.' },
+      400
+    )
+  }
+  if (extractedText.length > MAX_TRANSLATION_CHARS) {
+    return c.json(
+      { success: false, error: `Documentul are prea mult text pentru traducere (${MAX_TRANSLATION_CHARS} caractere max).` },
       400
     )
   }
 
-  const missingFields = [
-    !profile?.full_name ? 'Nume complet' : null,
-    !profile?.email ? 'Email' : null,
-    !profile?.phone ? 'Telefon' : null,
-    documents.length === 0 ? 'Documente de tradus' : null,
-  ].filter((field): field is string => field !== null)
+  const chunks = chunkText(extractedText)
+  const translatedChunks: string[] = []
+  let mode: LibreTranslateResult['mode'] = 'libretranslate_api'
+  let endpointUsed: string | null = null
 
-  const payload: WeTranslateHandoff['payload_preview'] = {
-    service: 'Traducere autorizată',
-    source_language: sourceLanguage,
-    target_language: targetLanguage,
-    package: packageName,
-    delivery_method: deliveryMethod,
-    customer: {
-      name: profile?.full_name ?? null,
-      email: profile?.email ?? null,
-      phone: profile?.phone ?? null,
-      address: profile?.address ?? null,
-    },
-    documents,
-    vehicle: vehicle
-      ? {
-          make: vehicle.make ?? null,
-          model: vehicle.model ?? null,
-          vin: vehicle.vin ?? null,
-          plate_number: vehicle.plate_number ?? null,
-        }
-      : null,
+  for (const chunk of chunks) {
+    const translated = await translateWithLibreTranslate({
+      q: chunk,
+      source,
+      target,
+      format: 'text',
+      alternatives: 0,
+    })
+    translatedChunks.push(translated.translated_text)
+    if (translated.mode === 'offline_demo_fallback') mode = 'offline_demo_fallback'
+    endpointUsed = endpointUsed ?? translated.endpoint_used
   }
 
-  let mode: WeTranslateHandoff['mode'] = 'public_form_fallback'
-  let redirectUrl = buildFallbackUrl(payload)
-
-  try {
-    const partnerRedirect = await createPartnerQuote(formData, payload)
-    if (partnerRedirect) {
-      mode = 'partner_api'
-      redirectUrl = partnerRedirect
-    }
-  } catch (err) {
-    console.error('wetranslate partner handoff error:', err)
-  }
-
-  const handoffId = `wt-${Date.now()}`
-
-  writeAuditEntry({
-    userId,
-    action: 'Cerere traducere autorizată pregătită pentru WeTranslate',
-    actionType: 'translation_quote_started',
-    data: {
-      handoff_id: handoffId,
-      mode,
-      source_language: sourceLanguage,
-      target_language: targetLanguage,
-      documents: documents.map((doc) => ({ name: doc.name, size: doc.size })),
-      missing_fields: missingFields,
-    },
-  })
-
-  const result: WeTranslateHandoff = {
-    provider: 'wetranslate',
-    mode,
-    redirect_url: redirectUrl,
-    handoff_id: handoffId,
-    missing_fields: missingFields,
-    payload_preview: payload,
-  }
-
-  return c.json({ success: true, data: result })
-})
-
-integrationsRoute.post('/libretranslate/translate', requireAuth, async (c) => {
-  const userId = c.get('userId')
-
-  let body: {
-    q?: unknown
-    source?: unknown
-    target?: unknown
-    format?: unknown
-    alternatives?: unknown
-  } = {}
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ success: false, error: 'Request body invalid' }, 400)
-  }
-
-  const q = typeof body.q === 'string' ? body.q.trim() : ''
-  if (!q) {
-    return c.json({ success: false, error: 'Textul de tradus este obligatoriu' }, 400)
-  }
-
-  const source = typeof body.source === 'string' && body.source.trim() ? body.source.trim() : 'auto'
-  const target = typeof body.target === 'string' && body.target.trim() ? body.target.trim() : 'ro'
-  const format = isLibreFormat(body.format) ? body.format : 'text'
-  const alternatives =
-    typeof body.alternatives === 'number' && Number.isFinite(body.alternatives)
-      ? Math.max(0, Math.min(5, Math.round(body.alternatives)))
-      : 3
-
-  const translated = await translateWithLibreTranslate({
-    q,
+  const translatedText = translatedChunks.join('\n\n')
+  const pdfBytes = await buildTranslatedPdf({
+    originalFileName: file.name,
     source,
     target,
-    format,
-    alternatives,
+    extractedText,
+    translatedText,
   })
 
   writeAuditEntry({
     userId,
     action:
-      translated.mode === 'libretranslate_api'
-        ? 'Traducere demo realizată cu LibreTranslate'
-        : 'Traducere demo realizată local ca fallback',
-    actionType: 'translation_demo_completed',
+      mode === 'libretranslate_api'
+        ? 'Document PDF tradus cu LibreTranslate'
+        : 'Document PDF tradus cu fallback local',
+    actionType: 'translation_document_completed',
     data: {
-      provider: 'libretranslate_demo',
-      mode: translated.mode,
+      provider: 'libretranslate',
+      mode,
       source,
       target,
-      character_count: q.length,
-      endpoint_used: translated.endpoint_used,
+      original_file_name: file.name,
+      original_size: file.size,
+      extracted_character_count: extractedText.length,
+      translated_character_count: translatedText.length,
+      chunks: chunks.length,
+      endpoint_used: endpointUsed,
     },
   })
 
-  const result: LibreTranslateDemoResult = {
-    provider: 'libretranslate_demo',
-    ...translated,
-  }
-
-  return c.json({ success: true, data: result })
+  const outputName = `translated-${file.name.replace(/\.pdf$/i, '')}.pdf`
+  return new Response(pdfBytes, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${outputName.replace(/"/g, '')}"`,
+      'X-Translation-Mode': mode,
+    },
+  })
 })
 
 integrationsRoute.post('/ghiseul/drpciv-tax', requireAuth, async (c) => {

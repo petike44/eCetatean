@@ -424,7 +424,35 @@ export async function analyzePdf(
       : nativeFields;
   const fallbackFields =
     baseFields.length > 0 ? baseFields : heuristicFields(form);
-  return hydrateFieldValues(fallbackFields, profile, inputValues);
+  const hydrated = hydrateFieldValues(fallbackFields, profile, inputValues);
+  // Phase 6: surface field_type / options / needs_review from fields_raw
+  // (tipizatul rows) so the frontend FieldRenderer can pick the right widget.
+  return enrichWithTemplateMeta(hydrated, form);
+}
+
+/** Merge fields_raw metadata (type, options, hidden) and the trust gate
+ *  (acroform_origin) onto the analyzed PdfAutofillFields. No-op for
+ *  non-tipizatul forms. */
+function enrichWithTemplateMeta(
+  fields: PdfAutofillField[],
+  form: PdfForm,
+): PdfAutofillField[] {
+  if (form.source !== "tipizatul") return fields;
+  const raw = (form as PdfForm & { fields_raw?: TemplateField[] }).fields_raw ?? [];
+  if (raw.length === 0) return fields;
+  const byName = new Map(raw.map((f) => [f.pdfFieldName, f] as const));
+  const needsReview = form.acroform_origin !== "original";
+  return fields.map((field) => {
+    const key = field.acroFieldName;
+    const tpl = key ? byName.get(key) : undefined;
+    if (!tpl) return field;
+    return {
+      ...field,
+      field_type: tpl.type,
+      options: tpl.options,
+      needs_review: needsReview,
+    };
+  });
 }
 
 /** Replace Romanian (and common accented) characters with ASCII equivalents so

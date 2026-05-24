@@ -186,7 +186,7 @@ claudiaRoute.post('/', requireAuth, async (c) => {
           const mock = getMockResponse(lastUserMessage)
           enqueue({ type: 'text', content: mock.text })
           if (mock.tool && mock.tool_input) {
-            const toolResult = handleToolCall(
+            const toolResult = await handleToolCall(
               mock.tool,
               mock.tool_input as Record<string, string>
             )
@@ -212,7 +212,7 @@ claudiaRoute.post('/', requireAuth, async (c) => {
           enqueue({
             type: 'tool_result',
             tool_name: mock.tool,
-            result: handleToolCall(
+            result: await handleToolCall(
               mock.tool,
               mock.tool_input as Record<string, string>
             ),

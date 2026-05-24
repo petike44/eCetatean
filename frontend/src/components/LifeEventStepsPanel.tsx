@@ -17,7 +17,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
-import { WeTranslateHandoffModal } from "@/components/WeTranslateHandoffModal";
+import { DocumentTranslationModal } from "@/components/DocumentTranslationModal";
 import {
   useLifeEvent,
   useUpdateLifeEventStep,
@@ -139,7 +139,7 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
   const handleAction = async (step: LifeEventStep) => {
     const action = step.online_action;
     if (!action) return;
-    if (action.type === "translation_quote") {
+    if (action.type === "translation_document") {
       setTranslationAction(action);
       return;
     }
@@ -162,10 +162,9 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-3 w-full">
-      <WeTranslateHandoffModal
+      <DocumentTranslationModal
         open={translationAction !== null}
         action={translationAction}
-        selectedVehicleId={selectedVehicleId}
         onClose={() => setTranslationAction(null)}
       />
       {/* Progress header */}

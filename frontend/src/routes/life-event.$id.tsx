@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Protected } from "@/lib/auth-guard";
-import { WeTranslateHandoffModal } from "@/components/WeTranslateHandoffModal";
+import { DocumentTranslationModal } from "@/components/DocumentTranslationModal";
 import {
   useLifeEvent,
   useUpdateLifeEventStep,
@@ -165,7 +165,7 @@ function LifeEventDashboard() {
       });
       return;
     }
-    if (action?.type === "translation_quote") {
+    if (action?.type === "translation_document") {
       setTranslationAction(action);
       return;
     }
@@ -198,7 +198,7 @@ function LifeEventDashboard() {
           show("success", `Programare confirmată — ${slot} (ref. ${ref})`)
         }
       />
-      <WeTranslateHandoffModal
+      <DocumentTranslationModal
         open={translationAction !== null}
         action={translationAction}
         onClose={() => setTranslationAction(null)}

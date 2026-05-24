@@ -130,6 +130,10 @@ export type PdfAutofillField = {
   confidence: number;
   source: PdfFieldSource;
   acroFieldName?: string;
+  // Tipizatul (Phase 6)
+  field_type?: "text" | "checkbox" | "dropdown" | "radio" | "unsupported";
+  options?: string[];
+  needs_review?: boolean;
 };
 
 export type PdfForm = {
@@ -665,36 +669,6 @@ export function useUpdateLifeEventStep() {
 
 // —— Translation Integrations ————————————————————————————————
 
-export type TranslationPackage = "Economy" | "Optimal" | "Premium";
-
-export type WeTranslateHandoff = {
-  provider: "wetranslate";
-  mode: "partner_api" | "public_form_fallback";
-  redirect_url: string;
-  handoff_id: string;
-  missing_fields: string[];
-  payload_preview: {
-    service: string;
-    source_language: string;
-    target_language: string;
-    package: TranslationPackage;
-    delivery_method: string;
-    customer: {
-      name: string | null;
-      email: string | null;
-      phone: string | null;
-      address: string | null;
-    };
-    documents: Array<{ name: string; size: number; type: string }>;
-    vehicle?: {
-      make: string | null;
-      model: string | null;
-      vin: string | null;
-      plate_number: string | null;
-    } | null;
-  };
-};
-
 export type GhiseulDrpcivTaxType =
   | "certificat_inmatriculare"
   | "permis_conducere"
@@ -720,87 +694,17 @@ export type GhiseulDrpcivPaymentHandoff = {
   };
 };
 
-export type LibreTranslateDemoResult = {
-  provider: "libretranslate_demo";
-  mode: "libretranslate_api" | "offline_demo_fallback";
-  source: string;
-  target: string;
-  format: "text" | "html";
-  alternatives: number;
-  translated_text: string;
-  detected_language?: {
-    confidence?: number;
-    language?: string;
-  };
-  alternative_translations?: string[];
-  endpoint_used: string | null;
-};
-
-export function useCreateWeTranslateQuote() {
+export function useTranslateDocument() {
   const getToken = useGetToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      files,
-      sourceLanguage = "Germană",
-      targetLanguage = "Română",
-      packageName = "Optimal",
-      deliveryMethod = "E-mail",
-      vehicleId,
-      consent,
-    }: {
-      files: File[];
-      sourceLanguage?: string;
-      targetLanguage?: string;
-      packageName?: TranslationPackage;
-      deliveryMethod?: string;
-      vehicleId?: string | null;
-      consent: boolean;
-    }) => {
+    mutationFn: ({ file, source, target = "ro" }: { file: File; source: string; target?: string }) => {
       const fd = new FormData();
-      fd.set("source_language", sourceLanguage);
-      fd.set("target_language", targetLanguage);
-      fd.set("package", packageName);
-      fd.set("delivery_method", deliveryMethod);
-      fd.set("consent", consent ? "true" : "false");
-      if (vehicleId) fd.set("vehicle_id", vehicleId);
-      for (const file of files) fd.append("documents", file);
-      return apiPostForm<WeTranslateHandoff>("/api/integrations/wetranslate/quote", fd, getToken);
+      fd.set("document", file);
+      fd.set("source", source);
+      fd.set("target", target);
+      return apiPostForm<Blob>("/api/integrations/libretranslate/document", fd, getToken);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["audit"] });
-    },
-  });
-}
-
-export function useLibreTranslateDemo() {
-  const getToken = useGetToken();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      q,
-      source = "auto",
-      target = "ro",
-      format = "text",
-      alternatives = 3,
-    }: {
-      q: string;
-      source?: string;
-      target?: string;
-      format?: "text" | "html";
-      alternatives?: number;
-    }) =>
-      apiPostJson<LibreTranslateDemoResult>(
-        "/api/integrations/libretranslate/translate",
-        {
-          q,
-          source,
-          target,
-          format,
-          alternatives,
-        },
-        getToken,
-      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["audit"] });
     },

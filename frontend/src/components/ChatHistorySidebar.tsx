@@ -203,7 +203,7 @@ export function ChatHistorySidebar() {
     <aside className="hidden lg:flex lg:flex-col lg:w-[260px] lg:shrink-0 sticky top-0 h-dvh bg-bg border-r border-border">
       <div className="h-14 flex items-center px-4 shrink-0 border-b border-border">
         <Link
-          to="/chat"
+          to="/home"
           className="font-display font-bold text-[15px] tracking-tight text-primary hover:opacity-70 transition-opacity duration-150"
         >
           eCetățean
@@ -237,7 +237,13 @@ export function ChatHistoryMobileSheet() {
       >
         <SheetTitle className="sr-only">Istoric conversații</SheetTitle>
         <div className="h-14 flex items-center px-4 border-b border-border shrink-0 pt-[env(safe-area-inset-top)]">
-          <span className="font-display font-bold text-[15px] text-primary">eCetățean</span>
+          <Link
+            to="/home"
+            onClick={sessions.closeHistory}
+            className="font-display font-bold text-[15px] text-primary hover:opacity-70 transition-opacity duration-150"
+          >
+            eCetățean
+          </Link>
         </div>
         <div className="px-3 py-3 shrink-0">
           <NewChatButton onClick={sessions.closeHistory} />

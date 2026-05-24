@@ -348,7 +348,8 @@ export function Chat({ conversationId }: { conversationId?: string }) {
     }
   };
 
-  const isEmpty = msgs.length <= 1;
+  const isLoadingConversation = !!conversationId && (convLoading || hydratedRef.current !== conversationId);
+  const isEmpty = !isLoadingConversation && msgs.length <= 1;
 
   const chatTopBar = (
     <header
@@ -390,7 +391,25 @@ export function Chat({ conversationId }: { conversationId?: string }) {
         className="flex flex-col min-h-[calc(100dvh-7rem)] lg:min-h-0 lg:flex-1 lg:overflow-hidden bg-background text-foreground"
         style={{ fontFamily: "'Manrope', system-ui, sans-serif" }}
       >
-        {isEmpty ? (
+        {isLoadingConversation ? (
+          /* ───── LOADING SKELETON ───── */
+          <div className="flex-1 flex flex-col px-5 py-6 space-y-4 desktop-content-readable lg:w-full">
+            {[120, 80, 200, 60, 160].map((w, i) => (
+              <div
+                key={i}
+                className={`flex gap-2 ${i % 2 === 0 ? "justify-start" : "justify-end"}`}
+              >
+                {i % 2 === 0 && (
+                  <div className="w-8 h-8 rounded-full shrink-0 bg-surface-secondary animate-pulse" />
+                )}
+                <div
+                  className="h-10 rounded-2xl bg-surface-secondary animate-pulse"
+                  style={{ width: w, opacity: 1 - i * 0.12 }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : isEmpty ? (
           /* ───── EMPTY / HERO STATE ───── */
           <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6 anim-fade-up">
             <div className="w-full max-w-md">

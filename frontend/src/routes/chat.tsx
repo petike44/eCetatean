@@ -668,6 +668,7 @@ function ReplyExtras({
 }) {
   const createLifeEvent = useCreateLifeEvent();
   const { show } = useToast();
+  const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
 
   const openPlan = async () => {
@@ -677,8 +678,8 @@ function ReplyExtras({
     }
     setCreating(true);
     try {
-      const result = await createLifeEvent.mutateAsync({ event_type: reply.event_type });
-      onTrackProgress(result.id, reply.event_type);
+      await createLifeEvent.mutateAsync({ event_type: reply.event_type });
+      navigate({ to: "/plans" });
     } catch {
       show("error", "Eroare la crearea planului");
       setCreating(false);

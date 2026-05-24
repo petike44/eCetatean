@@ -15,6 +15,7 @@ import { Route as SeedRouteImport } from './routes/seed'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as ProfileSetupRouteImport } from './routes/profile-setup'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as DocumentsRouteImport } from './routes/documents'
@@ -57,6 +58,11 @@ const ProfileSetupRoute = ProfileSetupRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
+  '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
+  '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/documents': typeof DocumentsRoute
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
+  '/plans': typeof PlansRoute
   '/profile': typeof ProfileRoute
   '/profile-setup': typeof ProfileSetupRoute
   '/report': typeof ReportRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/news'
     | '/onboarding'
+    | '/plans'
     | '/profile'
     | '/profile-setup'
     | '/report'
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/news'
     | '/onboarding'
+    | '/plans'
     | '/profile'
     | '/profile-setup'
     | '/report'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/news'
     | '/onboarding'
+    | '/plans'
     | '/profile'
     | '/profile-setup'
     | '/report'
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   DocumentsRoute: typeof DocumentsRoute
   NewsRoute: typeof NewsRoute
   OnboardingRoute: typeof OnboardingRoute
+  PlansRoute: typeof PlansRoute
   ProfileRoute: typeof ProfileRoute
   ProfileSetupRoute: typeof ProfileSetupRoute
   ReportRoute: typeof ReportRoute
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -434,6 +454,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocumentsRoute: DocumentsRoute,
   NewsRoute: NewsRoute,
   OnboardingRoute: OnboardingRoute,
+  PlansRoute: PlansRoute,
   ProfileRoute: ProfileRoute,
   ProfileSetupRoute: ProfileSetupRoute,
   ReportRoute: ReportRoute,

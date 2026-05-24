@@ -8,7 +8,6 @@ import {
   apiDelete,
   apiPostForm,
   apiStreamPost,
-  apiDelete,
   downloadAutofilledPdf,
   downloadPdf,
   type GetToken,
@@ -611,6 +610,17 @@ export function useCreateLifeEvent() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["life-events"] });
       qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useDeleteLifeEvent() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<boolean>(`/api/life-events/${id}`, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["life-events"] });
     },
   });
 }

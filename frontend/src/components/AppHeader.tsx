@@ -28,7 +28,7 @@ export function AppHeader({
   const { data: profile } = useProfile();
   const authEmail = user?.primaryEmailAddress?.emailAddress ?? null;
   const displayName = profileDisplayName(profile, authEmail);
-  const initials = profileInitials(profile, authEmail);
+  const initials = profileInitials(profile?.full_name, authEmail);
 
   const isChat = variant === "chat";
 

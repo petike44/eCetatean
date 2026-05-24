@@ -5,6 +5,7 @@ import {
   apiGet,
   apiPostJson,
   apiPatchJson,
+  apiDelete,
   apiPostForm,
   apiStreamPost,
   downloadAutofilledPdf,
@@ -501,7 +502,12 @@ export type Vehicle = {
   fuel_type: string | null;
   engine_cc: number | null;
   color: string | null;
+  itp_expiry: string | null;
+  rca_expiry: string | null;
+  created_at?: string;
 };
+
+export type VehicleInput = Omit<Vehicle, "id" | "created_at">;
 
 export function useVehicles() {
   const getToken = useGetToken();
@@ -510,6 +516,42 @@ export function useVehicles() {
     queryKey: ["vehicles"],
     queryFn: () => apiGet<Vehicle[]>("/api/vehicles", getToken),
     enabled: !!isSignedIn,
+  });
+}
+
+export function useAddVehicle() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: VehicleInput) => apiPostJson<Vehicle>("/api/vehicles", body, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useUpdateVehicle() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: Partial<VehicleInput> & { id: string }) =>
+      apiPatchJson<Vehicle>(`/api/vehicles/${id}`, body, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useDeleteVehicle() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<void>(`/api/vehicles/${id}`, getToken),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] });
+    },
   });
 }
 

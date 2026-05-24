@@ -111,7 +111,9 @@ function parseFeeLei(fee: string | undefined): number {
 }
 
 function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
-  const textParts: string[] = [];
+  // Streaming text tokens are concatenated directly; tool result prose is appended separately.
+  let streamText = "";
+  const toolTextParts: string[] = [];
   let bullets: string[] | undefined;
   let info: { label: string; value: string }[] | undefined;
   let documents: DocItem[] | undefined;
@@ -124,7 +126,7 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
 
   for (const chunk of chunks) {
     if (chunk.type === "text") {
-      if (chunk.content) textParts.push(chunk.content);
+      if (chunk.content) streamText += chunk.content;
       continue;
     }
 
@@ -136,8 +138,8 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
       if (r.create_life_event) create_life_event = true;
       if (r.event_type) event_type = r.event_type as string;
       if (procedure) {
-        textParts.push(`${procedure.emoji ?? ""} ${procedure.title}`.trim());
-        if (procedure.summary) textParts.push(procedure.summary);
+        toolTextParts.push(`${procedure.emoji ?? ""} ${procedure.title}`.trim());
+        if (procedure.summary) toolTextParts.push(procedure.summary);
         if (procedure.steps?.length) {
           bullets = procedure.steps.map((s) => `${s.order}. ${s.title}${s.office ? ` — ${s.office}` : ""}`);
           documents = procedure.steps.flatMap<DocItem>((s) =>
@@ -198,12 +200,13 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
       ];
     } else if (kind === "text_only") {
       const m = r.message as string | undefined;
-      if (m) textParts.push(m);
+      if (m) toolTextParts.push(m);
     }
   }
 
+  const allParts = [streamText.trim(), ...toolTextParts].filter(Boolean);
   return {
-    text: textParts.join("\n\n") || "Răspuns gol primit de la ClaudIA.",
+    text: allParts.join("\n\n") || "Răspuns gol primit de la ClaudIA.",
     bullets,
     info,
     documents,

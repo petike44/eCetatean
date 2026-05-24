@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { AlertCircle, Check, ExternalLink, FileText, Upload, X } from "lucide-react";
 import {
   useCreateWeTranslateQuote,
+  useLibreTranslateDemo,
   useVehicles,
   type LifeEventStep,
+  type LibreTranslateDemoResult,
   type TranslationPackage,
 } from "@/lib/api-hooks";
 import { useToast } from "@/components/Toast";
@@ -23,6 +25,9 @@ const REQUIRED_DOCS = [
 ];
 const MAX_FILE_COUNT = 30;
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
+const DEMO_TEXT =
+  "Zulassungsbescheinigung Teil II und Kaufvertrag fur Fahrzeugimport. " +
+  "Kaufer beantragt eine autorisierte Ubersetzung fur die Zulassung in Rumanien.";
 
 export function WeTranslateHandoffModal({
   open,
@@ -33,15 +38,20 @@ export function WeTranslateHandoffModal({
   const { show } = useToast();
   const { data: vehicles } = useVehicles();
   const createQuote = useCreateWeTranslateQuote();
+  const libreTranslate = useLibreTranslateDemo();
   const [files, setFiles] = useState<File[]>([]);
   const [consent, setConsent] = useState(false);
   const [vehicleId, setVehicleId] = useState<string | null>(selectedVehicleId ?? null);
   const [packageName, setPackageName] = useState<TranslationPackage>("Optimal");
+  const [demoText, setDemoText] = useState(DEMO_TEXT);
+  const [demoTarget, setDemoTarget] = useState("ro");
+  const [translationResult, setTranslationResult] = useState<LibreTranslateDemoResult | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setVehicleId(selectedVehicleId ?? vehicles?.[0]?.id ?? null);
     setPackageName(action?.package ?? "Optimal");
+    setTranslationResult(null);
   }, [action?.package, open, selectedVehicleId, vehicles]);
 
   if (!open || !action) return null;
@@ -50,6 +60,28 @@ export function WeTranslateHandoffModal({
   const targetLanguage = action.target_language ?? "Română";
   const hasFiles = files.length > 0;
   const totalFileBytes = files.reduce((sum, file) => sum + file.size, 0);
+
+  const runDemoTranslation = async () => {
+    try {
+      const result = await libreTranslate.mutateAsync({
+        q: demoText,
+        source: "auto",
+        target: demoTarget,
+        format: "text",
+        alternatives: 3,
+      });
+      setTranslationResult(result);
+      show(
+        "success",
+        result.mode === "libretranslate_api"
+          ? "Traducerea demo a fost generată prin LibreTranslate"
+          : "Traducerea demo a folosit fallback-ul local",
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Eroare la traducerea demo";
+      show("error", message);
+    }
+  };
 
   const submit = async () => {
     if (!consent) {
@@ -118,6 +150,58 @@ export function WeTranslateHandoffModal({
             <p className="text-[12px] text-[#475569] mt-1">
               Serviciu: traducere autorizată, livrare prin e-mail.
             </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 space-y-3">
+            <div>
+              <p className="text-[12px] font-semibold text-[#166534]">
+                Demo API LibreTranslate
+              </p>
+              <p className="text-[11.5px] leading-relaxed text-[#166534]/80 mt-1">
+                Pentru demo, traducem text pre-completat prin API open-source. Nu înlocuiește traducerea autorizată.
+              </p>
+            </div>
+            <textarea
+              value={demoText}
+              onChange={(e) => setDemoText(e.target.value)}
+              rows={3}
+              className="w-full rounded-xl border border-[#86EFAC] bg-white px-3 py-2 text-[12px] text-[#0F172A] outline-none focus:border-[#16A34A]"
+            />
+            <div className="flex gap-2">
+              <select
+                value={demoTarget}
+                onChange={(e) => setDemoTarget(e.target.value)}
+                className="h-10 rounded-xl border border-[#86EFAC] bg-white px-3 text-[12px] text-[#0F172A]"
+              >
+                <option value="ro">Română</option>
+                <option value="en">English</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => void runDemoTranslation()}
+                disabled={libreTranslate.isPending || !demoText.trim()}
+                className="press flex-1 rounded-xl bg-[#16A34A] px-3 py-2 text-[12.5px] font-semibold text-white disabled:opacity-60"
+              >
+                {libreTranslate.isPending ? "Se traduce..." : "Tradu demo cu API"}
+              </button>
+            </div>
+            {translationResult && (
+              <div className="rounded-xl bg-white border border-[#BBF7D0] px-3 py-2">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[11px] font-semibold text-[#166534]">
+                    Rezultat LibreTranslate
+                  </span>
+                  <span className="text-[10px] text-[#64748B]">
+                    {translationResult.mode === "libretranslate_api" ? "API" : "Fallback"}
+                  </span>
+                </div>
+                <p className="text-[12px] leading-relaxed text-[#334155]">
+                  {translationResult.translated_text}
+                </p>
+              </div>
+            )}
           </div>
 
           <div>

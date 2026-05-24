@@ -71,7 +71,9 @@ export type AuditActionType =
   | "life_event_step_completed"
   | "payment_simulated"
   | "appointment_simulated"
-  | "translation_quote_started";
+  | "translation_quote_started"
+  | "payment_handoff_started"
+  | "translation_demo_completed";
 
 export type AuditEntry = {
   id: string;
@@ -420,7 +422,7 @@ export type LifeEventStep = {
     description?: string;
     office?: string;
     slot_hint?: string;
-    provider?: "wetranslate";
+    provider?: "wetranslate" | "ghiseul_drpciv";
     source_language?: string;
     target_language?: string;
     package?: "Economy" | "Optimal" | "Premium";
@@ -536,6 +538,47 @@ export type WeTranslateHandoff = {
   };
 };
 
+export type GhiseulDrpcivTaxType =
+  | "certificat_inmatriculare"
+  | "permis_conducere"
+  | "autorizatie_provizorie";
+
+export type GhiseulDrpcivPaymentHandoff = {
+  provider: "ghiseul_drpciv";
+  mode: "partner_api" | "public_form_fallback";
+  redirect_url: string;
+  handoff_id: string;
+  missing_fields: string[];
+  payload_preview: {
+    institution: "RAAPPS";
+    person_type: "Persoană fizică";
+    tax_type: string;
+    amount_ron: number;
+    payer_cnp: string | null;
+    beneficiary_cnp: string | null;
+    beneficiary_name: string | null;
+    email: string | null;
+    confirm_email: string | null;
+    captcha_required: true;
+  };
+};
+
+export type LibreTranslateDemoResult = {
+  provider: "libretranslate_demo";
+  mode: "libretranslate_api" | "offline_demo_fallback";
+  source: string;
+  target: string;
+  format: "text" | "html";
+  alternatives: number;
+  translated_text: string;
+  detected_language?: {
+    confidence?: number;
+    language?: string;
+  };
+  alternative_translations?: string[];
+  endpoint_used: string | null;
+};
+
 export function useCreateWeTranslateQuote() {
   const getToken = useGetToken();
   const qc = useQueryClient();
@@ -567,6 +610,56 @@ export function useCreateWeTranslateQuote() {
       for (const file of files) fd.append("documents", file);
       return apiPostForm<WeTranslateHandoff>("/api/integrations/wetranslate/quote", fd, getToken);
     },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function useLibreTranslateDemo() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      q,
+      source = "auto",
+      target = "ro",
+      format = "text",
+      alternatives = 3,
+    }: {
+      q: string;
+      source?: string;
+      target?: string;
+      format?: "text" | "html";
+      alternatives?: number;
+    }) =>
+      apiPostJson<LibreTranslateDemoResult>(
+        "/api/integrations/libretranslate/translate",
+        {
+          q,
+          source,
+          target,
+          format,
+          alternatives,
+        },
+        getToken,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+export function usePrepareGhiseulDrpcivPayment() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (taxType: GhiseulDrpcivTaxType = "certificat_inmatriculare") =>
+      apiPostJson<GhiseulDrpcivPaymentHandoff>(
+        "/api/integrations/ghiseul/drpciv-tax",
+        { tax_type: taxType },
+        getToken,
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["audit"] });
     },

@@ -17,6 +17,7 @@ import {
   useLifeEvent,
   useUpdateLifeEventStep,
   useGeneratePdf,
+  usePrepareGhiseulDrpcivPayment,
   type LifeEventStep,
   type StepStatus,
 } from "@/lib/api-hooks";
@@ -53,6 +54,7 @@ function LifeEventDashboard() {
   const { data: event, isLoading, error } = useLifeEvent(id);
   const updateStep = useUpdateLifeEventStep();
   const generatePdf = useGeneratePdf();
+  const prepareGhiseulPayment = usePrepareGhiseulDrpcivPayment();
   const [expandedStep, setExpandedStep] = useState<number | null>(1);
   const [paymentModal, setPaymentModal] = useState<{
     amount: number;
@@ -129,10 +131,24 @@ function LifeEventDashboard() {
     }
   };
 
-  const handleAction = (step: LifeEventStep) => {
+  const handleAction = async (step: LifeEventStep) => {
     const action = step.online_action;
     if (action?.type === "pdf" && action.form_type) {
       void handleDownloadForm(action.form_type);
+      return;
+    }
+    if (action?.type === "payment" && action.provider === "ghiseul_drpciv") {
+      try {
+        const handoff = await prepareGhiseulPayment.mutateAsync("certificat_inmatriculare");
+        if (handoff.missing_fields.length > 0) {
+          show("error", `Completează în Profil: ${handoff.missing_fields.join(", ")}`);
+          return;
+        }
+        window.open(handoff.redirect_url, "_blank", "noopener,noreferrer");
+        show("success", "Am pregătit plata DRPCIV cu datele din profil.");
+      } catch (err) {
+        show("error", err instanceof Error ? err.message : "Eroare la pregătirea plății DRPCIV");
+      }
       return;
     }
     if (action?.type === "payment") {
@@ -264,7 +280,7 @@ function LifeEventDashboard() {
                     onDownloadForm={
                       step.form_type ? () => handleDownloadForm(step.form_type!) : undefined
                     }
-                    onAction={() => handleAction(step)}
+                    onAction={() => void handleAction(step)}
                   />
                 );
               })}

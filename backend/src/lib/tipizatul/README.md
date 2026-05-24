@@ -122,6 +122,35 @@ npx tsx --env-file=backend/.env.local backend/scripts/verify-drive-proxy.ts <dri
 Expects to see `%PDF?  yes ✔`. The script is committed but is NOT run
 by `npm test` or any CI.
 
+## AcroForm fill core (Phase 4)
+
+When `pdf_forms.source === 'tipizatul'`, the existing `fillPdf` reroutes
+to `fillTipizatulPdf` (`pdf-fill.ts`) which:
+
+- Embeds **NotoSans-Regular.ttf** via fontkit, so Romanian diacritics
+  (ă â î ș ț) render natively — no more ASCII latinization.
+- Dispatches on field type from `fields_raw` (preferred) or live
+  introspection (`pdf-introspect.ts`): `setText` for text,
+  `check/uncheck` for checkboxes, `select(option)` for dropdowns and
+  radio groups.
+- Skips fields where `type === 'unsupported'` (signatures included) or
+  `hidden === true`. The complete field list stays in `fields_raw`.
+- **Trust gate:** `acroform_origin === 'original'` →
+  `updateFieldAppearances(font)` + `flatten()` and the PDF ships
+  read-only. `acroform_origin === 'generated'` OR `null` → appearances
+  computed, form stays editable, every filled outcome is reported as
+  `needs_review` for the preview UX.
+
+Legacy callers (`form.source === 'manual'`, or no `form` arg) keep the
+unchanged overlay + Helvetica + latinize path — verified by
+`fillPdf-routing.test.ts`.
+
+### Font asset
+
+`backend/src/assets/NotoSans-Regular.ttf` (621 KB) — sourced from the
+official notofonts GitHub repo, SIL Open Font License v1.1. License
+text + provenance: see `NotoSans-Regular.LICENSE.md` next to the font.
+
 ## Verified live-data facts (as of integration)
 
 - `catalog/index` and `templates/*` are anonymously readable via

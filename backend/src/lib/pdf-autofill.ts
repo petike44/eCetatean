@@ -7,6 +7,8 @@ import {
 import { supabaseAdmin } from "./supabase";
 import { getCachedTipizatulPdf } from "./tipizatul/pdf-cache";
 import { DriveCredentialsMissingError } from "./tipizatul/drive-proxy";
+import { fillTipizatulPdf, type FillValueInput } from "./tipizatul/pdf-fill";
+import type { TemplateField } from "./tipizatul/types";
 import type {
   PdfAutofillField,
   PdfForm,
@@ -443,7 +445,25 @@ export async function fillPdf(
   fields: PdfAutofillField[],
   profile: Partial<Profile>,
   inputValues: Record<string, string> = {},
+  form?: PdfForm,
 ): Promise<Buffer> {
+  // ─── Tipizatul AcroForm path (Phase 4) ─────────────────────────
+  // Only routes here when the form row is tipizatul-sourced. Demo /
+  // legacy callers (no `form` arg, or source !== 'tipizatul') fall
+  // through to the unchanged overlay+latinize path below.
+  if (form?.source === "tipizatul") {
+    const hydrated = hydrateFieldValues(fields, profile, inputValues);
+    const values: FillValueInput[] = hydrated
+      .filter((f) => f.acroFieldName && f.value !== undefined && f.value !== "")
+      .map((f) => ({ pdfFieldName: f.acroFieldName as string, value: f.value as string }));
+    const fieldsRaw = (form as PdfForm & { fields_raw?: TemplateField[] }).fields_raw;
+    const result = await fillTipizatulPdf(sourcePdf, values, {
+      acroformOrigin: form.acroform_origin ?? null,
+      fieldsRaw,
+    });
+    return Buffer.from(result.pdf);
+  }
+
   const pdf = await PDFDocument.load(sourcePdf, { ignoreEncryption: true });
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const hydratedFields = hydrateFieldValues(fields, profile, inputValues);

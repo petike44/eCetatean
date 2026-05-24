@@ -22,6 +22,7 @@ import {
   useLifeEvent,
   useUpdateLifeEventStep,
   useAutofillDrpciv,
+  usePrepareGhiseulDrpcivPayment,
   useProfile,
   useVehicles,
   type LifeEventStep,
@@ -53,6 +54,7 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
   const { data: vehicles } = useVehicles();
   const updateStep = useUpdateLifeEventStep();
   const autofillDrpciv = useAutofillDrpciv();
+  const prepareGhiseulPayment = usePrepareGhiseulDrpcivPayment();
 
   const [vehicleFields, setVehicleFields] = useState<VehicleFields>({ make: "", model: "", vin: "", current_plate: "" });
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
@@ -134,11 +136,25 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
     }
   };
 
-  const handleAction = (step: LifeEventStep) => {
+  const handleAction = async (step: LifeEventStep) => {
     const action = step.online_action;
     if (!action) return;
     if (action.type === "translation_quote") {
       setTranslationAction(action);
+      return;
+    }
+    if (action.type === "payment" && action.provider === "ghiseul_drpciv") {
+      try {
+        const handoff = await prepareGhiseulPayment.mutateAsync("certificat_inmatriculare");
+        if (handoff.missing_fields.length > 0) {
+          show("error", `Completează în Profil: ${handoff.missing_fields.join(", ")}`);
+          return;
+        }
+        window.open(handoff.redirect_url, "_blank", "noopener,noreferrer");
+        show("success", "Am pregătit plata DRPCIV cu datele din profil.");
+      } catch (err) {
+        show("error", err instanceof Error ? err.message : "Eroare la pregătirea plății DRPCIV");
+      }
       return;
     }
     if (action.url) window.open(action.url, "_blank", "noopener,noreferrer");
@@ -313,7 +329,7 @@ export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
                           <ActionButton
                             action={action}
                             meta={meta}
-                            onClick={() => handleAction(step)}
+                            onClick={() => void handleAction(step)}
                           />
                         )}
                         <button onClick={() => handleMarkStep(step.order)} disabled={updateStep.isPending}

@@ -65,6 +65,8 @@ export type AuditActionType =
   | 'payment_simulated'
   | 'appointment_simulated'
   | 'translation_quote_started'
+  | 'payment_handoff_started'
+  | 'translation_demo_completed'
 
 export interface AuditEntry {
   id: string
@@ -130,7 +132,7 @@ export interface LifeEventStep {
     description?: string
     office?: string
     slot_hint?: string
-    provider?: 'wetranslate'
+    provider?: 'wetranslate' | 'ghiseul_drpciv'
     source_language?: string
     target_language?: string
     package?: 'Economy' | 'Optimal' | 'Premium'

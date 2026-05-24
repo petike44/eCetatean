@@ -66,7 +66,7 @@ async function request<T>(
 
   if (contentType.includes("application/pdf") || contentType.startsWith("application/octet-stream")) {
     if (!response.ok) {
-      throw new ApiError(response.status, "Eroare la descărcarea fișierului");
+      throw new ApiError(response.status, await readErrorMessage(response, "Eroare la descărcarea fișierului"));
     }
     return (await response.blob()) as unknown as T;
   }
@@ -91,6 +91,20 @@ async function request<T>(
   }
 
   return body.data;
+}
+
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  const contentType = response.headers.get("content-type") ?? "";
+  try {
+    if (contentType.includes("application/json")) {
+      const body = (await response.json()) as { error?: unknown };
+      return typeof body.error === "string" && body.error.trim() ? body.error : fallback;
+    }
+    const text = await response.text();
+    return text.trim() || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 export function apiGet<T>(path: string, getToken: GetToken): Promise<T> {

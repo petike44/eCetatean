@@ -18,6 +18,7 @@ type LanguageOption = {
 };
 
 const LANGUAGES: LanguageOption[] = [
+  { code: "auto", label: "Detectare automată", nativeLabel: "Auto detect" },
   { code: "de", label: "Germană", nativeLabel: "Deutsch" },
   { code: "en", label: "Engleză", nativeLabel: "English" },
   { code: "fr", label: "Franceză", nativeLabel: "Français" },
@@ -51,8 +52,9 @@ const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 
 function sourceFromAction(action: TranslationAction | null): string {
   const value = action?.source_language?.toLowerCase() ?? "";
+  if (!value || value === "auto") return "auto";
   if (value === "germană" || value === "germana" || value === "german" || value === "de") return "de";
-  return LANGUAGES.some((language) => language.code === value) ? value : "de";
+  return LANGUAGES.some((language) => language.code === value) ? value : "auto";
 }
 
 function downloadName(file: File | null): string {
@@ -63,7 +65,7 @@ function downloadName(file: File | null): string {
 export function DocumentTranslationModal({ open, action, onClose }: Props) {
   const { show } = useToast();
   const translateDocument = useTranslateDocument();
-  const [source, setSource] = useState("de");
+  const [source, setSource] = useState("auto");
   const [target, setTarget] = useState("ro");
   const [file, setFile] = useState<File | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -142,6 +144,9 @@ export function DocumentTranslationModal({ open, action, onClose }: Props) {
               <Languages size={14} />
               1. Alege limba documentului
             </div>
+            <p className="text-[11.5px] text-[#64748B] mb-2">
+              Pentru PDF-uri mixte sau necunoscute, folosește detectarea automată.
+            </p>
             <div className="max-h-40 overflow-y-auto rounded-2xl border border-[#CBD5E1] bg-[#F8FAFC] p-2">
               <div className="grid grid-cols-2 gap-2">
                 {LANGUAGES.map((language) => (

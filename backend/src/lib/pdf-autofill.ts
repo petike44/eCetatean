@@ -251,6 +251,41 @@ const DEMO_FORMS: PdfForm[] = [
       },
     ],
   },
+  {
+    id: "demo-anaf-tva-certificate",
+    slug: "anaf_tva_certificate",
+    title: "Cerere certificat TVA ANAF",
+    institution: "ANAF",
+    description:
+      "Cerere pentru eliberarea certificatului privind TVA pentru achizitii intracomunitare de vehicule.",
+    category: "taxe",
+    tags: ["anaf", "tva", "certificat tva", "vehicul", "spv"],
+    storage_bucket: "pdf-forms",
+    storage_path: "anaf_tva_certificate.pdf",
+    source_url: null,
+    is_active: true,
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+    mapping: [
+      field("full_name", "Denumire/Nume, Prenume", "profile.full_name", 150, 150, 260, true, 0.75),
+      field("fiscal_code", "Cod de identificare fiscala", "input.fiscal_code", 150, 178, 210, false, 0.65),
+      field("cnp", "Cod numeric personal", "profile.cnp", 150, 206, 210, true, 0.75),
+      field("city", "Localitate", "profile.city", 150, 234, 180, true, 0.7),
+      field("address", "Strada", "profile.address", 150, 262, 300, true, 0.7),
+      field("email", "E-mail", "profile.email", 150, 290, 220, false, 0.7),
+      field("phone", "Telefon", "profile.phone", 150, 318, 160, false, 0.7),
+      field("vehicle_make", "Marca vehicul", "input.make", 150, 374, 160, true, 0.68),
+      field("vehicle_model", "Denumire comerciala", "input.model", 330, 374, 150, true, 0.68),
+      field("vin", "Numar identificare/Sasiu", "input.vin", 150, 402, 260, true, 0.7),
+      field("date", "Data", "system.today", 150, 690, 120, true, 0.7),
+    ],
+    required_inputs: [
+      { key: "make", label: "Marca vehiculului", placeholder: "Dacia" },
+      { key: "model", label: "Model / denumire comerciala", placeholder: "Logan" },
+      { key: "vin", label: "Numar identificare / sasiu", placeholder: "VF1..." },
+      { key: "fiscal_code", label: "Cod de identificare fiscala", placeholder: "CNP sau CUI" },
+    ],
+  },
 ];
 
 function field(

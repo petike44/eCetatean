@@ -335,6 +335,35 @@ values
     '[
       {"key":"purpose","label":"Scopul solicitarii","placeholder":"Dosar vanzare-cumparare"}
     ]'::jsonb
+  ),
+  (
+    'anaf_tva_certificate',
+    'Cerere certificat TVA ANAF',
+    'ANAF',
+    'Cerere pentru eliberarea certificatului privind TVA pentru achizitii intracomunitare de vehicule.',
+    'taxe',
+    array['anaf', 'tva', 'certificat tva', 'vehicul', 'spv'],
+    'anaf_tva_certificate.pdf',
+    null,
+    '[
+      {"id":"full_name","label":"Denumire/Nume, Prenume","dataKey":"profile.full_name","page":0,"x":150,"y":150,"width":260,"height":18,"required":true,"confidence":0.75,"source":"saved"},
+      {"id":"fiscal_code","label":"Cod de identificare fiscala","dataKey":"input.fiscal_code","page":0,"x":150,"y":178,"width":210,"height":18,"required":false,"confidence":0.65,"source":"saved"},
+      {"id":"cnp","label":"Cod numeric personal","dataKey":"profile.cnp","page":0,"x":150,"y":206,"width":210,"height":18,"required":true,"confidence":0.75,"source":"saved"},
+      {"id":"city","label":"Localitate","dataKey":"profile.city","page":0,"x":150,"y":234,"width":180,"height":18,"required":true,"confidence":0.7,"source":"saved"},
+      {"id":"address","label":"Strada","dataKey":"profile.address","page":0,"x":150,"y":262,"width":300,"height":18,"required":true,"confidence":0.7,"source":"saved"},
+      {"id":"email","label":"E-mail","dataKey":"profile.email","page":0,"x":150,"y":290,"width":220,"height":18,"required":false,"confidence":0.7,"source":"saved"},
+      {"id":"phone","label":"Telefon","dataKey":"profile.phone","page":0,"x":150,"y":318,"width":160,"height":18,"required":false,"confidence":0.7,"source":"saved"},
+      {"id":"vehicle_make","label":"Marca vehicul","dataKey":"input.make","page":0,"x":150,"y":374,"width":160,"height":18,"required":true,"confidence":0.68,"source":"saved"},
+      {"id":"vehicle_model","label":"Denumire comerciala","dataKey":"input.model","page":0,"x":330,"y":374,"width":150,"height":18,"required":true,"confidence":0.68,"source":"saved"},
+      {"id":"vin","label":"Numar identificare/Sasiu","dataKey":"input.vin","page":0,"x":150,"y":402,"width":260,"height":18,"required":true,"confidence":0.7,"source":"saved"},
+      {"id":"date","label":"Data","dataKey":"system.today","page":0,"x":150,"y":690,"width":120,"height":18,"required":true,"confidence":0.7,"source":"saved"}
+    ]'::jsonb,
+    '[
+      {"key":"make","label":"Marca vehiculului","placeholder":"Dacia"},
+      {"key":"model","label":"Model / denumire comerciala","placeholder":"Logan"},
+      {"key":"vin","label":"Numar identificare / sasiu","placeholder":"VF1..."},
+      {"key":"fiscal_code","label":"Cod de identificare fiscala","placeholder":"CNP sau CUI"}
+    ]'::jsonb
   )
 on conflict (slug) do update set
   title = excluded.title,

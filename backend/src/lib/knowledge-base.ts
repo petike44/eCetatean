@@ -490,7 +490,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
           label: 'Tradu document PDF',
           type: 'translation_document',
           provider: 'libretranslate',
-          source_language: 'de',
+          source_language: 'auto',
           target_language: 'ro',
         },
       },

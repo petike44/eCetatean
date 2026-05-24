@@ -1,10 +1,6 @@
 import { Hono } from 'hono'
 import { PDFParse } from 'pdf-parse'
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib'
-// @ts-expect-error fontkit does not ship TS declarations in this project.
-import * as fontkit from 'fontkit'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
 import { requireAuth } from '../middleware/auth'
 import { writeAuditEntry } from '../lib/hash-chain'
 import { supabaseAdmin, isSupabaseConfigured } from '../lib/supabase'
@@ -62,7 +58,6 @@ const LIBRETRANSLATE_PUBLIC_ENDPOINTS = [
   'https://libretranslate.de',
   'https://translate.argosopentech.com',
 ]
-const FONT_PATH = path.join(process.cwd(), 'src', 'assets', 'NotoSans-Regular.ttf')
 
 export const integrationsRoute = new Hono()
 
@@ -147,10 +142,17 @@ async function createGhiseulPartnerPayment(
 
 function libreTranslateEndpoints(): string[] {
   const configured = process.env.LIBRETRANSLATE_API_URL?.trim()
+  const apiKey = process.env.LIBRETRANSLATE_API_KEY?.trim()
   const endpoints = configured
     ? [configured, ...LIBRETRANSLATE_PUBLIC_ENDPOINTS]
+    : apiKey
+      ? ['https://libretranslate.com', ...LIBRETRANSLATE_PUBLIC_ENDPOINTS]
     : LIBRETRANSLATE_PUBLIC_ENDPOINTS
   return [...new Set(endpoints.map((endpoint) => endpoint.replace(/\/$/, '')))]
+}
+
+function allowOfflineFallback(): boolean {
+  return process.env.LIBRETRANSLATE_ALLOW_OFFLINE_FALLBACK === 'true'
 }
 
 function offlineFallbackTranslation(q: string, target: string): string {
@@ -237,6 +239,9 @@ async function translateWithLibreTranslate({
   }
 
   console.error('libretranslate fallback used:', lastError)
+  if (!allowOfflineFallback()) {
+    throw new Error('LibreTranslate API is unavailable')
+  }
   return {
     mode: 'offline_demo_fallback',
     source,
@@ -246,6 +251,48 @@ async function translateWithLibreTranslate({
     translated_text: offlineFallbackTranslation(q, target),
     endpoint_used: null,
   }
+}
+
+function isPageMarker(line: string): boolean {
+  return /^[-–—]{1,2}\s*\d+\s+of\s+\d+\s*[-–—]{1,2}$/i.test(line)
+}
+
+function isTableLikeLine(line: string): boolean {
+  return /^\d+[\s\t]+/.test(line) || line.includes('\t')
+}
+
+function isHeadingLikeLine(line: string): boolean {
+  return line.length <= 48 && !/[.!?,;:]$/.test(line) && /^[A-Z0-9][\w\s/&-]+$/.test(line)
+}
+
+function normalizeExtractedPdfText(text: string): string {
+  const lines = text
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter((line) => line && !isPageMarker(line))
+
+  const blocks: string[] = []
+  let paragraph = ''
+
+  const flush = () => {
+    if (paragraph.trim()) blocks.push(paragraph.trim())
+    paragraph = ''
+  }
+
+  for (const line of lines) {
+    if (isTableLikeLine(line) || line.startsWith('-') || isHeadingLikeLine(line)) {
+      flush()
+      blocks.push(line)
+      continue
+    }
+
+    paragraph = paragraph ? `${paragraph} ${line}` : line
+    if (/[.!?]$/.test(line)) flush()
+  }
+
+  flush()
+  return blocks.join('\n\n')
 }
 
 function chunkText(text: string): string[] {
@@ -282,22 +329,17 @@ function chunkText(text: string): string[] {
   return chunks
 }
 
-async function embedReadableFont(pdf: PDFDocument): Promise<PDFFont> {
-  try {
-    pdf.registerFontkit(fontkit as unknown as Parameters<typeof pdf.registerFontkit>[0])
-    return await pdf.embedFont(new Uint8Array(fs.readFileSync(FONT_PATH)), { subset: true })
-  } catch (err) {
-    console.warn('NotoSans unavailable for translated PDF, falling back to Helvetica:', err)
-    return pdf.embedFont(StandardFonts.Helvetica)
-  }
-}
-
 function printableText(text: string, font: PDFFont): string {
+  const withoutControls = text
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
   try {
-    font.encodeText(text)
-    return text
+    font.encodeText(withoutControls)
+    return withoutControls
   } catch {
-    return text
+    return withoutControls
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/ș/g, 's')
@@ -311,7 +353,7 @@ function printableText(text: string, font: PDFFont): string {
       .replace(/â/g, 'a')
       .replace(/Â/g, 'A')
       .replace(/ß/g, 'ss')
-      .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '')
+      .replace(/[^\x20-\x7E]/g, '')
   }
 }
 
@@ -348,7 +390,7 @@ async function buildTranslatedPdf({
   translatedText: string
 }): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
-  const font = await embedReadableFont(pdf)
+  const font = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
   const margin = 50
   const fontSize = 11
@@ -365,11 +407,17 @@ async function buildTranslatedPdf({
       page = pdf.addPage([pageWidth, pageHeight])
       y = pageHeight - margin
     }
-    page.drawText(printableText(line, options?.bold ? bold : font), {
+    const selectedFont = options?.bold ? bold : font
+    const text = printableText(line, selectedFont)
+    if (!text) {
+      y -= lineHeight
+      return
+    }
+    page.drawText(text, {
       x: margin,
       y,
       size: options?.size ?? fontSize,
-      font: options?.bold ? bold : font,
+      font: selectedFont,
       color: rgb(0.08, 0.1, 0.16),
     })
     y -= lineHeight
@@ -421,7 +469,7 @@ integrationsRoute.post('/libretranslate/document', requireAuth, async (c) => {
     const buffer = Buffer.from(await file.arrayBuffer())
     parser = new PDFParse({ data: buffer })
     const parsed = await parser.getText()
-    extractedText = parsed.text.trim()
+    extractedText = normalizeExtractedPdfText(parsed.text)
   } catch (err) {
     console.error('pdf extraction error:', err)
     return c.json({ success: false, error: 'Nu am putut extrage textul din PDF' }, 400)

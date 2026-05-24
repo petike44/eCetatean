@@ -1,17 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  Bot,
-  Building2,
-  CheckCircle2,
-  DatabaseZap,
-  FileCode2,
-  KeyRound,
-  Landmark,
-  LockKeyhole,
-  Network,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Bot, CheckCircle2, FileText, Landmark, Network, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { FadeIn, StaggerItem, StaggerList } from "@/components/motion-primitives";
@@ -20,17 +8,17 @@ import { Badge } from "@/components/ui-bits";
 export const Route = createFileRoute("/our-goal")({
   head: () => ({
     meta: [
-      { title: "Our goal — eCetățean" },
+      { title: "Scopul nostru | eCetățean" },
       {
         name: "description",
         content:
-          "Viziunea eCetățean pentru digitalizarea serviciilor publice prin API-uri guvernamentale sigure, documentate și interoperabile.",
+          "Scopul eCetățean este să folosească AI pentru proceduri civice simple și să pregătească automatizarea interacțiunilor cu statul.",
       },
-      { property: "og:title", content: "Our goal — eCetățean" },
+      { property: "og:title", content: "Scopul nostru | eCetățean" },
       {
         property: "og:description",
         content:
-          "Cum putem transforma portalurile statului în servicii digitale conectate, cu acordul cetățeanului.",
+          "Cum folosim AI pentru viața civică de zi cu zi și cum vrem să conectăm aplicația la API uri oficiale ale statului.",
       },
     ],
   }),
@@ -39,40 +27,33 @@ export const Route = createFileRoute("/our-goal")({
 
 const goalPillars = [
   {
-    icon: FileCode2,
-    title: "API-uri publice documentate",
-    text: "Fiecare instituție ar trebui să ofere endpoint-uri stabile, specificații OpenAPI, exemple clare și medii de test pentru dezvoltatori.",
+    icon: Sparkles,
+    title: "Ajutor rapid pentru cetățeni",
+    text: "eCetățean explică procedurile publice pe înțelesul tuturor. Utilizatorul spune ce problemă are, iar aplicația îl ghidează către pașii corecți.",
   },
   {
-    icon: ShieldCheck,
-    title: "Acces cu consimțământ",
-    text: "Automatizarea trebuie făcută prin ROeID, OAuth2 sau eIDAS, astfel încât cetățeanul să poată aproba, limita și revoca accesul.",
+    icon: Bot,
+    title: "AI pentru evenimente de viață",
+    text: "Folosim AI ca să transformăm situații reale în planuri clare. Mutare în alt oraș, acte auto, buletin, pașaport sau PFA devin pași, documente, costuri și termene.",
   },
   {
     icon: Network,
-    title: "Interoperabilitate reală",
-    text: "Instituțiile trebuie să poată verifica date între ele, ca oamenii să nu mai ducă aceleași copii, adeverințe și declarații de la un ghișeu la altul.",
+    title: "Automatizare prin API uri publice",
+    text: "Pe termen lung vrem ca instituțiile statului să ofere acces controlat la API uri oficiale. Atunci eCetățean ar putea completa, valida și trimite cereri direct din aplicație, cu acordul utilizatorului.",
   },
 ];
 
 const roadmap = [
-  "Generăm formulare și dosare digitale corecte pe baza profilului cetățeanului.",
-  "Modelăm procedurile statului ca pași clari, verificabili și reutilizabili.",
-  "Pregătim conectori pentru viitoare API-uri oficiale, fără scraping fragil sau automatizări neautorizate.",
-  "Promovăm standarde deschise pentru instituții, dezvoltatori și servicii civice.",
-];
-
-const apiStandards = [
-  { icon: KeyRound, label: "Autentificare", value: "OAuth2, ROeID, eIDAS, certificate instituționale" },
-  { icon: LockKeyhole, label: "Control", value: "consimțământ granular, audit log, revocare acces" },
-  { icon: DatabaseZap, label: "Date", value: "scheme comune pentru identitate, adrese, taxe, vehicule și firme" },
-  { icon: Bot, label: "Automatizare", value: "prefill, validare, depunere și status prin API-uri oficiale" },
+  "Identificăm procedura potrivită pentru fiecare nevoie.",
+  "Construim un plan de acțiune cu pași simpli și documente necesare.",
+  "Pregătim formulare și informații pe baza profilului utilizatorului.",
+  "Păstrăm controlul la cetățean pentru orice date personale folosite.",
 ];
 
 function OurGoalPage() {
   return (
     <AppShell
-      topBar={<TopBar title="Our goal" subtitle="Digitalizarea României" />}
+      topBar={<TopBar title="Scopul nostru" subtitle="Digitalizarea României" />}
       contentClassName="lg:max-w-4xl lg:mx-auto"
       className="lg:!px-5"
     >
@@ -82,22 +63,21 @@ function OurGoalPage() {
             <div className="relative bg-gradient-to-br from-primary via-primary to-accent px-5 py-7 text-white lg:px-8 lg:py-10">
               <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_20%_20%,white,transparent_34%),radial-gradient(circle_at_80%_10%,white,transparent_28%)]" />
               <div className="relative">
-                <Badge tone="metro">Inițiativă civică</Badge>
+                <Badge tone="metro">Scopul proiectului</Badge>
                 <h1 className="font-display mt-4 text-[30px] font-bold leading-tight tracking-tight lg:text-[42px]">
-                  Our goal: servicii publice conectate, nu formulare repetate.
+                  Vrem ca interacțiunea cu statul să fie simplă, ghidată și digitală.
                 </h1>
                 <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/80 lg:text-[17px]">
-                  eCetățean vrea să ajute România să treacă de la portaluri izolate la infrastructură digitală:
-                  API-uri oficiale, sigure și documentate, prin care aplicațiile pot precompleta, valida și trimite
-                  cereri cu acordul explicit al cetățeanului.
+                  eCetățean folosește AI pentru a ajuta oamenii să rezolve evenimente de viață. Aplicația explică
+                  proceduri, găsește soluții, pregătește documente și arată ce trebuie făcut mai departe.
                 </p>
               </div>
             </div>
 
             <div className="grid gap-3 p-4 lg:grid-cols-3 lg:p-5">
-              <HeroMetric label="Mai puține drumuri" value="online first" />
-              <HeroMetric label="Mai puține copii" value="once-only" />
-              <HeroMetric label="Mai mult control" value="consimțământ" />
+              <HeroMetric label="Acum" value="ghidare cu AI" />
+              <HeroMetric label="Curând" value="formulare pregătite" />
+              <HeroMetric label="Pe termen lung" value="automatizare prin API uri" />
             </div>
           </header>
         </FadeIn>
@@ -121,27 +101,26 @@ function OurGoalPage() {
             <section className="rounded-2xl border border-border bg-surface p-5 shadow-card lg:p-6">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-light text-primary">
-                  <Building2 size={20} strokeWidth={1.9} />
+                  <FileText size={20} strokeWidth={1.9} />
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">
-                    Problema actuală
+                    Cum funcționează astăzi
                   </p>
                   <h2 className="font-display mt-1 text-[20px] font-semibold text-text-primary">
-                    Site-urile statului sunt făcute pentru oameni, nu pentru integrare software.
+                    Cu AI, o problemă civică devine un plan concret.
                   </h2>
                 </div>
               </div>
               <p className="mt-4 text-[14px] leading-relaxed text-text-secondary">
-                Multe portaluri publice nu oferă API-uri stabile, documentație pentru dezvoltatori, sandbox-uri sau
-                reguli clare pentru aplicații terțe. Asta blochează automatizarea legitimă: precompletare de câmpuri,
-                verificare de documente, depunere de cereri și urmărirea statusului.
+                Utilizatorul poate întreba ce trebuie să facă pentru o situație reală. ClaudIA citește contextul,
+                identifică procedura, explică pașii și ajută la pregătirea documentelor necesare.
               </p>
               <div className="mt-4 rounded-2xl bg-surface-secondary p-4">
-                <p className="text-[13px] font-semibold text-text-primary">Principiul nostru</p>
+                <p className="text-[13px] font-semibold text-text-primary">Rezultatul pentru utilizator</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
-                  Nu construim automatizări fragile peste formulare web. Construim un produs pregătit să se conecteze
-                  corect la API-uri oficiale atunci când instituțiile le vor pune la dispoziție.
+                  Mai puțină confuzie, mai puțin timp pierdut și o imagine clară asupra actelor, taxelor, instituțiilor
+                  și termenelor.
                 </p>
               </div>
             </section>
@@ -155,23 +134,23 @@ function OurGoalPage() {
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">
-                    Ce poate face statul
+                    Viziunea pe termen lung
                   </p>
-                  <h2 className="font-display text-[20px] font-semibold text-text-primary">Un portal național de API-uri</h2>
+                  <h2 className="font-display text-[20px] font-semibold text-text-primary">Automatizare completă prin API uri oficiale</h2>
                 </div>
               </div>
-              <div className="space-y-3">
-                {apiStandards.map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex gap-3 rounded-2xl bg-surface-secondary p-3">
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-surface text-primary">
-                      <Icon size={16} />
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-semibold text-text-primary">{label}</p>
-                      <p className="mt-0.5 text-[12px] leading-relaxed text-text-secondary">{value}</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="rounded-2xl bg-surface-secondary p-4">
+                <p className="text-[14px] leading-relaxed text-text-secondary">
+                  Dacă această soluție funcționează la scară largă, următorul pas este colaborarea cu statul pentru
+                  acces public controlat la API uri oficiale. Prin aceste API uri, aplicația ar putea precompleta
+                  câmpuri, verifica date, trimite cereri și urmări statusul direct în eCetățean.
+                </p>
+              </div>
+              <div className="mt-3 rounded-2xl bg-surface-secondary p-4">
+                <p className="text-[13px] font-semibold text-text-primary">Principiul important</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
+                  Automatizarea trebuie să fie sigură, transparentă și făcută doar cu acordul utilizatorului.
+                </p>
               </div>
             </section>
           </FadeIn>
@@ -185,7 +164,7 @@ function OurGoalPage() {
                   Rolul eCetățean
                 </p>
                 <h2 className="font-display mt-1 text-[20px] font-semibold text-text-primary">
-                  Pregătim terenul pentru automatizare civică sigură.
+                  Ce face eCetățean pentru oameni
                 </h2>
               </div>
             </div>
@@ -203,16 +182,15 @@ function OurGoalPage() {
         <FadeIn delay={0.15}>
           <section className="mt-6 rounded-2xl border border-primary/10 bg-primary-light p-5 lg:p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/70">
-              Viziune pe termen lung
+              Scopul final
             </p>
             <h2 className="font-display mt-2 text-[22px] font-semibold text-primary">
-              România poate avea servicii publice care lucrează pentru cetățean.
+              O singură aplicație pentru interacțiunea cu instituțiile statului.
             </h2>
             <p className="mt-2 text-[14px] leading-relaxed text-text-secondary">
-              Când API-urile oficiale vor exista, eCetățean poate transforma profilul utilizatorului într-un flux
-              complet: câmpuri completate automat, validări înainte de depunere, trimitere securizată și notificări de
-              status. Scopul nu este să înlocuim statul, ci să facem interacțiunea cu statul mai simplă, transparentă
-              și verificabilă.
+              Scopul nostru este ca oamenii să nu mai caute informații în zeci de portaluri. În viitor, cu API uri
+              oficiale ale statului, eCetățean poate deveni locul unde cetățeanul înțelege, pregătește și rezolvă
+              digital relația cu administrația publică.
             </p>
             <Link
               to="/chat"

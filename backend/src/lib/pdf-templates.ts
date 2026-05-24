@@ -352,37 +352,43 @@ async function generateCerereDrpciv(
 
 async function loadCerereDrpcivTemplate(): Promise<Uint8Array> {
   const BUCKET = 'pdf-forms'
-  const FILE = 'cerere-inmatriculare-drpciv.pdf.pdf'
+  const FILE = 'cerere-inmatriculare-drpciv.pdf'
 
   // 1. Local assets folder (fastest — copy the file here for offline dev)
-  const localPath = path.join(process.cwd(), 'src', 'assets', FILE)
-  if (fs.existsSync(localPath)) {
-    console.log(`PDF template loaded from local: ${localPath}`)
-    return new Uint8Array(fs.readFileSync(localPath))
+  for (const fileName of [FILE, 'cerere-inmatriculare-drpciv.pdf.pdf']) {
+    const localPath = path.join(process.cwd(), 'src', 'assets', fileName)
+    if (fs.existsSync(localPath)) {
+      console.log(`PDF template loaded from local: ${localPath}`)
+      return new Uint8Array(fs.readFileSync(localPath))
+    }
   }
 
   // 2. Authenticated SDK download (requires real service_role key)
   try {
-    const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(FILE)
-    if (data && !error) {
-      console.log(`PDF template loaded via SDK: ${BUCKET}/${FILE}`)
-      return new Uint8Array(await data.arrayBuffer())
+    for (const fileName of [FILE, 'cerere-inmatriculare-drpciv.pdf.pdf']) {
+      const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(fileName)
+      if (data && !error) {
+        console.log(`PDF template loaded via SDK: ${BUCKET}/${fileName}`)
+        return new Uint8Array(await data.arrayBuffer())
+      }
+      if (error && fileName === FILE) console.warn(`SDK download rejected (${error.message}) — trying legacy name`)
     }
-    if (error) console.warn(`SDK download rejected (${error.message}) — trying public URL`)
   } catch (err) {
     console.warn('SDK download threw:', err)
   }
 
   // 3. Public URL fallback (works when bucket is set to public)
   try {
-    const { data: { publicUrl } } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(FILE)
-    console.log(`Trying public URL: ${publicUrl}`)
-    const res = await fetch(publicUrl)
-    if (res.ok) {
-      console.log(`PDF template loaded via public URL`)
-      return new Uint8Array(await res.arrayBuffer())
+    for (const fileName of [FILE, 'cerere-inmatriculare-drpciv.pdf.pdf']) {
+      const { data: { publicUrl } } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(fileName)
+      console.log(`Trying public URL: ${publicUrl}`)
+      const res = await fetch(publicUrl)
+      if (res.ok) {
+        console.log(`PDF template loaded via public URL`)
+        return new Uint8Array(await res.arrayBuffer())
+      }
+      console.warn(`Public URL returned ${res.status}`)
     }
-    console.warn(`Public URL returned ${res.status}`)
   } catch (err) {
     console.warn('Public URL fetch failed:', err)
   }

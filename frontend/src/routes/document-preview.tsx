@@ -19,6 +19,22 @@ type DocumentPreviewSearch = {
   q?: string;
 };
 
+const DATA_KEY_OPTIONS = [
+  "profile.full_name",
+  "profile.cnp",
+  "profile.date_of_birth",
+  "profile.full_address",
+  "profile.address",
+  "profile.city",
+  "profile.email",
+  "profile.phone",
+  "profile.identity_card",
+  "profile.buletin_series",
+  "profile.buletin_number",
+  "profile.buletin_expiry",
+  "system.today",
+];
+
 export const Route = createFileRoute("/document-preview")({
   validateSearch: (search: Record<string, unknown>): DocumentPreviewSearch => ({
     form: typeof search.form === "string" ? search.form : undefined,
@@ -95,6 +111,12 @@ function DocPreview() {
   function updateField(fieldId: string, value: string) {
     setFields((current) =>
       current.map((field) => (field.id === fieldId ? { ...field, value } : field)),
+    );
+  }
+
+  function updateFieldDataKey(fieldId: string, dataKey: string) {
+    setFields((current) =>
+      current.map((field) => (field.id === fieldId ? { ...field, dataKey } : field)),
     );
   }
 
@@ -286,6 +308,28 @@ function DocPreview() {
                             placeholder="Completează valoarea"
                             className="w-full rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[14px] text-text-primary outline-none focus:border-primary"
                           />
+                          <div className="mt-2 grid gap-2 md:grid-cols-[180px_1fr]">
+                            <select
+                              value={DATA_KEY_OPTIONS.includes(field.dataKey) ? field.dataKey : "custom"}
+                              onChange={(event) => {
+                                if (event.target.value !== "custom") updateFieldDataKey(field.id, event.target.value);
+                              }}
+                              className="rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[12px] text-text-secondary outline-none focus:border-primary"
+                            >
+                              <option value="custom">Cheie personalizată</option>
+                              {DATA_KEY_OPTIONS.map((key) => (
+                                <option key={key} value={key}>
+                                  {key}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              value={field.dataKey}
+                              onChange={(event) => updateFieldDataKey(field.id, event.target.value)}
+                              placeholder="ex. profile.full_name sau input.vehicle_make"
+                              className="w-full rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[12px] text-text-secondary outline-none focus:border-primary"
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>

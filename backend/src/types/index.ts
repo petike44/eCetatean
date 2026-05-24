@@ -209,6 +209,10 @@ export interface PdfForm {
   is_active: boolean
   created_at: string
   updated_at: string
+  // ─── Tipizatul (Phase 1/3) ───
+  source?: 'manual' | 'tipizatul'
+  drive_file_id?: string | null
+  acroform_origin?: 'original' | 'generated' | null
 }
 
 export interface PdfFormAnalyzeResult {

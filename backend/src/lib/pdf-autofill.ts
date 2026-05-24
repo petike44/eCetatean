@@ -5,6 +5,8 @@ import {
   type PDFTextField,
 } from '@pdfme/pdf-lib'
 import { supabaseAdmin } from './supabase'
+import { getCachedTipizatulPdf } from './tipizatul/pdf-cache'
+import { DriveCredentialsMissingError } from './tipizatul/drive-proxy'
 import type {
   PdfAutofillField,
   PdfForm,
@@ -51,14 +53,14 @@ const DEMO_FORMS: PdfForm[] = [
   },
   {
     id: 'demo-drpciv',
-    slug: 'demo-drpciv',
+    slug: 'cerere-inmatriculare-drpciv',
     title: 'Cerere inmatriculare vehicul',
     institution: 'DRPCIV',
     description: 'Cerere pentru inmatricularea sau transcrierea unui vehicul.',
     category: 'auto',
     tags: ['drpciv', 'inmatriculare', 'vehicul', 'auto'],
     storage_bucket: 'pdf-forms',
-    storage_path: 'cerere-inmatriculare-drpciv.pdf.pdf',
+    storage_path: 'cerere-inmatriculare-drpciv.pdf',
     source_url: null,
     is_active: true,
     created_at: new Date(0).toISOString(),
@@ -191,6 +193,26 @@ function normalizeInputDefinitions(raw: unknown): PdfFormInputDefinition[] {
 }
 
 export async function getPdfBytes(form: PdfForm): Promise<Uint8Array> {
+  // ─── Tipizatul branch (Phase 3) ─────────────────────────────
+  // For source='tipizatul' rows, the storage_path is pre-set to
+  // `tipizatul/<driveFileId>.pdf`. Try the cache (which serves the
+  // SDK download path), and on cache miss go to the Drive proxy.
+  if (form.source === 'tipizatul' && form.drive_file_id) {
+    try {
+      return await getCachedTipizatulPdf(form.drive_file_id)
+    } catch (err) {
+      if (err instanceof DriveCredentialsMissingError) {
+        console.warn(
+          `tipizatul fetch unavailable (no SA creds): ${err.message} — falling back to placeholder`
+        )
+        return createPlaceholderPdf(form)
+      }
+      console.warn(`tipizatul fetch for ${form.drive_file_id} failed:`, err)
+      // Fall through to generic storage paths below, which will most likely
+      // fail too (file isn't there yet), and eventually placeholder.
+    }
+  }
+
   // Attempt 1 — authenticated SDK download (requires real service_role key)
   try {
     const { data, error } = await supabaseAdmin.storage
@@ -236,7 +258,9 @@ export async function analyzePdf(
 ): Promise<PdfAutofillField[]> {
   const savedFields = normalizeFields(form.mapping)
   const nativeFields = await extractAcroFields(sourcePdf)
-  const baseFields = nativeFields.length > 0 ? nativeFields : savedFields
+  const baseFields = savedFields.length > 0
+    ? mergeSavedAndNativeFields(savedFields, nativeFields)
+    : nativeFields
   const fallbackFields = baseFields.length > 0 ? baseFields : heuristicFields(form)
   return hydrateFieldValues(fallbackFields, profile, inputValues)
 }
@@ -364,6 +388,64 @@ async function extractAcroFields(sourcePdf: Uint8Array): Promise<PdfAutofillFiel
   }
 }
 
+function mergeSavedAndNativeFields(
+  savedFields: PdfAutofillField[],
+  nativeFields: PdfAutofillField[]
+): PdfAutofillField[] {
+  if (!nativeFields.length) return savedFields
+
+  const nativeByKey = new Map<string, PdfAutofillField>()
+  for (const nativeField of nativeFields) {
+    for (const key of fieldMatchKeys(nativeField)) {
+      if (!nativeByKey.has(key)) nativeByKey.set(key, nativeField)
+    }
+  }
+
+  const matchedNativeIds = new Set<string>()
+  const merged = savedFields.map((savedField) => {
+    const nativeField = fieldMatchKeys(savedField)
+      .map((key) => nativeByKey.get(key))
+      .find(Boolean)
+
+    if (!nativeField) return savedField
+    matchedNativeIds.add(nativeField.id)
+
+    return {
+      ...savedField,
+      acroFieldName: savedField.acroFieldName ?? nativeField.acroFieldName,
+      page: Number.isFinite(savedField.page) ? savedField.page : nativeField.page,
+      x: Number.isFinite(savedField.x) ? savedField.x : nativeField.x,
+      y: Number.isFinite(savedField.y) ? savedField.y : nativeField.y,
+      width: Number.isFinite(savedField.width) ? savedField.width : nativeField.width,
+      height: Number.isFinite(savedField.height) ? savedField.height : nativeField.height,
+      source: savedField.source,
+    }
+  })
+
+  const newNativeFields = nativeFields
+    .filter((nativeField) => !matchedNativeIds.has(nativeField.id))
+    .map((nativeField) => ({
+      ...nativeField,
+      dataKey: nativeField.dataKey.startsWith('input.')
+        ? nativeField.dataKey
+        : `input.${safeId(nativeField.label || nativeField.id) || nativeField.id}`,
+      confidence: Math.min(nativeField.confidence, 0.55),
+    }))
+
+  return [...merged, ...newNativeFields]
+}
+
+function fieldMatchKeys(field: PdfAutofillField): string[] {
+  return [
+    field.id,
+    field.label,
+    field.acroFieldName,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => safeId(value))
+    .filter(Boolean)
+}
+
 function getFieldRectangle(fieldItem: unknown):
   | { page: number; x: number; y: number; width: number; height: number }
   | null {
@@ -423,7 +505,11 @@ function guessDataKey(label: string): string {
   if (value.includes('adresa') || value.includes('domicili') || value.includes('resedint')) {
     return value.includes('solicitat') || value.includes('nou') ? 'input.new_address' : 'profile.full_address'
   }
-  if (value.includes('serie') || value.includes('numar') && value.includes('ci')) return 'profile.identity_card'
+  if (value.includes('serie') || (value.includes('numar') && value.includes('ci'))) return 'profile.identity_card'
+  if (value.includes('serie')) return 'profile.buletin_series'
+  if (value.includes('data naster')) return 'profile.date_of_birth'
+  if (value.includes('data expir')) return 'profile.buletin_expiry'
+  if (value.includes('oras') || value.includes('localitate')) return 'profile.city'
   if (value.includes('data')) return 'system.today'
   if (value.includes('marca')) return 'input.make'
   if (value.includes('model') || value.includes('tip')) return 'input.model'
@@ -433,7 +519,7 @@ function guessDataKey(label: string): string {
   return `input.${safeId(label) || 'value'}`
 }
 
-function resolveDataKey(
+export function resolveDataKey(
   dataKey: string,
   profile: Partial<Profile>,
   inputValues: Record<string, string>
@@ -448,7 +534,9 @@ function resolveDataKey(
   if (dataKey.startsWith('profile.')) {
     const key = dataKey.replace(/^profile\./, '') as keyof Profile
     const value = profile[key]
-    return typeof value === 'string' ? value : ''
+    if (typeof value === 'string') return value
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+    return ''
   }
   if (dataKey.startsWith('input.')) {
     const key = dataKey.replace(/^input\./, '')

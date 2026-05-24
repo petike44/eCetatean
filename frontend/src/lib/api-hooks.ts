@@ -202,6 +202,17 @@ export function useGeneratePdf() {
       additionalData?: Record<string, string>;
       profile?: CitizenProfile | null;
     }) => {
+      const catalogSlug = formTypeToCatalogSlug(formType);
+      if (catalogSlug) {
+        try {
+          await downloadAutofilledPdf(catalogSlug, catalogSlug, getToken, {
+            additional_data: additionalData,
+          });
+          return;
+        } catch {
+          // Keep the legacy generator as a fallback for forms not yet present in the catalog.
+        }
+      }
       await downloadPdf(formType, getToken, additionalData, profileOverride ?? undefined);
     },
   });
@@ -565,7 +576,7 @@ export function useAutofillDrpciv() {
   return useMutation({
     mutationFn: async (inputValues: Record<string, string>) => {
       await downloadAutofilledPdf(
-        "demo-drpciv",
+        "cerere-inmatriculare-drpciv",
         "cerere_drpciv.pdf",
         getToken,
         { additional_data: inputValues },
@@ -575,4 +586,13 @@ export function useAutofillDrpciv() {
       qc.invalidateQueries({ queryKey: ["audit"] });
     },
   });
+}
+
+function formTypeToCatalogSlug(formType: string): string | null {
+  const aliases: Record<string, string> = {
+    cerere_drpciv: "cerere-inmatriculare-drpciv",
+    viza_flotant: "cerere-viza-flotant",
+    certificat_fiscal: "cerere-certificat-fiscal",
+  };
+  return aliases[formType] ?? null;
 }

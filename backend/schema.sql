@@ -361,3 +361,63 @@ values
    'Persoanele fizice cu venituri independente trebuie să depună Declarația Unică până miercuri.',
    now() - interval '5 days')
 on conflict (id) do nothing;
+
+-- ════════════════════════════════════════════════════════════════
+--  Tipizatul.eu integration (Phase 1)
+--  Additive, idempotent. Extends pdf_forms and adds `procedures`.
+--  Source: https://github.com/iamandiradu/tipizatul.eu (MIT)
+-- ════════════════════════════════════════════════════════════════
+
+-- ─── pdf_forms extensions ───────────────────────────────────────
+alter table public.pdf_forms add column if not exists drive_file_id text;
+alter table public.pdf_forms add column if not exists original_drive_file_id text;
+alter table public.pdf_forms add column if not exists acroform_origin text
+  check (acroform_origin in ('original','generated') or acroform_origin is null);
+alter table public.pdf_forms add column if not exists procedure_id text;
+alter table public.pdf_forms add column if not exists edirect_doc_id text;
+alter table public.pdf_forms add column if not exists county text;
+alter table public.pdf_forms add column if not exists organization text;
+-- 'manual' for hand-curated demo rows; 'tipizatul' for ETL-imported rows.
+alter table public.pdf_forms add column if not exists source text not null default 'manual';
+-- tipizatul Template.id (firestore doc id). Unique per source.
+alter table public.pdf_forms add column if not exists source_template_id text;
+alter table public.pdf_forms add column if not exists source_version int;
+-- Raw TemplateField[] as received (incl. detectorConfidence) so we can
+-- re-derive `mapping` without re-pulling from Firestore.
+alter table public.pdf_forms add column if not exists fields_raw jsonb;
+alter table public.pdf_forms add column if not exists vote_count int;
+alter table public.pdf_forms add column if not exists synced_at timestamptz;
+
+create index if not exists pdf_forms_procedure_id_idx on public.pdf_forms (procedure_id);
+create index if not exists pdf_forms_drive_file_id_idx on public.pdf_forms (drive_file_id);
+create index if not exists pdf_forms_county_idx on public.pdf_forms (county);
+create unique index if not exists pdf_forms_source_template_uidx
+  on public.pdf_forms (source, source_template_id)
+  where source_template_id is not null;
+
+-- ─── procedures ─────────────────────────────────────────────────
+-- Tipizatul procedures.json feed (~3.5k Romanian administrative procedures).
+-- Stored verbatim (informational fields + document list) so ClaudIA can
+-- compose action plans on top of it.
+create extension if not exists pg_trgm;
+
+create table if not exists public.procedures (
+  procedure_id      text primary key,
+  title             text not null,
+  institution       text,
+  county            text,                       -- full RO name e.g. 'Cluj', NULL = national
+  city              text,
+  informational     boolean not null default false,
+  fields            jsonb not null default '{}'::jsonb,
+  documents         jsonb not null default '[]'::jsonb,
+  output_documents  jsonb not null default '[]'::jsonb,
+  laws              jsonb not null default '[]'::jsonb,
+  built_at          timestamptz,
+  synced_at         timestamptz not null default now()
+);
+create index if not exists procedures_county_idx on public.procedures (county);
+create index if not exists procedures_institution_idx on public.procedures (institution);
+create index if not exists procedures_title_trgm_idx
+  on public.procedures using gin (title gin_trgm_ops);
+
+alter table public.procedures disable row level security;

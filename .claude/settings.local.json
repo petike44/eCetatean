@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git stash *)",
+      "Bash(npx tsc *)",
+      "Bash(ls -la .git/index.lock 2>&1 && rm .git/index.lock && echo \"removed\")",
+      "Bash(git add *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\marcu\\Documents\\GitHub\\eCetatean\\backend\\.git"
+    ]
+  }
+}

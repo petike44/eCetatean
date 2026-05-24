@@ -50,13 +50,13 @@ describe('indexFormCandidates — dedupe', () => {
 describe('joinKeysForDocuments', () => {
   it('collects unique edirect ids + drive ids from downloadUrl', () => {
     const docs: ProcedureDocument[] = [
-      { name: 'A', eDirectDocId: 'EDD1', downloadUrl: 'https://drive.google.com/file/d/drv-A/view' },
-      { name: 'B', eDirectDocId: 'EDD1', downloadUrl: 'https://drive.google.com/open?id=drv-B' },
+      { name: 'A', eDirectDocId: 'EDD1', downloadUrl: 'https://drive.google.com/file/d/1ABCDEFGHIJ_KLMNOPQ/view' },
+      { name: 'B', eDirectDocId: 'EDD1', downloadUrl: 'https://drive.google.com/open?id=2STUVWXYZ_abcdefgh' },
       { name: 'C' },
     ]
     const { edirectDocIds, driveFileIds } = joinKeysForDocuments(docs)
     expect(edirectDocIds.sort()).toEqual(['EDD1'])
-    expect(driveFileIds.sort()).toEqual(['drv-A', 'drv-B'])
+    expect(driveFileIds.sort()).toEqual(['1ABCDEFGHIJ_KLMNOPQ', '2STUVWXYZ_abcdefgh'])
   })
 })
 

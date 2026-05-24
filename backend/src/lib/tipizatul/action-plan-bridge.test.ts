@@ -55,7 +55,7 @@ function makeClient(rows: unknown[]) {
   for (const op of ['select', 'eq', 'overlaps', 'order', 'limit']) {
     chain[op] = () => chain
   }
-  ;(chain as unknown as PromiseLike<unknown>).then = (
+  ;(chain as unknown as { then: unknown }).then = (
     resolve: (val: { data: unknown[]; error: unknown }) => unknown,
   ) => resolve({ data: rows, error: null })
   return { from: () => chain } as never

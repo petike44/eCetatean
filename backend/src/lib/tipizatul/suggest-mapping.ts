@@ -80,8 +80,10 @@ export async function suggestMapping(
   const fillable = fieldsRaw.filter(isFillable)
   if (fillable.length === 0) return { mapping: [], fallback: false }
 
-  const fallback = deps.forceFallback || !isGeminiConfigured()
-  if (fallback && !deps.generateContent) {
+  if (deps.forceFallback) {
+    return { mapping: heuristicMapping(fieldsRaw), fallback: true }
+  }
+  if (!deps.generateContent && !isGeminiConfigured()) {
     return { mapping: heuristicMapping(fieldsRaw), fallback: true }
   }
 

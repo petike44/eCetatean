@@ -165,3 +165,77 @@ text + provenance: see `NotoSans-Regular.LICENSE.md` next to the font.
 ## Pipeline B (the legacy `generatePDF` switch in `pdf-templates.ts`)
 stays alive indefinitely as a fallback. Tipizatul-backed forms only
 replace it scenario-by-scenario once they reach parity.
+
+## Procedures → action plans (Phase 6)
+
+Two new ClaudIA-facing surfaces:
+
+- `handle_life_event` (existing tool, now async) goes through the
+  `action-plan-bridge`: for any step whose `online_action.form_type`
+  matches a curated entry in `FORM_TYPE_TO_TAGS`, we look up a
+  tipizatul-backed `pdf_forms.slug` by tag overlap and attach it as
+  `online_action.form_slug`. The frontend prefers `form_slug` (opens
+  the tipizatul preview at `/document-preview?form=<slug>`) and falls
+  back to `form_type` (legacy `generatePDF` download). The bridge
+  table is empty by default; populate it as tipizatul forms reach
+  parity with hardcoded life events.
+- `find_procedure` (new tool) runs a `pg_trgm` substring search on
+  `procedures.title`, applies the Cluj filter at query time
+  (`county = 'Cluj' OR county IS NULL` by default), and returns the
+  first match's `SynthesizedActionPlan` plus up to 4 alternatives.
+
+### Document → form resolver
+
+`procedure-resolve.ts` joins a `Procedure.documents[*]` array to
+`pdf_forms` rows:
+
+1. **Primary key:** `documents[*].eDirectDocId === pdf_forms.edirect_doc_id`.
+2. **Fallback key:** Drive file id extracted from
+   `documents[*].downloadUrl` (`/file/d/<id>/`, `/open?id=<id>`,
+   `?id=<id>`) === `pdf_forms.drive_file_id`.
+3. Dedupe when multiple `pdf_forms` rows match the same key:
+   newer `synced_at` wins, ties broken by higher `vote_count`.
+
+Each resolved document carries a `resolution` tag of
+`'edirect_doc_id' | 'drive_file_id' | 'none'` so ClaudIA can log how
+the link was established and the UI can show "no fillable template
+available — download the upstream PDF directly" when both keys miss.
+
+### Assumption 6 status
+
+**The join shape is now load-bearing in code** (Phase 6 uses it). What
+still needs live-data verification before turning the bridge table on
+for real users:
+
+1. **eDirectDocId presence.** Are most documents in real
+   `procedures.json` tagged with `eDirectDocId`, or do many rely on
+   `downloadUrl` only? Affects whether the drive-id fallback gets
+   exercised heavily.
+2. **eDirectDocId uniqueness across pdf_forms.** If the same
+   `eDirectDocId` lands on multiple `pdf_forms` rows (e.g. catalog
+   re-imports without `--force`), the newest-`synced_at` rule wins.
+   When you do the first live catalog sync, spot-check with:
+   ```sql
+   select edirect_doc_id, count(*) from public.pdf_forms
+     where source = 'tipizatul' and edirect_doc_id is not null
+     group by 1 having count(*) > 1;
+   ```
+3. **downloadUrl format.** The regex covers Drive sharing/preview
+   formats. If the procedures feed ever uses anonymized redirect URLs
+   (`https://procedurile.gov.ro/...`), the fallback won't hit and
+   we'll need to add a redirect-following step.
+
+## FieldRenderer (Phase 6 frontend)
+
+`frontend/src/components/FieldRenderer.tsx` renders a single
+`PdfAutofillField` as the right input widget for its `field_type`:
+text, checkbox, dropdown, radio, or "unsupported" (signature
+placeholder). `document-preview.tsx` routes tipizatul rows through
+`FieldRenderer` so checkbox/dropdown/radio fields actually work
+instead of falling back to a free-text input. The renderer also shows
+a `Verifică` badge when `needs_review === true` (i.e. the form's
+`acroform_origin` is `'generated'` or `null`).
+
+`field_type`, `options`, and `needs_review` come from a Phase 6
+enrichment step in `analyzePdf` that merges `pdf_forms.fields_raw` with
+the live AcroForm. No additional backend introspection cost.

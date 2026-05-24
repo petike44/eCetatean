@@ -107,7 +107,7 @@ export type CitizenProfile = {
   date_of_birth?: string | null;
 };
 
-export type PdfFieldSource = "saved" | "acroform" | "heuristic";
+export type PdfFieldSource = "saved" | "acroform" | "heuristic" | "ai";
 
 export type PdfFormInputDefinition = {
   key: string;
@@ -152,6 +152,10 @@ export type PdfForm = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Tipizatul (Phase 1/3/6)
+  source?: "manual" | "tipizatul";
+  drive_file_id?: string | null;
+  acroform_origin?: "original" | "generated" | null;
 };
 
 export type PdfFormAnalyzeResult = {

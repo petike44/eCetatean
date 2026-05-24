@@ -1,6 +1,10 @@
 import { Hono } from 'hono'
 import { PDFParse } from 'pdf-parse'
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib'
+// @ts-expect-error fontkit does not ship TS declarations in this project.
+import * as fontkit from 'fontkit'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { requireAuth } from '../middleware/auth'
 import { writeAuditEntry } from '../lib/hash-chain'
 import { supabaseAdmin, isSupabaseConfigured } from '../lib/supabase'
@@ -58,6 +62,7 @@ const LIBRETRANSLATE_PUBLIC_ENDPOINTS = [
   'https://libretranslate.de',
   'https://translate.argosopentech.com',
 ]
+const FONT_PATH = path.join(process.cwd(), 'src', 'assets', 'NotoSans-Regular.ttf')
 
 export const integrationsRoute = new Hono()
 
@@ -277,22 +282,37 @@ function chunkText(text: string): string[] {
   return chunks
 }
 
-function sanitizeForStandardPdfFont(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ș/g, 's')
-    .replace(/Ș/g, 'S')
-    .replace(/ț/g, 't')
-    .replace(/Ț/g, 'T')
-    .replace(/ă/g, 'a')
-    .replace(/Ă/g, 'A')
-    .replace(/î/g, 'i')
-    .replace(/Î/g, 'I')
-    .replace(/â/g, 'a')
-    .replace(/Â/g, 'A')
-    .replace(/ß/g, 'ss')
-    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '')
+async function embedReadableFont(pdf: PDFDocument): Promise<PDFFont> {
+  try {
+    pdf.registerFontkit(fontkit as unknown as Parameters<typeof pdf.registerFontkit>[0])
+    return await pdf.embedFont(new Uint8Array(fs.readFileSync(FONT_PATH)), { subset: true })
+  } catch (err) {
+    console.warn('NotoSans unavailable for translated PDF, falling back to Helvetica:', err)
+    return pdf.embedFont(StandardFonts.Helvetica)
+  }
+}
+
+function printableText(text: string, font: PDFFont): string {
+  try {
+    font.encodeText(text)
+    return text
+  } catch {
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ș/g, 's')
+      .replace(/Ș/g, 'S')
+      .replace(/ț/g, 't')
+      .replace(/Ț/g, 'T')
+      .replace(/ă/g, 'a')
+      .replace(/Ă/g, 'A')
+      .replace(/î/g, 'i')
+      .replace(/Î/g, 'I')
+      .replace(/â/g, 'a')
+      .replace(/Â/g, 'A')
+      .replace(/ß/g, 'ss')
+      .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '')
+  }
 }
 
 function wrapLine(line: string, maxChars: number): string[] {
@@ -328,7 +348,7 @@ async function buildTranslatedPdf({
   translatedText: string
 }): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
-  const font = await pdf.embedFont(StandardFonts.Helvetica)
+  const font = await embedReadableFont(pdf)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
   const margin = 50
   const fontSize = 11
@@ -345,7 +365,7 @@ async function buildTranslatedPdf({
       page = pdf.addPage([pageWidth, pageHeight])
       y = pageHeight - margin
     }
-    page.drawText(sanitizeForStandardPdfFont(line), {
+    page.drawText(printableText(line, options?.bold ? bold : font), {
       x: margin,
       y,
       size: options?.size ?? fontSize,

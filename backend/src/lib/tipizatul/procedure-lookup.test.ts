@@ -23,7 +23,7 @@ function makeClient(rows: unknown[], error: { message: string } | null = null) {
     }
   }
   // Awaiting the chain returns { data, error }.
-  ;(chain as unknown as PromiseLike<unknown>).then = (
+  ;(chain as unknown as { then: unknown }).then = (
     resolve: (val: { data: unknown[]; error: unknown }) => unknown,
   ) => resolve({ data: rows, error })
   const client = {

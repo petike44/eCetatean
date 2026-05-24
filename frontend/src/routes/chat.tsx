@@ -198,7 +198,6 @@ function mapChunksToReply(chunks: ClaudIAStreamChunk[]): Reply {
 
 export function Chat({ conversationId }: { conversationId?: string }) {
   const navigate = useNavigate();
-  const { openHistory } = useChatSessions();
   const { show } = useToast();
   const sendChat = useSendChatMessage();
   const createConversation = useCreateConversation();
@@ -345,11 +344,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
     </header>
   );
 
-  const mobileHistoryBtn = (
-    <TopBarButton aria-label="Istoric conversații" onClick={openHistory} className="lg:hidden">
-      <PanelLeft size={17} strokeWidth={2} />
-    </TopBarButton>
-  );
+  const mobileHistoryBtn = <ChatHistoryOpenButton />;
 
   const mobileNewChatBtn = (
     <Link to="/chat" aria-label="Chat nou" className="lg:hidden">
@@ -556,6 +551,15 @@ export function Chat({ conversationId }: { conversationId?: string }) {
 }
 
 /* ───────────── Suggestion dial ───────────── */
+
+function ChatHistoryOpenButton() {
+  const { openHistory } = useChatSessions();
+  return (
+    <TopBarButton aria-label="Istoric conversații" onClick={openHistory} className="lg:hidden">
+      <PanelLeft size={17} strokeWidth={2} />
+    </TopBarButton>
+  );
+}
 
 const ITEM_H = 52;
 const VISIBLE = 3; // center + 1 above + 1 below visible; ±1 more faded outside

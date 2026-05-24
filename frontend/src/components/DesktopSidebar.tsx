@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Sparkles, FolderOpen, UserCircle, Newspaper, FlaskConical } from "lucide-react";
+import { Home, Sparkles, FolderOpen, UserCircle, Newspaper, FlaskConical } from "lucide-react";
 import { navIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const tabs: { to: string; label: string; icon: typeof Sparkles; dot?: boolean }[] = [
+  { to: "/home", label: "Acasă", icon: Home },
   { to: "/chat", label: "Asistent", icon: Sparkles, dot: true },
   { to: "/documents", label: "Documente", icon: FolderOpen },
   { to: "/news", label: "Noutăți", icon: Newspaper },
@@ -21,7 +22,7 @@ export function DesktopSidebar() {
     <aside className="hidden lg:flex lg:flex-col lg:w-[240px] lg:shrink-0 sticky top-0 h-dvh bg-bg border-r border-border">
       <div className="h-14 flex items-center px-5 shrink-0">
         <Link
-          to="/chat"
+          to="/home"
           className="font-display font-bold text-[15px] tracking-tight text-primary hover:opacity-70 transition-opacity duration-150"
         >
           eCetățean
@@ -30,7 +31,7 @@ export function DesktopSidebar() {
 
       <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto" aria-label="Navigare principală">
         {tabs.map(({ to, label, icon: Icon, dot }) => {
-          const active = path === to || (to === "/chat" && path === "/");
+          const active = path === to || (to === "/home" && path === "/");
           return (
             <Link
               key={to}

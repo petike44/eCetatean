@@ -59,7 +59,7 @@ export function AppHeader({
           </div>
         ) : (
           <Link
-            to="/chat"
+            to="/home"
             className="font-display font-bold text-[15px] tracking-tight text-primary hover:opacity-70 transition-opacity duration-150 shrink-0"
           >
             eCetățean

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Protected } from "@/lib/auth-guard";
+import { WeTranslateHandoffModal } from "@/components/WeTranslateHandoffModal";
 import {
   useLifeEvent,
   useUpdateLifeEventStep,
@@ -61,6 +62,8 @@ function LifeEventDashboard() {
     office: string;
     slotHint?: string;
   } | null>(null);
+  const [translationAction, setTranslationAction] =
+    useState<NonNullable<LifeEventStep["online_action"]> | null>(null);
 
   if (isLoading) {
     return (
@@ -146,6 +149,10 @@ function LifeEventDashboard() {
       });
       return;
     }
+    if (action?.type === "translation_quote") {
+      setTranslationAction(action);
+      return;
+    }
     if (action?.type === "url" && action.url) {
       window.open(action.url, "_blank", "noopener,noreferrer");
       return;
@@ -174,6 +181,11 @@ function LifeEventDashboard() {
         onSuccess={(slot, ref) =>
           show("success", `Programare confirmată — ${slot} (ref. ${ref})`)
         }
+      />
+      <WeTranslateHandoffModal
+        open={translationAction !== null}
+        action={translationAction}
+        onClose={() => setTranslationAction(null)}
       />
       <div className="flex-1 overflow-y-auto pb-24 lg:pb-0">
         <div className="lg:max-w-3xl lg:mx-auto">

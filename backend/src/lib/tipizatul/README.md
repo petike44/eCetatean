@@ -15,7 +15,7 @@ the UI.
 |---|---|---|---|
 | CATALOG (metadata) | Firestore `catalog/index` (gzipped) + `templates/{id}` | `pdf_forms` (source='tipizatul') | 1 ✅ |
 | PROCEDURES | `https://tipizatul-eu.vercel.app/procedures.json` | `procedures` table | 2 ✅ |
-| PDF BINARIES | Google Drive (driveFileId) | `pdf-forms` storage bucket, lazy on first request | 3 (pending) |
+| PDF BINARIES | Google Drive (driveFileId) | `pdf-forms` storage bucket, lazy on first request | 3 ✅ |
 
 ## Running the catalog ETL (Phase 1)
 
@@ -90,11 +90,37 @@ Each row in `pdf_forms` gets:
   by label is the exception, not the rule — phases 5/6 will assign
   profile keys via AI proposal + human review.
 
-## Drive proxy credentials (Phase 3 — placeholders only for now)
+## PDF binary cache (Phase 3)
 
-`backend/.env.example` includes a `GDRIVE_SA_EMAIL` / `GDRIVE_SA_PRIVATE_KEY`
-block. Required only once Phase 3 lands — Phase 1 (catalog sync) does
-NOT need them.
+When a tipizatul-sourced `pdf_forms` row is requested, `getPdfBytes`:
+
+1. Looks in `pdf-forms/tipizatul/<driveFileId>.pdf` in Supabase Storage.
+2. On miss: mints a JWT for the service account, exchanges it at
+   `oauth2.googleapis.com` for an `access_token` (scope
+   `drive.readonly`), calls `GET drive/v3/files/<id>?alt=media`, and
+   writes the bytes back to the same storage path.
+3. Subsequent requests serve from storage.
+
+The Drive proxy is **env-gated**. If `GDRIVE_SA_EMAIL` and
+`GDRIVE_SA_PRIVATE_KEY` are missing, fetches throw
+`DriveCredentialsMissingError` and the caller falls back to the
+existing placeholder PDF — the server does NOT crash on boot.
+
+PEM accepts either real newlines or `\n` escapes. Surrounding quotes
+are stripped.
+
+### Live verification (manual)
+
+Once SA credentials are in `backend/.env.local`:
+
+```sh
+npx tsx --env-file=backend/.env.local backend/scripts/verify-drive-proxy.ts
+# or with a custom file id:
+npx tsx --env-file=backend/.env.local backend/scripts/verify-drive-proxy.ts <driveFileId>
+```
+
+Expects to see `%PDF?  yes ✔`. The script is committed but is NOT run
+by `npm test` or any CI.
 
 ## Verified live-data facts (as of integration)
 

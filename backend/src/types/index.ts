@@ -64,6 +64,7 @@ export type AuditActionType =
   | 'life_event_step_completed'
   | 'payment_simulated'
   | 'appointment_simulated'
+  | 'translation_quote_started'
 
 export interface AuditEntry {
   id: string
@@ -122,13 +123,17 @@ export interface LifeEventStep {
   tip: string | null
   online_action?: {
     label: string
-    type: 'pdf' | 'url' | 'payment' | 'appointment'
+    type: 'pdf' | 'url' | 'payment' | 'appointment' | 'translation_quote'
     url?: string
     form_type?: FormType
     amount_ron?: number
     description?: string
     office?: string
     slot_hint?: string
+    provider?: 'wetranslate'
+    source_language?: string
+    target_language?: string
+    package?: 'Economy' | 'Optimal' | 'Premium'
   }
 }
 

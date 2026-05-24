@@ -69,7 +69,8 @@ export type AuditActionType =
   | "life_event_started"
   | "life_event_step_completed"
   | "payment_simulated"
-  | "appointment_simulated";
+  | "appointment_simulated"
+  | "translation_quote_started";
 
 export type AuditEntry = {
   id: string;
@@ -402,13 +403,17 @@ export type LifeEventStep = {
   tip: string | null;
   online_action?: {
     label: string;
-    type: "pdf" | "url" | "payment" | "appointment";
+    type: "pdf" | "url" | "payment" | "appointment" | "translation_quote";
     url?: string;
     form_type?: string;
     amount_ron?: number;
     description?: string;
     office?: string;
     slot_hint?: string;
+    provider?: "wetranslate";
+    source_language?: string;
+    target_language?: string;
+    package?: "Economy" | "Optimal" | "Premium";
   };
 };
 
@@ -484,6 +489,75 @@ export function useUpdateLifeEventStep() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["life-events", vars.id] });
       qc.invalidateQueries({ queryKey: ["life-events"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+  });
+}
+
+// —— Translation Integrations ————————————————————————————————
+
+export type TranslationPackage = "Economy" | "Optimal" | "Premium";
+
+export type WeTranslateHandoff = {
+  provider: "wetranslate";
+  mode: "partner_api" | "public_form_fallback";
+  redirect_url: string;
+  handoff_id: string;
+  missing_fields: string[];
+  payload_preview: {
+    service: string;
+    source_language: string;
+    target_language: string;
+    package: TranslationPackage;
+    delivery_method: string;
+    customer: {
+      name: string | null;
+      email: string | null;
+      phone: string | null;
+      address: string | null;
+    };
+    documents: Array<{ name: string; size: number; type: string }>;
+    vehicle?: {
+      make: string | null;
+      model: string | null;
+      vin: string | null;
+      plate_number: string | null;
+    } | null;
+  };
+};
+
+export function useCreateWeTranslateQuote() {
+  const getToken = useGetToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      files,
+      sourceLanguage = "Germană",
+      targetLanguage = "Română",
+      packageName = "Optimal",
+      deliveryMethod = "E-mail",
+      vehicleId,
+      consent,
+    }: {
+      files: File[];
+      sourceLanguage?: string;
+      targetLanguage?: string;
+      packageName?: TranslationPackage;
+      deliveryMethod?: string;
+      vehicleId?: string | null;
+      consent: boolean;
+    }) => {
+      const fd = new FormData();
+      fd.set("source_language", sourceLanguage);
+      fd.set("target_language", targetLanguage);
+      fd.set("package", packageName);
+      fd.set("delivery_method", deliveryMethod);
+      fd.set("consent", consent ? "true" : "false");
+      if (vehicleId) fd.set("vehicle_id", vehicleId);
+      for (const file of files) fd.append("documents", file);
+      return apiPostForm<WeTranslateHandoff>("/api/integrations/wetranslate/quote", fd, getToken);
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["audit"] });
     },
   });

@@ -49,3 +49,6 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# tipizatul.eu reference source (read-only, used for integration; not part of this repo)
+tipizatul.eu-main/

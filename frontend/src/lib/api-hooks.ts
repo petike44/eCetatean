@@ -569,6 +569,8 @@ export type LifeEventStep = {
     type: "pdf" | "url" | "payment" | "appointment" | "translation_document";
     url?: string;
     form_type?: string;
+    /** Tipizatul-backed pdf_forms.slug. UI prefers this over form_type. */
+    form_slug?: string;
     amount_ron?: number;
     description?: string;
     office?: string;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
   Download,
@@ -48,6 +49,7 @@ const CATEGORY_ORDER: StepCategory[] = ["docs", "financial", "onsite"];
 // ─── Main panel ──────────────────────────────────────────────────────────────
 
 export function LifeEventStepsPanel({ eventId }: { eventId: string }) {
+  const nav = useNavigate();
   const { show } = useToast();
   const { data: event, isLoading } = useLifeEvent(eventId);
   const { data: profile } = useProfile();

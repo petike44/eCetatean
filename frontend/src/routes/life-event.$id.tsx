@@ -133,6 +133,13 @@ function LifeEventDashboard() {
 
   const handleAction = async (step: LifeEventStep) => {
     const action = step.online_action;
+    // Phase 6: prefer Pipeline A (tipizatul preview) when the action plan
+    // resolved a form_slug, fall back to Pipeline B (direct PDF download
+    // via legacy form_type) otherwise.
+    if (action?.type === "pdf" && action.form_slug) {
+      nav({ to: "/document-preview", search: { form: action.form_slug } });
+      return;
+    }
     if (action?.type === "pdf" && action.form_type) {
       void handleDownloadForm(action.form_type);
       return;

@@ -14,6 +14,7 @@ import {
   useSavePdfFormMapping,
   useSuggestPdfFormMapping,
 } from "@/lib/api-hooks";
+import { FieldRenderer } from "@/components/FieldRenderer";
 
 type DocumentPreviewSearch = {
   form?: string;
@@ -375,7 +376,44 @@ function DocPreview() {
                       </p>
                     )}
                     <div className="space-y-3">
-                      {fields.map((field) => (
+                      {fields.map((field) =>
+                        isTipizatul ? (
+                          <div key={field.id} className="space-y-2">
+                            <FieldRenderer
+                              field={field}
+                              onValueChange={(value) => updateField(field.id, value)}
+                            />
+                            <div className="grid gap-2 md:grid-cols-[180px_1fr]">
+                              <select
+                                value={
+                                  DATA_KEY_OPTIONS.includes(field.dataKey)
+                                    ? field.dataKey
+                                    : "custom"
+                                }
+                                onChange={(event) => {
+                                  if (event.target.value !== "custom")
+                                    updateFieldDataKey(field.id, event.target.value);
+                                }}
+                                className="rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[12px] text-text-secondary outline-none focus:border-primary"
+                              >
+                                <option value="custom">Cheie personalizată</option>
+                                {DATA_KEY_OPTIONS.map((key) => (
+                                  <option key={key} value={key}>
+                                    {key}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                value={field.dataKey}
+                                onChange={(event) =>
+                                  updateFieldDataKey(field.id, event.target.value)
+                                }
+                                placeholder="ex. profile.full_name sau input.vehicle_make"
+                                className="w-full rounded-xl border border-transparent bg-surface px-3 py-2.5 text-[12px] text-text-secondary outline-none focus:border-primary"
+                              />
+                            </div>
+                          </div>
+                        ) : (
                         <div
                           key={field.id}
                           className="rounded-xl border border-border bg-surface-secondary/60 p-3"
@@ -427,7 +465,7 @@ function DocPreview() {
                             />
                           </div>
                         </div>
-                      ))}
+                        ))}
                     </div>
                   </Section>
                 </Card>

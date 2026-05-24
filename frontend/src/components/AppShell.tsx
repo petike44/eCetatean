@@ -61,7 +61,7 @@ export function AppShell({
               exit="exit"
               variants={pageTransition}
               className={cn(
-                "mx-auto w-full max-w-[440px] md:max-w-[640px] lg:max-w-none lg:px-8 lg:py-6",
+                "mx-auto w-full max-w-[440px] md:max-w-[760px] lg:max-w-[1280px] lg:px-8 xl:px-10 lg:py-6",
                 hideNav ? "pb-0" : "pb-4 lg:pb-0",
                 className,
                 contentClassName,

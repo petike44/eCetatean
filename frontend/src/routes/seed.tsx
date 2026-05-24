@@ -158,7 +158,7 @@ function Seed() {
     <AppShell
       topBar={<TopBar title="Seed & Reset" subtitle="Dev tools" />}
     >
-      <div className="lg:max-w-2xl lg:mx-auto">
+      <div className="lg:max-w-4xl lg:mx-auto">
         <FadeIn className="px-5 pt-4 lg:px-0 lg:pt-2 space-y-6">
 
           {/* Stats */}

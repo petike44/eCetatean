@@ -3,9 +3,31 @@ import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
 import { FadeIn, StaggerItem, StaggerList } from "@/components/motion-primitives";
-import { Newspaper, Loader2 } from "lucide-react";
-import { useNews } from "@/lib/api-hooks";
+import { Newspaper, Loader2, Sparkles } from "lucide-react";
+import { useNews, useLifeEvents, type NewsItem } from "@/lib/api-hooks";
 import { formatRoDate } from "@/lib/profile-utils";
+
+// Keywords per life event type — used to surface relevant news
+const EVENT_KEYWORDS: Record<string, string[]> = {
+  car_from_germany: ["mașin", "import", "drpciv", "taxa auto", "rar", "vamă", "înmatriculare"],
+  car_domestic: ["mașin", "drpciv", "înmatriculare", "taxa auto"],
+  bought_car: ["mașin", "înmatriculare", "drpciv", "taxa auto"],
+  moving_to_cluj: ["cluj", "cazare", "student", "facultate", "chirie", "domiciliu"],
+  id_renewal: ["buletin", "carte de identitate", "spclep", "act de identitate"],
+  start_business: ["pfa", "firmă", "onrc", "antreprenor", "srl", "impozit"],
+};
+
+function scoreNews(item: NewsItem, activeEventTypes: string[]): number {
+  const text = `${item.title} ${item.summary}`.toLowerCase();
+  let score = 0;
+  for (const eventType of activeEventTypes) {
+    const keywords = EVENT_KEYWORDS[eventType] ?? [];
+    for (const kw of keywords) {
+      if (text.includes(kw)) score++;
+    }
+  }
+  return score;
+}
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -24,7 +46,20 @@ function newsDate(item: { published_at: string | null; created_at: string }) {
 }
 
 function NewsPage() {
-  const { data: items = [], isLoading, isError } = useNews();
+  const { data: rawItems = [], isLoading, isError } = useNews();
+  const { data: lifeEvents = [] } = useLifeEvents();
+
+  const activeEventTypes = lifeEvents
+    .filter((e) => !e.is_completed)
+    .map((e) => e.event_type);
+
+  // Sort: items with a relevance score first, then the rest (stable order within each group)
+  const items = [...rawItems].sort((a, b) => {
+    const sa = scoreNews(a, activeEventTypes);
+    const sb = scoreNews(b, activeEventTypes);
+    return sb - sa;
+  });
+
   const [featured, ...rest] = items;
 
   return (
@@ -34,7 +69,7 @@ function NewsPage() {
           <TopBar title="Noutăți" subtitle="Buletin civic" />
         </div>
       }
-      contentClassName="lg:max-w-2xl lg:mx-auto"
+      contentClassName="lg:max-w-4xl lg:mx-auto"
       className="lg:!px-5"
     >
       <FadeIn>
@@ -96,6 +131,11 @@ function NewsPage() {
                 <span className="absolute top-3 left-3 inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary-light text-primary">
                   Actualitate
                 </span>
+                {scoreNews(featured, activeEventTypes) > 0 && (
+                  <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-400 text-amber-900">
+                    <Sparkles size={10} /> Relevant pentru tine
+                  </span>
+                )}
               </div>
               <div className="p-5">
                 <h2 className="font-display text-[19px] font-semibold text-foreground leading-snug">
@@ -112,26 +152,36 @@ function NewsPage() {
           </FadeIn>
 
           <StaggerList className="space-y-3 pb-4">
-            {rest.map((n) => (
-              <StaggerItem key={n.id}>
-                <article className="bg-surface border border-border rounded-2xl p-4 shadow-card transition-all duration-200 lg:hover:shadow-elevated lg:hover:-translate-y-0.5">
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-11 h-11 rounded-2xl bg-primary-light flex items-center justify-center text-primary">
-                      <Newspaper size={18} strokeWidth={1.8} />
+            {rest.map((n) => {
+              const relevant = scoreNews(n, activeEventTypes) > 0;
+              return (
+                <StaggerItem key={n.id}>
+                  <article className={`bg-surface border rounded-2xl p-4 shadow-card transition-all duration-200 lg:hover:shadow-elevated lg:hover:-translate-y-0.5 ${relevant ? "border-amber-300" : "border-border"}`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center ${relevant ? "bg-amber-50 text-amber-600" : "bg-primary-light text-primary"}`}>
+                        <Newspaper size={18} strokeWidth={1.8} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] text-text-tertiary">{newsDate(n)}</span>
+                          {relevant && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                              <Sparkles size={9} /> Relevant
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-display text-[15px] font-semibold text-foreground leading-snug mt-1">
+                          {n.title}
+                        </h3>
+                        <p className="text-[13px] text-text-secondary mt-1 leading-relaxed line-clamp-3">
+                          {n.summary}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[11px] text-text-tertiary">{newsDate(n)}</span>
-                      <h3 className="font-display text-[15px] font-semibold text-foreground leading-snug mt-1">
-                        {n.title}
-                      </h3>
-                      <p className="text-[13px] text-text-secondary mt-1 leading-relaxed line-clamp-3">
-                        {n.summary}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              </StaggerItem>
-            ))}
+                  </article>
+                </StaggerItem>
+              );
+            })}
           </StaggerList>
         </>
       )}

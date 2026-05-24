@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sync:tipizatul": "tsx --env-file=.env.local scripts/sync-tipizatul-catalog.ts"
+    "sync:tipizatul": "tsx --env-file=.env.local scripts/sync-tipizatul-catalog.ts",
+    "sync:tipizatul-procedures": "tsx --env-file=.env.local scripts/sync-tipizatul-procedures.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

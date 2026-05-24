@@ -14,7 +14,7 @@ the UI.
 | Layer | Source | Where it lands | Phase |
 |---|---|---|---|
 | CATALOG (metadata) | Firestore `catalog/index` (gzipped) + `templates/{id}` | `pdf_forms` (source='tipizatul') | 1 ✅ |
-| PROCEDURES | `https://tipizatul-eu.vercel.app/procedures.json` | `procedures` table | 2 (pending) |
+| PROCEDURES | `https://tipizatul-eu.vercel.app/procedures.json` | `procedures` table | 2 ✅ |
 | PDF BINARIES | Google Drive (driveFileId) | `pdf-forms` storage bucket, lazy on first request | 3 (pending) |
 
 ## Running the catalog ETL (Phase 1)
@@ -44,6 +44,27 @@ Requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in
 `backend/.env.local`. Firestore reads are anonymous (verified against the
 live `tipizatul` project — `catalog/index` and `templates/*` are
 publicly readable).
+
+## Running the procedures ETL (Phase 2)
+
+Pulls `procedures.json` (a static feed, ~3.5k national rows). No
+county filter at write time — the full national table is imported and
+filtering happens at query time so non-Cluj users are trivial later.
+
+```sh
+cd backend
+
+# Smoke test
+npm run sync:tipizatul-procedures -- --limit=50
+
+# Full sync
+npm run sync:tipizatul-procedures
+```
+
+The feed itself is a public HTTPS endpoint — no Firestore auth needed.
+`document[*].downloadUrl` is stored verbatim; Phase 6 will resolve
+URLs to fillable templates via `eDirectDocId → pdf_forms.edirect_doc_id`
+and lazily cache the binaries through the Drive proxy.
 
 ## What gets stored
 

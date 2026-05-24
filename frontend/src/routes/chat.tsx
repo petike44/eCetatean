@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Send, MapPin, Clock, Phone, Navigation2, Check, Sparkles, Car, IdCard, Briefcase, Plane, ArrowRight, FileText, PanelLeft, Plus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -42,6 +42,26 @@ export const Route = createFileRoute("/chat")({
     </Protected>
   ),
 });
+
+// Renders **bold**, *italic*, and line breaks from plain AI text
+function renderMarkdown(text: string): ReactNode {
+  const segments = text.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g);
+  return (
+    <>
+      {segments.map((seg, i) => {
+        if (seg.startsWith("**") && seg.endsWith("**")) {
+          return <strong key={i} className="font-semibold">{seg.slice(2, -2)}</strong>;
+        }
+        if (seg.startsWith("*") && seg.endsWith("*")) {
+          return <em key={i}>{seg.slice(1, -1)}</em>;
+        }
+        return seg.split("\n").flatMap((line, j, arr) =>
+          j < arr.length - 1 ? [line, <br key={`${i}-${j}`} />] : [line]
+        );
+      })}
+    </>
+  );
+}
 
 // Reply and Msg types exported from chat-message-map
 
@@ -471,7 +491,7 @@ export function Chat({ conversationId }: { conversationId?: string }) {
                           className="px-4 py-3 rounded-2xl bg-surface-secondary text-foreground border border-border self-start max-w-[85%]"
                           style={{ borderBottomLeftRadius: "6px" }}
                         >
-                          <p className="text-[14.5px] leading-relaxed whitespace-pre-line">{m.reply.text}</p>
+                          <p className="text-[14.5px] leading-relaxed">{renderMarkdown(m.reply.text)}</p>
                           {m.reply.clarification && (
                             <div className="flex flex-wrap gap-2 mt-3">
                               {m.reply.clarification.options.map((opt) => (

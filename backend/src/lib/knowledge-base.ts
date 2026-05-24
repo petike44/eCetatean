@@ -518,7 +518,7 @@ export const LIFE_EVENTS: Record<string, LifeEventProcedure> = {
           type: 'appointment',
           office: 'Registrul Auto Român Cluj',
           slot_hint: 'Luni–Vineri 08:00–12:00',
-          url: 'https://www.rar.ro',
+          url: 'https://portal.rarom.ro/rar-public/appointment',
         },
       },
       {

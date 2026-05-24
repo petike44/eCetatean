@@ -11,6 +11,20 @@ import {
   Newspaper,
   ListChecks,
   ChevronRight,
+  CreditCard,
+  Car,
+  BadgeCheck,
+  Building2,
+  Clock,
+  FileText,
+  Zap,
+  UserPlus,
+  MessageSquare,
+  ClipboardCheck,
+  ShieldCheck,
+  Scale,
+  HeartHandshake,
+  Lightbulb,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { HomeTopBar } from "@/components/TopBar";
@@ -438,6 +452,134 @@ function LifeEventWidget({ events }: { events: LifeEventProgressWithDetails[] })
   );
 }
 
+// ——— Quick actions ——————————————————————————————————————————
+
+const QUICK_ACTIONS = [
+  { label: "Reînnoire buletin", icon: BadgeCheck, to: "/chat", color: "#0E7C66" },
+  { label: "Înregistrare vehicul", icon: Car, to: "/chat", color: "#1F4E79" },
+  { label: "Plată taxe locale", icon: CreditCard, to: "/chat", color: "#0B2540" },
+  { label: "Adeverință domiciliu", icon: Building2, to: "/chat", color: "#6D3AB5" },
+];
+
+function QuickActionsSection() {
+  const nav = useNavigate();
+  return (
+    <section>
+      <div className="flex items-center gap-1.5 mb-3">
+        <Zap size={12} className="text-text-tertiary" />
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">
+          Acțiuni rapide
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {QUICK_ACTIONS.map((a) => {
+          const Icon = a.icon;
+          return (
+            <button
+              key={a.label}
+              onClick={() => nav({ to: a.to as "/chat" })}
+              className="press flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border bg-surface shadow-card hover:shadow-elevated transition-shadow text-left"
+            >
+              <div
+                className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${a.color}14`, color: a.color }}
+              >
+                <Icon size={15} />
+              </div>
+              <span className="text-[13px] font-medium text-text-primary leading-tight">
+                {a.label}
+              </span>
+              <ChevronRight size={13} className="ml-auto shrink-0 text-text-tertiary" />
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ——— Popular guides ——————————————————————————————————————————
+
+const POPULAR_GUIDES = [
+  {
+    title: "Cum îți reînnoiești buletinul de identitate",
+    category: "Acte personale",
+    time: "~30 min",
+    icon: BadgeCheck,
+    color: "#0E7C66",
+    to: "/chat",
+  },
+  {
+    title: "Înmatriculare autoturism nou",
+    category: "Transport",
+    time: "~1 oră",
+    icon: Car,
+    color: "#1F4E79",
+    to: "/chat",
+  },
+  {
+    title: "Obținerea unui certificat de naștere",
+    category: "Familie",
+    time: "~20 min",
+    icon: FileText,
+    color: "#0B2540",
+    to: "/chat",
+  },
+  {
+    title: "Schimbare domiciliu — pași obligatorii",
+    category: "Domiciliu",
+    time: "~45 min",
+    icon: Building2,
+    color: "#6D3AB5",
+    to: "/chat",
+  },
+];
+
+function PopularGuidesSection() {
+  const nav = useNavigate();
+  return (
+    <section>
+      <div className="flex items-center gap-1.5 mb-3">
+        <Newspaper size={12} className="text-text-tertiary" />
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">
+          Ghiduri populare
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
+        {POPULAR_GUIDES.map((g) => {
+          const Icon = g.icon;
+          return (
+            <button
+              key={g.title}
+              onClick={() => nav({ to: g.to as "/chat" })}
+              className="press flex items-center gap-3.5 px-4 py-3.5 rounded-2xl border border-border bg-surface shadow-card hover:shadow-elevated transition-shadow text-left"
+            >
+              <div
+                className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${g.color}12`, color: g.color }}
+              >
+                <Icon size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13.5px] font-medium text-text-primary leading-snug line-clamp-1">
+                  {g.title}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[11px] text-text-tertiary">{g.category}</span>
+                  <span className="w-1 h-1 rounded-full bg-border shrink-0" />
+                  <Clock size={10} className="text-text-tertiary shrink-0" />
+                  <span className="text-[11px] text-text-tertiary">{g.time}</span>
+                </div>
+              </div>
+              <ChevronRight size={14} className="shrink-0 text-text-tertiary" />
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ——— Main page ——————————————————————————————————————————————
 
 function Home() {
@@ -489,6 +631,16 @@ function Home() {
             Funcționalități
           </p>
           <FeatureGrid onCardClick={setActiveCard} />
+
+          {/* Quick actions */}
+          <div className="mt-8">
+            <QuickActionsSection />
+          </div>
+
+          {/* Popular guides */}
+          <div className="mt-8">
+            <PopularGuidesSection />
+          </div>
         </div>
 
         {/* ── Right column — overview widgets ── */}

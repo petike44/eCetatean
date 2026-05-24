@@ -76,6 +76,9 @@
   --border: #E4E7EC;
   --metro: #1F4E79;
   --metro-light: #E8EEF6;
+  --desktop-content-max: 1440px;
+  --desktop-readable-max: 1280px;
+  --desktop-gutter: clamp(1rem, 1.8vw, 2rem);
 }
 
 @layer base {
@@ -142,6 +145,30 @@
 
   .shell-desktop-bg {
     @apply lg:bg-surface-secondary;
+  }
+
+  .shell-mobile-bg {
+    background-image:
+      radial-gradient(120% 80% at 50% -10%, rgba(232, 238, 246, 0.7), transparent 58%),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 1));
+  }
+
+  @media (min-width: 1024px) {
+    .desktop-content-wide {
+      width: 100%;
+      max-width: var(--desktop-content-max);
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: var(--desktop-gutter);
+      padding-right: var(--desktop-gutter);
+    }
+
+    .desktop-content-readable {
+      width: 100%;
+      max-width: var(--desktop-readable-max);
+      margin-left: auto;
+      margin-right: auto;
+    }
   }
 }
 

@@ -16,24 +16,40 @@ function isMockId(id: string): boolean {
   return id.startsWith('mock-')
 }
 
+function makeMockConversation(userId: string, title: string | null): ChatConversation {
+  const now = new Date().toISOString()
+  return {
+    id: `mock-${Date.now()}`,
+    user_id: userId,
+    title,
+    created_at: now,
+    updated_at: now,
+  }
+}
+
+// Returns null when not found; falls back to mock store on Supabase error.
 async function getConversationForUser(
   id: string,
   userId: string
 ): Promise<ChatConversation | null> {
-  if (isMockId(id)) {
-    const conv = mockConversations.get(id)
-    return conv && conv.user_id === userId ? conv : null
+  const mock = mockConversations.get(id)
+  if (mock) return mock.user_id === userId ? mock : null
+
+  if (isMockId(id)) return null
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('chat_conversations')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (error) throw error
+    return data as ChatConversation | null
+  } catch {
+    return null
   }
-
-  const { data, error } = await supabaseAdmin
-    .from('chat_conversations')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  if (error) throw error
-  return data as ChatConversation | null
 }
 
 // POST /api/chat/conversations
@@ -50,17 +66,9 @@ chatConversationsRoute.post('/', requireAuth, async (c) => {
   const title = body.title?.trim() || null
 
   if (!isSupabaseConfigured) {
-    const id = `mock-${Date.now()}`
-    const now = new Date().toISOString()
-    const conv: ChatConversation = {
-      id,
-      user_id: userId,
-      title,
-      created_at: now,
-      updated_at: now,
-    }
-    mockConversations.set(id, conv)
-    mockMessages.set(id, [])
+    const conv = makeMockConversation(userId, title)
+    mockConversations.set(conv.id, conv)
+    mockMessages.set(conv.id, [])
     return c.json({ success: true, data: conv })
   }
 
@@ -71,8 +79,11 @@ chatConversationsRoute.post('/', requireAuth, async (c) => {
     .single()
 
   if (error) {
-    console.error('chat_conversations insert:', error)
-    return c.json({ success: false, error: 'Nu am putut crea conversația' }, 500)
+    console.error('chat_conversations insert:', error.message, '— using mock fallback')
+    const conv = makeMockConversation(userId, title)
+    mockConversations.set(conv.id, conv)
+    mockMessages.set(conv.id, [])
+    return c.json({ success: true, data: conv })
   }
 
   return c.json({ success: true, data: data as ChatConversation })
@@ -82,11 +93,12 @@ chatConversationsRoute.post('/', requireAuth, async (c) => {
 chatConversationsRoute.get('/', requireAuth, async (c) => {
   const userId = c.get('userId')
 
+  const mockList = [...mockConversations.values()]
+    .filter((conv) => conv.user_id === userId)
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+
   if (!isSupabaseConfigured) {
-    const list = [...mockConversations.values()]
-      .filter((conv) => conv.user_id === userId)
-      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-    return c.json({ success: true, data: list })
+    return c.json({ success: true, data: mockList })
   }
 
   const { data, error } = await supabaseAdmin
@@ -96,11 +108,17 @@ chatConversationsRoute.get('/', requireAuth, async (c) => {
     .order('updated_at', { ascending: false })
 
   if (error) {
-    console.error('chat_conversations list:', error)
-    return c.json({ success: false, error: 'Nu am putut încărca conversațiile' }, 500)
+    console.error('chat_conversations list:', error.message, '— using mock fallback')
+    return c.json({ success: true, data: mockList })
   }
 
-  return c.json({ success: true, data: data as ChatConversation[] })
+  const dbIds = new Set((data as ChatConversation[]).map((c) => c.id))
+  const merged = [
+    ...mockList.filter((m) => !dbIds.has(m.id)),
+    ...(data as ChatConversation[]),
+  ].sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+
+  return c.json({ success: true, data: merged })
 })
 
 // GET /api/chat/conversations/:id
@@ -113,28 +131,30 @@ chatConversationsRoute.get('/:id', requireAuth, async (c) => {
     return c.json({ success: false, error: 'Conversație negăsită' }, 404)
   }
 
-  if (isMockId(id)) {
+  if (isMockId(id) || mockConversations.has(id)) {
     const messages = mockMessages.get(id) ?? []
     const result: ChatConversationWithMessages = { ...conv, messages }
     return c.json({ success: true, data: result })
   }
 
-  const { data: messages, error } = await supabaseAdmin
-    .from('chat_messages')
-    .select('*')
-    .eq('conversation_id', id)
-    .order('created_at', { ascending: true })
+  try {
+    const { data: messages, error } = await supabaseAdmin
+      .from('chat_messages')
+      .select('*')
+      .eq('conversation_id', id)
+      .order('created_at', { ascending: true })
 
-  if (error) {
-    console.error('chat_messages list:', error)
-    return c.json({ success: false, error: 'Nu am putut încărca mesajele' }, 500)
-  }
+    if (error) throw error
 
-  const result: ChatConversationWithMessages = {
-    ...conv,
-    messages: (messages ?? []) as ChatMessageRow[],
+    const result: ChatConversationWithMessages = {
+      ...conv,
+      messages: (messages ?? []) as ChatMessageRow[],
+    }
+    return c.json({ success: true, data: result })
+  } catch (err) {
+    console.error('chat_messages list:', err, '— returning empty messages')
+    return c.json({ success: true, data: { ...conv, messages: [] } })
   }
-  return c.json({ success: true, data: result })
 })
 
 // PATCH /api/chat/conversations/:id
@@ -161,7 +181,7 @@ chatConversationsRoute.patch('/:id', requireAuth, async (c) => {
 
   const updated_at = new Date().toISOString()
 
-  if (isMockId(id)) {
+  if (isMockId(id) || mockConversations.has(id)) {
     const next = { ...conv, title, updated_at }
     mockConversations.set(id, next)
     return c.json({ success: true, data: next })
@@ -176,8 +196,10 @@ chatConversationsRoute.patch('/:id', requireAuth, async (c) => {
     .single()
 
   if (error) {
-    console.error('chat_conversations patch:', error)
-    return c.json({ success: false, error: 'Nu am putut actualiza conversația' }, 500)
+    console.error('chat_conversations patch:', error.message, '— using mock fallback')
+    const next = { ...conv, title, updated_at }
+    mockConversations.set(id, next)
+    return c.json({ success: true, data: next })
   }
 
   return c.json({ success: true, data: data as ChatConversation })
@@ -193,7 +215,7 @@ chatConversationsRoute.delete('/:id', requireAuth, async (c) => {
     return c.json({ success: false, error: 'Conversație negăsită' }, 404)
   }
 
-  if (isMockId(id)) {
+  if (isMockId(id) || mockConversations.has(id)) {
     mockConversations.delete(id)
     mockMessages.delete(id)
     return c.json({ success: true, data: true })
@@ -206,7 +228,7 @@ chatConversationsRoute.delete('/:id', requireAuth, async (c) => {
     .eq('user_id', userId)
 
   if (error) {
-    console.error('chat_conversations delete:', error)
+    console.error('chat_conversations delete:', error.message)
     return c.json({ success: false, error: 'Nu am putut șterge conversația' }, 500)
   }
 
@@ -243,7 +265,7 @@ chatConversationsRoute.post('/:id/messages', requireAuth, async (c) => {
 
   const updated_at = new Date().toISOString()
 
-  if (isMockId(id)) {
+  if (isMockId(id) || mockConversations.has(id)) {
     const existing = mockMessages.get(id) ?? []
     const rows: ChatMessageRow[] = incoming.map((m, i) => ({
       id: `mock-msg-${Date.now()}-${i}`,
@@ -271,8 +293,19 @@ chatConversationsRoute.post('/:id/messages', requireAuth, async (c) => {
     .select()
 
   if (error) {
-    console.error('chat_messages insert:', error)
-    return c.json({ success: false, error: 'Nu am putut salva mesajele' }, 500)
+    console.error('chat_messages insert:', error.message, '— using mock fallback')
+    const mockRows: ChatMessageRow[] = incoming.map((m, i) => ({
+      id: `mock-msg-${Date.now()}-${i}`,
+      conversation_id: id,
+      role: m.role,
+      content: m.content,
+      metadata: m.metadata ?? {},
+      created_at: new Date().toISOString(),
+    }))
+    const existing = mockMessages.get(id) ?? []
+    mockMessages.set(id, [...existing, ...mockRows])
+    mockConversations.set(id, { ...conv, updated_at })
+    return c.json({ success: true, data: mockRows })
   }
 
   await supabaseAdmin

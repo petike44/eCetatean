@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useState, type ReactNode } from "react";
-import { Menu } from "lucide-react";
+import { ChevronRight, Menu, Sparkles } from "lucide-react";
 import { APP_NAV_TABS, isNavTabActive } from "@/lib/nav-config";
 import { navIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,13 @@ interface AppHeaderProps {
   showNavStrip?: boolean;
 }
 
-function MobileNavMenu() {
+function MobileNavMenu({
+  displayName,
+  initials,
+}: {
+  displayName: string;
+  initials: string;
+}) {
   const [open, setOpen] = useState(false);
   const { location } = useRouterState();
   const path = location.pathname;
@@ -38,13 +44,35 @@ function MobileNavMenu() {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="left"
-          className="w-[min(300px,85vw)] p-0 flex flex-col gap-0 border-r"
+          className="w-[min(320px,90vw)] p-0 flex flex-col gap-0 border-r border-primary/10 bg-surface/95 backdrop-blur-xl"
         >
           <SheetTitle className="sr-only">Navigare principală</SheetTitle>
-          <div className="h-14 flex items-center px-4 border-b border-border shrink-0 pt-[env(safe-area-inset-top)]">
-            <span className="font-display font-bold text-[15px] text-primary">eCetățean</span>
+          <div className="shrink-0 border-b border-border/80 bg-gradient-to-b from-primary-light/55 to-surface px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-card">
+                <Sparkles size={16} strokeWidth={2.2} />
+              </div>
+              <div className="min-w-0">
+                <span className="block font-display font-bold text-[15px] leading-none text-primary">eCetățean</span>
+                <span className="block mt-1 text-[11.5px] text-text-tertiary">Asistentul tău civic digital</span>
+              </div>
+            </div>
+            <Link
+              to="/profile"
+              onClick={() => setOpen(false)}
+              className="press mt-4 flex items-center gap-3 rounded-2xl border border-border/80 bg-surface/90 px-3 py-2.5 shadow-card"
+            >
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="text-[11.5px] font-semibold text-primary">{initials}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-medium text-text-secondary leading-none">Contul tău</p>
+                <p className="text-[14px] font-semibold text-foreground truncate mt-1 leading-none">{displayName}</p>
+              </div>
+              <ChevronRight size={15} className="text-text-tertiary shrink-0" />
+            </Link>
           </div>
-          <nav className="flex flex-col gap-0.5 p-2 pb-[env(safe-area-inset-bottom)]" aria-label="Navigare principală">
+          <nav className="flex flex-col gap-1 p-2.5 pb-2" aria-label="Navigare principală">
             {APP_NAV_TABS.map(({ to, label, icon: Icon, dot }) => {
               const active = isNavTabActive(path, to);
               return (
@@ -53,10 +81,10 @@ function MobileNavMenu() {
                   to={to}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "press flex items-center gap-3 px-3 py-3 rounded-xl min-h-11 transition-colors",
+                    "press flex items-center gap-3 px-3 py-3 rounded-2xl min-h-11 transition-all",
                     active
-                      ? "bg-primary/8 text-primary font-medium"
-                      : "text-text-secondary hover:bg-black/[0.04]",
+                      ? "bg-primary-light text-primary font-semibold border border-primary/15 shadow-card"
+                      : "text-text-secondary hover:bg-black/[0.04] border border-transparent",
                   )}
                   aria-current={active ? "page" : undefined}
                 >
@@ -66,11 +94,22 @@ function MobileNavMenu() {
                       <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full" />
                     )}
                   </div>
-                  <span className="text-[15px]">{label}</span>
+                  <span className="text-[15px] flex-1">{label}</span>
+                  <ChevronRight size={15} className={cn("shrink-0", active ? "text-primary/80" : "text-text-tertiary")} />
                 </Link>
               );
             })}
           </nav>
+          <div className="mt-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <Link
+              to="/chat"
+              onClick={() => setOpen(false)}
+              className="press w-full min-h-11 rounded-2xl bg-primary text-primary-foreground font-semibold text-[14px] inline-flex items-center justify-center gap-2 shadow-elevated"
+            >
+              <Sparkles size={15} strokeWidth={2.2} />
+              Deschide asistentul
+            </Link>
+          </div>
         </SheetContent>
       </Sheet>
     </>
@@ -96,8 +135,7 @@ export function AppHeader({
   return (
     <div
       className={cn(
-        "sticky top-0 z-40 shrink-0 bg-surface/95 backdrop-blur-md",
-        !isChat && "border-b border-border",
+        "sticky top-0 z-40 shrink-0 border-b border-border/80 bg-surface/90 backdrop-blur-xl supports-[backdrop-filter]:bg-surface/80",
         "pt-[env(safe-area-inset-top)]",
       )}
     >
@@ -110,7 +148,7 @@ export function AppHeader({
           <div className="shrink-0 lg:hidden">{leftAction}</div>
         )}
 
-        {showNavStrip && <MobileNavMenu />}
+        {showNavStrip && <MobileNavMenu displayName={displayName} initials={initials} />}
 
         {isChat ? (
           <div className="flex-1 flex items-center justify-center gap-2 min-w-0 lg:hidden">

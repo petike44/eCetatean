@@ -105,8 +105,8 @@ export function TopBarButton({
       {...props}
       className={cn(
         "press w-9 h-9 rounded-full flex items-center justify-center",
-        "bg-black/[0.04] hover:bg-black/[0.08] active:bg-black/[0.12]",
-        "transition-colors duration-150",
+        "border border-border/70 bg-surface/85 text-foreground shadow-card backdrop-blur-sm",
+        "hover:bg-surface-secondary/90 active:bg-surface-secondary transition-colors duration-150",
         className,
       )}
     />

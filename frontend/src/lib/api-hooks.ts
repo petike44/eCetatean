@@ -187,7 +187,8 @@ export function useUpsertProfile() {
   const getToken = useGetToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: CitizenProfile) => apiPostJson<CitizenProfile>("/api/profile", body, getToken),
+    mutationFn: (body: CitizenProfile) =>
+      apiPostJson<CitizenProfile>("/api/profile", body, getToken),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
   });
 }
@@ -228,7 +229,8 @@ export function usePdfForms(query: string) {
 
   return useQuery({
     queryKey: ["pdf-forms", query.trim()],
-    queryFn: () => apiGet<PdfForm[]>(`/api/forms/search${params.size ? `?${params}` : ""}`, getToken),
+    queryFn: () =>
+      apiGet<PdfForm[]>(`/api/forms/search${params.size ? `?${params}` : ""}`, getToken),
     enabled: !!isSignedIn,
   });
 }
@@ -236,8 +238,18 @@ export function usePdfForms(query: string) {
 export function useAnalyzePdfForm() {
   const getToken = useGetToken();
   return useMutation({
-    mutationFn: ({ formId, additionalData = {} }: { formId: string; additionalData?: Record<string, string> }) =>
-      apiPostJson<PdfFormAnalyzeResult>(`/api/forms/${formId}/analyze`, { additional_data: additionalData }, getToken),
+    mutationFn: ({
+      formId,
+      additionalData = {},
+    }: {
+      formId: string;
+      additionalData?: Record<string, string>;
+    }) =>
+      apiPostJson<PdfFormAnalyzeResult>(
+        `/api/forms/${formId}/analyze`,
+        { additional_data: additionalData },
+        getToken,
+      ),
   });
 }
 
@@ -282,10 +294,7 @@ export function useSendChatMessage() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: {
-      messages: ChatMessage[];
-      profile?: CitizenProfile | null;
-    }) => {
+    mutationFn: async (payload: { messages: ChatMessage[]; profile?: CitizenProfile | null }) => {
       const response = await apiStreamPost("/api/claudia", payload, getToken);
       const chunks: ClaudIAStreamChunk[] = [];
 
@@ -691,12 +700,9 @@ export function useAutofillDrpciv() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (inputValues: Record<string, string>) => {
-      await downloadAutofilledPdf(
-        "cerere-inmatriculare-drpciv",
-        "cerere_drpciv.pdf",
-        getToken,
-        { additional_data: inputValues },
-      );
+      await downloadAutofilledPdf("cerere-inmatriculare-drpciv", "cerere_drpciv.pdf", getToken, {
+        additional_data: inputValues,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["audit"] });

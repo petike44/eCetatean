@@ -151,7 +151,7 @@ function Profile() {
         </div>
       }
     >
-      <div className="lg:max-w-5xl lg:mx-auto">
+      <div className="desktop-content-readable">
         <FadeIn className="px-5 pt-5 lg:px-0 lg:pt-2">
           <h1 className="font-display font-bold text-[22px] text-text-primary mb-4 lg:hidden">Profilul meu</h1>
           <div className="flex items-center gap-4">

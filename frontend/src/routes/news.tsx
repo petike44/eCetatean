@@ -69,7 +69,7 @@ function NewsPage() {
           <TopBar title="Noutăți" subtitle="Buletin civic" />
         </div>
       }
-      contentClassName="lg:max-w-4xl lg:mx-auto"
+      contentClassName="desktop-content-readable"
       className="lg:!px-5"
     >
       <FadeIn>
